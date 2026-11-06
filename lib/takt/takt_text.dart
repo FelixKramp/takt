@@ -19,6 +19,8 @@ class TaktText {
 
   String get activities => de ? 'Aktivitäten' : 'Activities';
   String get detected => de ? 'erkannt' : 'detected';
+  String get training => 'Training';
+  String get waitingForPulse => de ? 'Warte auf den Puls …' : 'Waiting for your pulse…';
   String get noActivities => de
       ? 'Heute noch nichts erkannt. War da ein Training?'
       : 'Nothing detected yet today. Did you train?';
@@ -46,5 +48,8 @@ class TaktText {
   String get sourceCode => de ? 'Quellcode von Takt' : 'Takt source code';
   String get licenseLine =>
       de ? 'Lizenz: AGPL-3.0, Code offen' : 'License: AGPL-3.0, open source';
+  String get legal => de
+      ? '© OpenStrap-Beitragende und Felix Kramp. Ohne jede Gewähr, kein Medizinprodukt.'
+      : '© OpenStrap contributors and Felix Kramp. No warranty, not a medical device.';
   String get newVersion => de ? 'Neue Version verfügbar' : 'New version available';
 }

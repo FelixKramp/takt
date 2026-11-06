@@ -7,7 +7,6 @@ import 'package:firebase_performance/firebase_performance.dart' as perf;
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 
-import '../firebase_options.dart';
 
 /// Handle for an in-flight Performance trace; opaque to callers.
 class FirebaseTraceHandle {
@@ -21,8 +20,8 @@ class FirebaseBridge {
   /// Throws when no real google-services.json / GoogleService-Info.plist is
   /// bundled; main() catches it.
   static Future<void> initialize({Duration? timeout}) async {
-    final future = Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    await (timeout == null ? future : future.timeout(timeout));
+    // TAKT: Das Firebase-Projekt gehört OpenStrap, Takt sendet dorthin nichts.
+    throw StateError('Takt nutzt kein Firebase');
   }
 
   static bool get isInitialized => Firebase.apps.isNotEmpty;

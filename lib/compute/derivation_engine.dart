@@ -6450,6 +6450,8 @@ class DerivationEngine {
         try {
           if (forceFinalize || !await activityStore.mayNotifyNew(suggestion)) continue;
           final nap = suggestion.kind == ActivityKind.nap;
+          // TAKT: Erkannte Workouts stehen direkt im Heute-Tab, ohne Rückfrage.
+          if (!nap) continue;
           await NotificationCenter.instance.emit(NotificationEvent(
             dedupeKey: '${day.date}:activity:${suggestion.id}',
             category: NotifCategory.reminders, priority: NotifPriority.normal,

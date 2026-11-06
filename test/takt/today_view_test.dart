@@ -101,6 +101,15 @@ void main() {
     expect(find.text('Synchronisiert …'), findsOneWidget);
   });
 
+  testWidgets('A13: Die Anzeige bleibt nicht stehen', (t) async {
+    await pump(t, TaktTodayView(data: full, pulse: livePulse, lastData: DateTime.now()));
+    expect(find.text('gerade eben'), findsOneWidget);
+    var ticks = 0;
+    await pump(t, TaktTodayView(data: full, pulse: livePulse, lastData: DateTime.now(), onTick: () => ticks++));
+    await t.pump(const Duration(seconds: 31));
+    expect(ticks, 1);
+  });
+
   testWidgets('A18: Letzter Wert steht mit Uhrzeit und Grund, Höhe bleibt gleich', (t) async {
     await pump(t, livePulse);
     final liveHeight = t.getSize(find.byType(PulseView)).height;
@@ -131,6 +140,12 @@ void main() {
     expect(paired, isTrue);
   });
 
+  testWidgets('A19: Gekoppelt ohne Messung bietet kein Koppeln an', (t) async {
+    await pump(t, PulseView(state: const PulseState(PulseKind.never, reason: PulseReason.notWorn), onPair: () {}));
+    expect(find.text('Band koppeln'), findsNothing);
+    expect(find.text('Warte auf den Puls …'), findsOneWidget);
+  });
+
   testWidgets('A20: Kalibrierung zeigt Fortschritt statt Wert', (t) async {
     final d = HomeData(
       readiness: Metric.parse({'value': '—', 'note': 'need_baseline:have=6,need=14'}),
@@ -141,6 +156,14 @@ void main() {
     expect(find.text(ringViewOf(HomeRingKind.sleep, d, null).value), findsOneWidget);
     final sleep = t.widget<DialRing>(find.byType(DialRing).at(2));
     expect(dialLitTicks(sleep.view.frac), 0);
+  });
+
+  testWidgets('A8: Ohne Sportart heißt es Training', (t) async {
+    final it = ActivityItem(id: 'suggestion:a', startTs: DateTime(2026, 11, 6, 18).millisecondsSinceEpoch ~/ 1000, type: 'other', detected: true);
+    await pump(t, TaktTodayView(data: full, pulse: livePulse, items: [it]));
+    await t.drag(find.byType(ListView), const Offset(0, -900));
+    await t.pump();
+    expect(find.text('Training'), findsOneWidget);
   });
 
   testWidgets('A9: Erkanntes lässt sich mit einem Tipp verwerfen', (t) async {

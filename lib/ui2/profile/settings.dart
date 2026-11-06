@@ -1,4 +1,5 @@
 import '../../takt/about.dart';
+import '../../takt/brand.dart';
 import '../../l10n/display_text.dart';
 import 'step_calibration.dart';
 // Settings, and editing the profile.
@@ -554,7 +555,7 @@ Future<void> _confirmReset(BuildContext c, AppState app) async {
     messenger.showSnackBar(SnackBar(
       content: Text(l?.settingsResetChatGptWarning ??
           'App data deleted, but the ChatGPT sign-in may not be fully removed. '
-              'Disconnect OpenStrap in ChatGPT settings to make sure its access is revoked. '
+              'Disconnect Takt in ChatGPT settings to make sure its access is revoked. '
               'Deleting everything again only retries removing what is left on this device.'),
     ));
   }
@@ -858,6 +859,8 @@ class MoreSettingsView extends StatelessWidget {
                       onTap: () => goto(c, const StepCalibrationScreen())),
                 ]),
                 settingsGroup(c, l?.settingsGroupPrivacy ?? 'Privacy', [
+                  // TAKT: Absturzberichte und Tickets gingen an OpenStrap.
+                  if (!kTaktNoReportUpload) ...[
                   SetRow(LucideIcons.bug, C.orange,
                       l?.settingsCrashReportsRowTitle ?? 'Crash reports',
                       sub: l?.settingsCrashReportsRowSub ??
@@ -869,6 +872,7 @@ class MoreSettingsView extends StatelessWidget {
                       sub: l?.settingsReportIssueRowSub ??
                           'Sends what you choose to the maintainers, encrypted',
                       onTap: () => goto(c, const ReportIssueScreen())),
+                  ],
                   // The food log's one outbound call. Named by what it sends,
                   // not by the feature it powers — a scan is the only thing
                   // that triggers it and the barcode is the whole payload.
@@ -936,7 +940,7 @@ class MoreSettingsView extends StatelessWidget {
                           'Who this app is not, and whose data it uses',
                       onTap: () => launchUrl(
                           Uri.parse(
-                              'https://openstrap.github.io/edge/notice.html'),
+                              '$kSourceUrl/blob/main/NOTICE.md'),
                           mode: LaunchMode.externalApplication)),
                 ]),
                 if (devMode)

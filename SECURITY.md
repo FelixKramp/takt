@@ -1,3 +1,5 @@
+> Dieses Dokument stammt aus OpenStrap Edge. Für Takt gilt zusätzlich: Takt sendet keine Absturzberichte und keine Tickets. Die einzige eigene Netzabfrage ist die tägliche Update-Prüfung gegen GitHub, sie enthält keine Gesundheitsdaten. Sicherheitsprobleme bitte als Issue in FelixKramp/takt melden.
+
 # Security Policy
 
 ## Reporting a vulnerability

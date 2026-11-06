@@ -9,6 +9,7 @@
 // tier would have to be sold. What replaces them is what this app actually
 // knows — how much it has measured, and from what.
 
+import '../../takt/brand.dart' show kTaktNoReportUpload;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -423,7 +424,8 @@ class ProfileHomeView extends StatelessWidget {
                           'Band, app, data, privacy and advanced',
                       onTap: onSettings),
                 ]),
-                settingsGroup(c, l?.profileCommunityGroup ?? 'Community', [
+                // TAKT: Die Community-Links gehören zu OpenStrap, nicht zu Takt.
+                if (!kTaktNoReportUpload) settingsGroup(c, l?.profileCommunityGroup ?? 'Community', [
                   SetRow.brand(brandGlyph('assets/icons/github.svg'), C.n500,
                       l?.profileGithubTitle ?? 'GitHub',
                       sub: l?.profileGithubSub ??

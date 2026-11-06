@@ -35,6 +35,7 @@ List<ActivityItem> todayActivities(
   List<Map<String, dynamic>> workouts,
   DateTime day, {
   List<ActivitySuggestion> pending = const [],
+  String Function(ActivitySuggestion)? sportOf,
 }) {
   final from = DateTime(day.year, day.month, day.day).millisecondsSinceEpoch ~/ 1000;
   final to = DateTime(day.year, day.month, day.day + 1).millisecondsSinceEpoch ~/ 1000;
@@ -61,7 +62,7 @@ List<ActivityItem> todayActivities(
           id: '$kDetectedPrefix${s.id}',
           startTs: s.startTs,
           endTs: s.endTs,
-          type: s.sport ?? 'other',
+          type: sportOf?.call(s) ?? s.sport ?? 'other',
           detected: true,
           durationMin: s.durationMin,
           avgHr: (s.details['avg_bpm'] as num?)?.round(),

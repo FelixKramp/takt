@@ -33,13 +33,14 @@ bleiben Plan, Hinweise und Wecker erreichbar, und Upstream-Änderungen daran mer
 | Objekt | Felder | Wer darf lesen | Wer darf schreiben |
 |---|---|---|---|
 | Workout (bestehend) | wie Upstream | nur die App auf dem Handy | die App |
-| Merkliste „erkannt" (neu) | Workout-IDs, die aus einer Erkennung entstanden sind | nur die App | `auto_confirm.dart` |
+| Sportart-Wahl (neu) | Sportart je offener Erkennung, in den App-Einstellungen | nur die App | Heute-Screen |
 
 Keine Konten, kein Server. Alle Daten bleiben auf dem Handy.
 
 ## Verhalten und Fehlerfälle
-- Erkanntes Workout → wird beim Laden des Heute-Tabs und nach jeder Berechnung bestätigt und ist
-  damit ein normales Workout mit Strain. Nickerchen bleiben im bisherigen Ablauf.
+- Erkanntes Workout → steht sofort als offene Erkennung in der Liste. Reichen die Daten 30 Minuten
+  über sein Ende hinaus, wird es gespeichert und bekommt Strain. „Erkannt" hängt am ID-Präfix
+  `suggestion:`. Nickerchen und ältere Vorschläge bleiben im bisherigen Ablauf.
 - Bestätigen scheitert, etwa wegen Überlappung → das Workout steht weiter in der Liste, ohne
   Strain-Wert, und bleibt per Antippen bearbeitbar.
 - Verwerfen → das Workout wird gelöscht, die Erkennung bleibt als bearbeitet markiert und kommt
@@ -56,7 +57,8 @@ Keine Konten, kein Server. Alle Daten bleiben auf dem Handy.
 | Workouts automatisch bestätigen | Vorschläge nur anzeigen | Nur bestätigte Workouts haben Strain und zählen in Verläufen |
 | `applicationId` ändern, Kotlin-Paket lassen | Paket umbenennen | Takt läuft neben Edge, ohne dass 17 Kotlin-Dateien vom Original abweichen |
 | Update-Prüfung gegen GitHub-Releases von FelixKramp/takt, Fehlerberichte an OpenStrap aus | Weiter deren Server ansprechen | Der OpenStrap-Hinweis würde Edge anbieten, Fehler von Takt gehören nicht zu OpenStrap |
-| Kein Firebase | Eigenes Firebase-Projekt | Upstream baut ohne `google-services.json`, kein Dienst nötig |
+| Kein Firebase, `firebase_options.dart` entfernt, Absturzberichte ausgeblendet | Eigenes Firebase-Projekt | Das Projekt in Upstream gehört OpenStrap |
+| Schrift Doto für Zahlen, Manrope bleibt für Text | Archivo aus dem Entwurf | Eine Schrift weniger, weniger Abweichung vom Original |
 | Bestehender Hintergrundbetrieb für A14 | Eigener Hintergrund-Job | Android hält die Verbindung schon per Vordergrunddienst offen, wird auf dem Gerät geprüft |
 
 ## Manuelle Aufgaben für Felix

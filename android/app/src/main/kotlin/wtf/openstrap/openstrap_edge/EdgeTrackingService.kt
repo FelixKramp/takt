@@ -18,7 +18,7 @@ import androidx.core.content.ContextCompat
 /**
  * Foreground service that keeps the app process alive while backgrounded so the live
  * flutter_blue_plus connection keeps draining the strap. Silent, low-priority, ongoing
- * notification titled "Edge Tracking".
+ * notification titled "Takt".
  *
  * STICKY: the service asks the OS to recreate it after a memory-pressure kill
  * (START_STICKY). Recreating the service restarts the process, which re-runs
@@ -251,7 +251,7 @@ class EdgeTrackingService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val ch = NotificationChannel(
                 CHANNEL_ID,
-                "Edge Tracking",
+                "Takt",
                 NotificationManager.IMPORTANCE_LOW,
             )
             ch.description = "Keeps your strap syncing in the background"
@@ -263,7 +263,7 @@ class EdgeTrackingService : Service() {
 
     private fun buildNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Edge Tracking")
+            .setContentTitle("Takt")
             .setContentText("Keeping your strap in sync")
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setOngoing(true)

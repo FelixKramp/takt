@@ -517,7 +517,7 @@ class _Shell extends StatefulWidget {
 
 class _ShellState extends State<_Shell> {
   /// Restore the last-selected tab so a relaunch lands where the user left off.
-  late ShellDomain _domain = restoredShellTab();
+  late ShellDomain _domain = ShellDomain.today; // TAKT: A1, immer auf Heute öffnen
 
   /// AppShell owns its own selection and takes only an `initial`, so a
   /// programmatic jump re-keys it.

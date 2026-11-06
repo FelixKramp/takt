@@ -90,7 +90,9 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext c) {
     final p = P.of(c);
     final t = TaktText.of(c);
-    final name = activityByName(item.type)?.displayName(c) ?? readableType(item.type);
+    final name = item.type == 'other'
+        ? t.training
+        : activityByName(item.type)?.displayName(c) ?? readableType(item.type);
     final start = DateTime.fromMillisecondsSinceEpoch(item.startTs * 1000);
     final details = [
       if (item.detected) t.detected,

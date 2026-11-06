@@ -3,18 +3,21 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/day_label.dart' show todayLabel;
+import '../../data/db.dart' show LocalDb;
 import '../../l10n/app_localizations.dart';
 import '../../l10n/decimal_text.dart' show displayFixed;
+import '../../models/activity_suggestion.dart';
 import '../../models/metric.dart';
 import '../../state/app_state.dart';
 import '../../ui2/activity/catalogue.dart';
 import '../../ui2/activity/day_strain.dart' show DayStrainDetail;
+import '../../ui2/activity/picker.dart' show ActivityPicker;
 import '../../ui2/profile/profile.dart' show ProfileAvatar;
-import '../../ui2/screens/detected_activities.dart';
 import '../../ui2/screens/home_screen.dart';
-import '../../ui2/screens/log_workout.dart';
+import '../../ui2/screens/log_workout.dart' show LogWorkout, bumpInsights;
 import '../../ui2/screens/metric_detail.dart';
 import '../../ui2/screens/readiness_detail.dart';
 import '../../ui2/screens/sleep_detail.dart';
@@ -28,8 +31,11 @@ import 'activity_list.dart';
 import 'auto_confirm.dart';
 import 'dial_ring.dart';
 import 'freshness.dart';
+import 'minute_tick.dart';
 import 'pulse_display.dart';
 import 'visibility.dart';
+
+const _kSportPick = 'takt.sport.';
 
 class TaktTodayScreen extends StatefulWidget {
   const TaktTodayScreen({super.key});
@@ -44,15 +50,18 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   HomeData _data = const HomeData();
   Metric _hrv = Metric.empty;
   List<ActivityItem> _items = const [];
+  String? _day;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     taktTodayVisible.addListener(_onVisible);
-    unawaited(_load());
     unawaited(refreshTaktUpdate());
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncIfDue());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      reload();
+      _syncIfDue();
+    });
   }
 
   @override
@@ -64,7 +73,9 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _syncIfDue();
+    if (state != AppLifecycleState.resumed) return;
+    reload();
+    _syncIfDue();
   }
 
   void _onVisible() {
@@ -79,52 +90,75 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     }
   }
 
+  /// Nach Mitternacht darf nicht der gestrige Tag stehen bleiben.
+  void _onTick() {
+    if (_day != todayLabel()) reload();
+  }
+
   @override
   void reload() => unawaited(_load());
 
   Future<void> _load() async {
     final repo = repoOf(context);
     if (repo == null) return;
+    final token = beginRead(#taktToday);
     final l = AppLocalizations.of(context);
-    final left = await autoConfirmWorkouts(
-      pending: repo.pendingActivities,
-      confirm: (s) => repo.confirmActivity(s,
-          workoutType: activityByName(s.sport)?.typeKey ?? 'other'),
-    );
-    final data = await HomeData.load(repo, l);
-    final today = await repo.getToday();
-    final week = await repo.getWorkouts(range: 'week');
-    final raw = week['workouts'];
-    final workouts = [
-      for (final w in (raw is List ? raw : const []))
-        if (w is Map) w.cast<String, dynamic>(),
-    ];
-    final hrv = today['hrv'];
-    final rmssd = hrv is Map ? hrv['rmssd'] as num? : null;
-    if (!mounted) return;
-    setState(() {
-      _data = data;
-      _hrv = rmssd == null || hrv is! Map
-          ? Metric.empty
-          : Metric.parse({...hrv.cast<String, dynamic>(), 'value': rmssd, 'unit': 'ms'});
-      _items = todayActivities(workouts, DateTime.now(), pending: left);
-    });
+    final dataThrough = context.read<AppState>().lastRecordAt;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String sportOf(ActivitySuggestion s) =>
+          prefs.getString('$_kSportPick${s.id}') ??
+          activityByName(s.sport)?.typeKey ??
+          'other';
+      final now = DateTime.now();
+      final left = await autoConfirmWorkouts(
+        pending: repo.pendingActivities,
+        confirm: (s) => repo.confirmActivity(s, workoutType: sportOf(s)),
+        dataThrough: dataThrough,
+        now: now,
+      );
+      final data = await HomeData.load(repo, l);
+      final today = await repo.getToday();
+      final week = await repo.getWorkouts(range: 'week');
+      final raw = week['workouts'];
+      final workouts = [
+        for (final w in (raw is List ? raw : const []))
+          if (w is Map) w.cast<String, dynamic>(),
+      ];
+      final hrv = today['hrv'];
+      final rmssd = hrv is Map ? hrv['rmssd'] as num? : null;
+      if (!stillNewest(#taktToday, token)) return;
+      setState(() {
+        _day = todayLabel();
+        _data = data;
+        _hrv = rmssd == null || hrv is! Map
+            ? Metric.empty
+            : overnightMetric(
+                today, {...hrv.cast<String, dynamic>(), 'value': rmssd, 'unit': 'ms'}, l);
+        _items = todayActivities(workouts, now, pending: left, sportOf: sportOf);
+      });
+    } catch (_) {
+      // Eine fehlgeschlagene Lesung lässt den letzten Stand stehen, die nächste
+      // Revision versucht es wieder.
+    }
   }
 
-  Future<void> _push(Widget w) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => w));
-    if (mounted) await _load();
-  }
-
-  Future<void> _open(ActivityItem item) async {
+  Future<void> _pickSport(ActivityItem item) async {
     final s = item.suggestion;
-    if (s != null) return _push(DetectedActivitiesScreen(focusId: s.id));
-    await _push(LogWorkout(
-      sessionId: item.id,
-      start: DateTime.fromMillisecondsSinceEpoch(item.startTs * 1000),
-      end: item.endTs == null ? null : DateTime.fromMillisecondsSinceEpoch(item.endTs! * 1000),
-      activity: activityByName(item.type),
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ActivityPicker(onPick: (pc, activity) async {
+        if (s != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('$_kSportPick${s.id}', activity.typeKey);
+        } else {
+          await LocalDb.setSessionType(item.id, activity.typeKey);
+        }
+        if (!pc.mounted) return;
+        bumpInsights(pc);
+        Navigator.of(pc).pop();
+      }),
     ));
+    if (mounted) await _load();
   }
 
   Future<void> _discard(ActivityItem item) async {
@@ -134,9 +168,17 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     if (s != null) {
       await repo.discardActivity(s);
     } else {
-      await repo.deleteWorkout(item.id);
+      // Über AppState, damit Verlauf und Tageswerte mitziehen.
+      await context.read<AppState>().deleteWorkout(item.id);
     }
+    if (!mounted) return;
+    bumpInsights(context);
     await _load();
+  }
+
+  Future<void> _push(Widget w) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => w));
+    if (mounted) await _load();
   }
 
   Future<void> _refresh() async {
@@ -171,7 +213,8 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
           HomeRingKind.sleep => const SleepDetail(),
         }),
         onCard: (key) => _push(MetricDetail(key)),
-        onOpen: _open,
+        onOpen: _pickSport,
+        onTick: _onTick,
         onDiscard: _discard,
         onLog: () => _push(const LogWorkout()),
       ),
@@ -196,6 +239,7 @@ class TaktTodayView extends StatelessWidget {
     this.onOpen,
     this.onDiscard,
     this.onLog,
+    this.onTick,
     this.now,
   });
 
@@ -212,6 +256,7 @@ class TaktTodayView extends StatelessWidget {
   final void Function(ActivityItem)? onOpen;
   final void Function(ActivityItem)? onDiscard;
   final VoidCallback? onLog;
+  final VoidCallback? onTick;
   final DateTime? now;
 
   @override
@@ -231,17 +276,20 @@ class TaktTodayView extends StatelessWidget {
       for (final r in rings)
         if (r.why != null && r.why!.isNotEmpty) r.why!,
     ];
-    final status = syncing ? t.syncing : freshnessText(lastData, now ?? DateTime.now(), t);
     return ListView(padding: pad, children: [
       const SizedBox(height: S.x3),
       Row(children: [
         Text(kAppName.toLowerCase(), style: F.t2.copyWith(color: p.ink)),
         const SizedBox(width: S.x3),
         Expanded(
-          child: Text(status,
-              key: const ValueKey('takt-status'),
-              textAlign: TextAlign.end,
-              style: F.cap.copyWith(color: p.ink2)),
+          child: MinuteTick(
+            onTick: onTick,
+            builder: (_) => Text(
+                syncing ? t.syncing : freshnessText(lastData, now ?? DateTime.now(), t),
+                key: const ValueKey('takt-status'),
+                textAlign: TextAlign.end,
+                style: F.cap.copyWith(color: p.ink2)),
+          ),
         ),
         if (header != null) ...[const SizedBox(width: S.x3), header!],
       ]),

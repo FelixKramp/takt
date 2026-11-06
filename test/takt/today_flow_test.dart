@@ -30,22 +30,55 @@ void main() {
     expect(SyncOnOpenGate().shouldSync(now, paired: false), isFalse);
   });
 
-  test('A8: Erkannte Workouts werden bestätigt, Nickerchen nicht', () async {
-    final done = <String>[];
-    final left = await autoConfirmWorkouts(
-      pending: () async => [s('w', ActivityKind.workout), s('n', ActivityKind.nap)],
-      confirm: (x) async => done.add(x.id),
-    );
-    expect(done, ['w']);
-    expect(left, isEmpty);
-  });
+  group('Automatisches Speichern', () {
+    final day = DateTime(2026, 11, 6, 20);
+    final start = DateTime(2026, 11, 6, 18).millisecondsSinceEpoch ~/ 1000;
+    ActivitySuggestion w(int endTs, {int? from}) => ActivitySuggestion(
+        id: 'w', kind: ActivityKind.workout, startTs: from ?? start, endTs: endTs, revision: 1);
+    final end = start + 1800;
+    DateTime at(int sec) => DateTime.fromMillisecondsSinceEpoch(sec * 1000);
 
-  test('A8: Scheitert das Bestätigen, bleibt das Workout sichtbar', () async {
-    final left = await autoConfirmWorkouts(
-      pending: () async => [s('w', ActivityKind.workout)],
-      confirm: (x) async => throw const ActivityReviewException('Überlappung'),
-    );
-    expect(left.single.id, 'w');
+    test('A8: Laufendes Training wird nicht gespeichert, bleibt aber sichtbar', () async {
+      final done = <String>[];
+      final left = await autoConfirmWorkouts(
+        pending: () async => [w(end)],
+        confirm: (x) async => done.add(x.id),
+        dataThrough: at(end + 600),
+        now: day,
+      );
+      expect(done, isEmpty);
+      expect(left.single.id, 'w');
+    });
+    test('A8: Abgeschlossenes Training wird gespeichert, Nickerchen nicht', () async {
+      final done = <String>[];
+      final left = await autoConfirmWorkouts(
+        pending: () async => [w(end), s('n', ActivityKind.nap)],
+        confirm: (x) async => done.add(x.id),
+        dataThrough: at(end + 1800),
+        now: day,
+      );
+      expect(done, ['w']);
+      expect(left, isEmpty);
+    });
+    test('A8: Scheitert das Speichern, bleibt das Workout sichtbar', () async {
+      final left = await autoConfirmWorkouts(
+        pending: () async => [w(end)],
+        confirm: (x) async => throw const ActivityReviewException('Überlappung'),
+        dataThrough: at(end + 1800),
+        now: day,
+      );
+      expect(left.single.id, 'w');
+    });
+    test('A17: Ältere Vorschläge aus einem Import bleiben unberührt', () async {
+      final done = <String>[];
+      await autoConfirmWorkouts(
+        pending: () async => [w(start - 86400 + 1800, from: start - 86400)],
+        confirm: (x) async => done.add(x.id),
+        dataThrough: at(end + 1800),
+        now: day,
+      );
+      expect(done, isEmpty);
+    });
   });
 
   group('Update-Prüfung', () {

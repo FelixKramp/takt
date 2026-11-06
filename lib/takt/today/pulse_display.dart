@@ -110,10 +110,16 @@ class PulseView extends StatelessWidget {
   final List<int> trace;
   final VoidCallback? onPair;
 
+  bool get _canPair =>
+      state.kind == PulseKind.never &&
+      state.reason == PulseReason.notPaired &&
+      onPair != null;
+
   String _reason(TaktText t) => switch (state.reason) {
         PulseReason.notPaired => t.notPaired,
         PulseReason.notConnected => t.notConnected,
-        PulseReason.notWorn => t.notWorn,
+        PulseReason.notWorn =>
+          state.kind == PulseKind.never ? t.waitingForPulse : t.notWorn,
         null => '',
       };
 
@@ -140,7 +146,7 @@ class PulseView extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             for (final line in lines) Text(line, style: F.cap.copyWith(color: ink)),
-            if (state.kind == PulseKind.never && onPair != null)
+            if (_canPair)
               Text(t.pairBand, style: F.cap.copyWith(color: Pult.lcdInk)),
           ]),
         ),
@@ -165,7 +171,7 @@ class PulseView extends StatelessWidget {
       ),
       child: body,
     );
-    return state.kind == PulseKind.never && onPair != null
+    return _canPair
         ? Pressable(onTap: onPair, child: box)
         : box;
   }

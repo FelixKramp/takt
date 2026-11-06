@@ -28,6 +28,8 @@ class TaktAboutGroup extends StatelessWidget {
             sub: kUpstreamUrl, onTap: () => _open(kUpstreamUrl)),
         SetRow(LucideIcons.code, C.n500, t.sourceCode,
             sub: t.licenseLine, onTap: () => _open(kSourceUrl)),
+        SetRow(LucideIcons.scale, C.n500, t.legal,
+            chevron: false, onTap: () => _open('$kSourceUrl/blob/main/LICENSE')),
       ]),
     );
   }

@@ -1,3 +1,9 @@
+# Takt
+
+Takt ist eine geänderte Fassung von OpenStrap Edge. Änderungen von Felix Kramp seit dem 6. November 2026, Details in der Git-Historie. Takt ist nicht mit OpenStrap verbunden.
+
+Doto: SIL Open Font License, siehe `assets/fonts/Doto/OFL.txt`.
+
 # Notice
 
 Edge is an independent, open-source project (AGPL-3.0, see `LICENSE`; versions up to

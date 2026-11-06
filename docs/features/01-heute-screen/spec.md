@@ -44,11 +44,13 @@ Algorithmen, aber ein neuer Heute-Screen, eigener Name und eigenes Logo.
 ### Aktivitäten
 - **A8** – Erkannte Workouts sofort sichtbar
   Ausgangslage: Die App hat heute ein Workout erkannt · Handlung: Heute-Tab ansehen · Ergebnis: Es
-  steht ohne Bestätigung in der Liste, mit Art, Startzeit, Dauer, Durchschnittspuls, Strain und der
-  Markierung „erkannt".
+  steht ohne Bestätigung in der Liste, mit Startzeit, Dauer, Durchschnittspuls und der Markierung
+  „erkannt". Ohne gewählte Sportart heißt es „Training". Reichen die Daten 30 Minuten über sein Ende
+  hinaus, wird es gespeichert und zeigt auch seinen Strain. Ein laufendes Training wird dabei nie
+  abgeschnitten.
 - **A9** – Erkanntes ändern oder löschen
-  Ausgangslage: Ein erkanntes Workout steht in der Liste · Handlung: Antippen, Art ändern oder
-  verwerfen · Ergebnis: Die Änderung gilt sofort, ein verworfenes Workout verschwindet und kommt
+  Ausgangslage: Ein erkanntes Workout steht in der Liste · Handlung: Antippen und Sportart wählen,
+  auch Handball, oder verwerfen · Ergebnis: Die Änderung gilt sofort, ein verworfenes Workout verschwindet und kommt
   nicht wieder.
 - **A10** – Alle Aktivitäten in einer Liste
   Ausgangslage: Es gibt erkannte, selbst gestartete und nachgetragene Workouts · Handlung:
@@ -135,4 +137,5 @@ Algorithmen, aber ein neuer Heute-Screen, eigener Name und eigenes Logo.
 
 ## Änderungen
 <!-- Nur über den Änderungsweg. Format: Datum · welche Kriterien · warum -->
+2026-11-06 · A8, A9 · Prüfung: sofortiges Speichern schnitt laufende Trainings ab, und OpenStrap erkennt keine Sportart. Felix hat beides freigegeben, Handball kommt in den Katalog.
 2026-11-06 · A25 neu · Der Update-Hinweis von OpenStrap würde Edge anbieten, Felix will trotzdem von neuen Takt-Versionen erfahren.
