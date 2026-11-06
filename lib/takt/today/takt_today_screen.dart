@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -36,7 +37,6 @@ import 'pulse_display.dart';
 import 'visibility.dart';
 
 const _kSportPick = 'takt.sport.';
-const _kComputedAtToMs = 1; // `day_result.computed_at`
 
 class TaktTodayScreen extends StatefulWidget {
   const TaktTodayScreen({super.key});
@@ -52,12 +52,15 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   Metric _hrv = Metric.empty;
   List<ActivityItem> _items = const [];
   String? _day;
+  bool _wasBusy = false;
+  final _scroll = ScrollController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     taktTodayVisible.addListener(_onVisible);
+    taktTodayReturned.addListener(_toTop);
     unawaited(refreshTaktUpdate());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       reload();
@@ -69,6 +72,8 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     taktTodayVisible.removeListener(_onVisible);
+    taktTodayReturned.removeListener(_toTop);
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -78,6 +83,10 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     reload();
     _syncIfDue();
     unawaited(refreshTaktUpdate());
+  }
+
+  void _toTop() {
+    if (_scroll.hasClients) _scroll.jumpTo(0);
   }
 
   void _onVisible() {
@@ -119,7 +128,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         pending: repo.pendingActivities,
         confirm: (s) => repo.confirmActivity(s, workoutType: sportOf(s)),
         dataThrough: dataThrough,
-        derivedAt: await _derivedAt(),
+        derivedAt: _derivedAt,
         busy: busy,
         now: now,
       );
@@ -149,11 +158,14 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     }
   }
 
-  /// Wann die Berechnung für heute zuletzt lief.
-  Future<DateTime?> _derivedAt() async {
-    final row = await LocalDb.dayResult(todayLabel());
+  /// Wann der Tag, an dem das Training endete, zuletzt vollständig gerechnet
+  /// wurde. Teilergebnisse zählen nicht.
+  Future<DateTime?> _derivedAt(ActivitySuggestion s) async {
+    final end = DateTime.fromMillisecondsSinceEpoch(s.endTs * 1000);
+    final row = await LocalDb.dayResult(DateFormat('yyyy-MM-dd').format(end));
     final at = row?['computed_at'];
-    return at is num ? DateTime.fromMillisecondsSinceEpoch(at.toInt() * _kComputedAtToMs) : null;
+    if (at is! num || row?['partial'] == 1 || row?['skipped'] == 1) return null;
+    return DateTime.fromMillisecondsSinceEpoch(at.toInt());
   }
 
   Future<void> _pickSport(ActivityItem item) async {
@@ -223,9 +235,20 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   @override
   Widget build(BuildContext c) {
     final syncing = c.select<AppState, bool>((a) => a.syncingNow);
+    final busy = c.select<AppState, bool>(
+        (a) => a.syncingNow || a.deriving || a.derivePending);
+    // Am Ende einer Berechnung neu lesen: Erst jetzt darf ein abgeschlossenes
+    // Training gespeichert werden, und niemand sonst stößt das an.
+    if (_wasBusy && !busy) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) reload();
+      });
+    }
+    _wasBusy = busy;
     return RefreshIndicator(
       onRefresh: _refresh,
       child: TaktTodayView(
+        scroll: _scroll,
         data: _data,
         hrv: _hrv,
         items: _items,
@@ -268,6 +291,7 @@ class TaktTodayView extends StatelessWidget {
     this.onLog,
     this.onTick,
     this.now,
+    this.scroll,
   });
 
   final HomeData data;
@@ -285,6 +309,7 @@ class TaktTodayView extends StatelessWidget {
   final VoidCallback? onLog;
   final VoidCallback? onTick;
   final DateTime? now;
+  final ScrollController? scroll;
 
   @override
   Widget build(BuildContext c) {
@@ -303,7 +328,7 @@ class TaktTodayView extends StatelessWidget {
       for (final r in rings)
         if (r.why != null && r.why!.isNotEmpty) r.why!,
     ];
-    return ListView(padding: pad, children: [
+    return ListView(controller: scroll, padding: pad, children: [
       const SizedBox(height: S.x3),
       Row(children: [
         Text(kAppName.toLowerCase(), style: F.t2.copyWith(color: p.ink)),

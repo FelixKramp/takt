@@ -48,10 +48,10 @@ Future<void> refreshTaktUpdate({DateTime? now}) async {
     final ms = prefs.getInt(_kCheckedAt);
     final last = ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
     if (shouldCheckUpdate(last, clock)) {
+      await prefs.setInt(_kCheckedAt, clock.millisecondsSinceEpoch);
       final res = await http
           .get(Uri.parse(kReleasesApi), headers: {'Accept': 'application/vnd.github+json'})
           .timeout(const Duration(seconds: 10));
-      await prefs.setInt(_kCheckedAt, clock.millisecondsSinceEpoch);
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         await prefs.setString(_kLatestTag, '${body['tag_name']}');

@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 /// also nicht selbst, wann sie verdeckt sind.
 final ValueNotifier<bool> taktTodayVisible = ValueNotifier(true);
 
+/// Zählt hoch, wenn die App nach einer Pause wieder auf Heute startet.
+final ValueNotifier<int> taktTodayReturned = ValueNotifier(0);
+
 const kBackToTodayAfter = Duration(minutes: 5);
 
 /// Android hält die App oft am Leben, „Öffnen" ist dann eine Rückkehr aus dem

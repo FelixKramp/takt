@@ -25,6 +25,13 @@ class App extends AppState {
   final DateTime? through;
   int syncs = 0;
   int retained = 0;
+  bool computing = false;
+  @override
+  bool get deriving => computing;
+  void finish() {
+    computing = false;
+    notifyListeners();
+  }
   @override
   DateTime? get lastRecordAt => through;
   @override
@@ -144,6 +151,21 @@ void main() {
       expect((w['workouts'] as List).single['id'], startsWith('suggestion:'));
     });
     expect(find.textContaining('erkannt,'), findsOneWidget);
+    await close(t);
+  });
+
+  testWidgets('A8: Am Ende der Berechnung wird ohne Zutun gespeichert', (t) async {
+    await seed(t);
+    final app = App(at(start + 1800 + 1900))..computing = true;
+    app.repo = repo;
+    app.paired = PairedDevice('AA:BB:CC:DD:EE:FF', 'SER1');
+    addTearDown(app.dispose);
+    await t.pumpWidget(wrap(app, const Scaffold(body: TaktTodayScreen())));
+    await settle(t);
+    await t.runAsync(() async => expect((await repo.pendingActivities()).length, 1));
+    app.finish();
+    await settle(t);
+    await t.runAsync(() async => expect(await repo.pendingActivities(), isEmpty));
     await close(t);
   });
 

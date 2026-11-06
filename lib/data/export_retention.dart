@@ -137,7 +137,7 @@ Future<void> purgeSharedHealthCopies([Directory? tmpRoot]) async {
   } catch (_) {
     return;
   }
-  for (final name in const ['db_share', 'openstrap_csv']) {
+  for (final name in const ['db_share', 'takt_csv', 'openstrap_csv']) {
     try {
       final d = Directory(p.join(tmpRoot.path, name));
       if (d.existsSync()) await d.delete(recursive: true);

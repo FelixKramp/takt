@@ -527,12 +527,13 @@ class _ShellState extends State<_Shell> with WidgetsBindingObserver {
       final back = shouldReturnToToday(
         leftAt: _leftAt,
         now: DateTime.now(),
-        workoutLive: app?.activeWorkout != null,
+        workoutLive: app?.activeWorkout != null || (app?.breathingActive ?? false),
       );
       _leftAt = null;
       if (back && mounted) {
         Navigator.of(context).popUntil((r) => r.isFirst);
         _go(ShellDomain.today);
+        taktTodayReturned.value++;
       }
     }
   }
@@ -599,6 +600,8 @@ class _ShellState extends State<_Shell> with WidgetsBindingObserver {
     final tab = app.navRequest.value;
     app.screenRequest.value = null;
     app.navRequest.value = -1;
+    // TAKT: Ein Tipp auf eine Benachrichtigung hat Vorrang vor der Rückkehr.
+    if ((s != null && s.isNotEmpty) || tab >= 0) _leftAt = null;
     // A screen route carries its own domain; the tab index alongside it is
     // the base the payload was built with, not a second destination.
     if (s != null && s.isNotEmpty) {

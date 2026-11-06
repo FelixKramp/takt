@@ -14,15 +14,23 @@ const kAutoConfirmWindow = Duration(hours: 36);
 /// die Berechnung hat diese Daten schon gesehen. Ohne die zweite Bedingung
 /// würde ein Sync nach einer Datenlücke das Training bei einer alten, kurzen
 /// Erkennung einfrieren.
+///
+/// [sameDay] sagt, ob [derivedAt] zum laufenden Tag gehört. Der wird immer neu
+/// gerechnet und muss bis zum Datenstand reichen. Ein vergangener Tag bleibt
+/// stehen, seine Rechnung muss nur klar nach dem Trainingsende liegen.
 bool isSettled(
   ActivitySuggestion s, {
   required DateTime? dataThrough,
   required DateTime? derivedAt,
+  required bool sameDay,
   required bool busy,
 }) {
   if (busy || dataThrough == null || derivedAt == null) return false;
-  if (derivedAt.isBefore(dataThrough)) return false;
-  return dataThrough.millisecondsSinceEpoch ~/ 1000 - s.endTs >= kSettleSeconds;
+  final settledAt = s.endTs + kSettleSeconds;
+  if (dataThrough.millisecondsSinceEpoch ~/ 1000 < settledAt) return false;
+  return sameDay
+      ? !derivedAt.isBefore(dataThrough)
+      : derivedAt.millisecondsSinceEpoch ~/ 1000 >= settledAt;
 }
 
 /// Speichert abgeschlossene Workouts und gibt zurück, was offen bleibt.
@@ -31,7 +39,7 @@ Future<List<ActivitySuggestion>> autoConfirmWorkouts({
   required Future<List<ActivitySuggestion>> Function() pending,
   required Future<void> Function(ActivitySuggestion) confirm,
   required DateTime? dataThrough,
-  required DateTime? derivedAt,
+  required Future<DateTime?> Function(ActivitySuggestion) derivedAt,
   required bool busy,
   required DateTime now,
 }) async {
@@ -39,7 +47,14 @@ Future<List<ActivitySuggestion>> autoConfirmWorkouts({
   final left = <ActivitySuggestion>[];
   for (final s in await pending()) {
     if (s.kind != ActivityKind.workout || s.startTs < oldest) continue;
-    if (!isSettled(s, dataThrough: dataThrough, derivedAt: derivedAt, busy: busy)) {
+    final end = DateTime.fromMillisecondsSinceEpoch(s.endTs * 1000);
+    final sameDay =
+        end.year == now.year && end.month == now.month && end.day == now.day;
+    if (!isSettled(s,
+        dataThrough: dataThrough,
+        derivedAt: await derivedAt(s),
+        sameDay: sameDay,
+        busy: busy)) {
       left.add(s);
       continue;
     }

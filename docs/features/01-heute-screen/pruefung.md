@@ -1,148 +1,186 @@
 ---
 feature: 01-heute-screen
 geprueft: 2026-11-06
-stand: 0f2b5517
+stand: 4d51296f
 ---
-# Zweite Prüfung: Heute-Screen
+# Dritte Prüfung: Heute-Screen
 
-**Ergebnis: nicht freigabefähig.** 5 von 25 Kriterien sind nicht bestanden (A1, A8, A9, A15, A25), 4 sind nur am Gerät prüfbar (A6, A12, A14, A17), 16 sind bestanden. Die zwei schwersten Fehler: Ein laufendes Training kann weiterhin dauerhaft abgeschnitten werden (N1), und die App öffnet im Normalfall nicht auf Heute, weil die Engine auf Android weiterlebt (N2).
+**Ergebnis: nicht freigabefähig, aber kein Blocker für den Gerätetest.** 5 von 25 Kriterien sind nicht bestanden (A1, A8, A9, A15, A25), 4 sind nur am Gerät prüfbar (A6, A12, A14, A17), 16 sind bestanden. Die Zahl ist dieselbe wie in der zweiten Prüfung, die Schwere nicht: Die Reproduktion von N1 (Backlog nach Lücke, Abschneiden bei 29 Minuten) ist behoben, N2 im Hauptweg ebenfalls.
 
-Die Befunde F3 und F5 der ersten Prüfung sind behoben, S1 ebenfalls im Code. F1 und F4 sind nur teilweise behoben. F2 ist im Hauptweg behoben, die neue Sportwahl hat aber eigene Fehler mitgebracht.
+Der neue schwerste Fund: Aus einer laufenden Berechnung heraus wird nie gespeichert, und nach ihrem Ende lädt niemand neu (D1). Bei offener App bleibt das Training deshalb ohne Strain stehen, obwohl alle Bedingungen erfüllt sind. Das verfälscht den Gerätetest von A8. Zweiter neuer Fund: Nach mindestens 5 Minuten im Hintergrund überschreibt die Rückkehr auf Heute das Ziel eines Benachrichtigungs-Tipps (D2).
 
 ## Grundlage
 
-- `flutter test test/takt --timeout 90s`: 43 Tests bestanden. `flutter analyze lib/takt lib/app.dart`: keine Funde. Die volle Suite und der APK-Build liefen parallel und sind nicht Teil dieser Prüfung.
-- Eigene Prüftests liegen außerhalb des Repos in einer Kopie ohne `.env*`, `android/key.properties` und `*.jks`: `/private/tmp/claude-501/-Users-felix-Documents-Obsidian-Felix/80747e21-fb4f-4587-8a43-73278d290795/scratchpad/p2/takt/test/p2/p2_test.dart`. Sie laufen gegen die echte SQLite-Datenbank (ffi) und `TaktTodayScreen`. Die Prüftests der ersten Prüfung liefen dort ebenfalls erneut. Zwei davon scheitern an der Testumgebung beziehungsweise am geänderten Ablauf, nicht am Code: `LogWorkout` beim Antippen ist bewusst dem Picker gewichen, und ein Test baut ohne `ThemeController`.
-- `.env`, `.env.*`, `android/key.properties` und `*.jks` habe ich nicht gelesen, auch nicht indirekt. Das APK habe ich nicht untersucht, weil die Werte aus `.env` darin stehen und der Build parallel lief. Deshalb bleibt ein Punkt offen, siehe Sicherheit.
-- Ein Handy und ein Band gab es nicht. A1 und alle Aussagen zur Lebensdauer der Engine stammen aus dem Code.
-- Der fehlende Push ist bekannt und kein Befund.
+- `flutter test test/takt --timeout 90s`: 49 Tests bestanden. `flutter analyze lib/takt lib/app.dart lib/data/export_retention.dart`: keine Funde. `test/export_retention_test.dart`, `test/auto_backup_test.dart`, `test/issue_report_test.dart`: bestanden. Die Gesamtsuite lief nicht, wie beauftragt.
+- Während der Prüfung kam Commit `4d51296f` dazu (Aufräumliste `_healthCopyName` kennt die Takt-Namen). Geprüft ist dieser Stand. Die Änderung betrifft nur `export_retention.dart` und den zugehörigen Test, beide liefen danach erneut.
+- Eigene Prüftests liegen außerhalb des Repos in einer Kopie ohne `.env*`, `android/key.properties` und `*.jks`: `/private/tmp/claude-501/-Users-felix-Documents-Obsidian-Felix/80747e21-fb4f-4587-8a43-73278d290795/scratchpad/p3/takt/test/p3/p3_test.dart` (R1 bis R12, echte SQLite-Datenbank und echter `TaktTodayScreen`) und `shell_test.dart` daneben (S1 bis S6, echter `_Shell`).
+- Für die S-Tests ist die Kopie an zwei Stellen geändert: `_Shell` ist über `debugShell()` erreichbar, und `kBackToTodayAfter` steht auf 1 Sekunde. Im Repo habe ich nur diese Datei geändert.
+- S3 bis S6 lieferten ihre Ausgabe, hängen danach aber beim Abbau des Tests. Die Ergebnisse stehen vor dem Hänger und sind davon nicht berührt.
+- `.env`, `.env.*`, `android/key.properties` und `*.jks` habe ich nicht gelesen, auch nicht indirekt. `plan.md` habe ich nicht gelesen.
 
-## Stand der Befunde aus der ersten Prüfung
+## Stand der Befunde aus der zweiten Prüfung
 
 | Befund | Stand | Nachweis |
 |---|---|---|
-| A1 immer auf Heute | ❌ nur beim Kaltstart | N2 |
-| A2 Assertion im Debug-Build | ✅ behoben | Erster Load läuft post-frame. Alter Prüftest: `ERSTER LOAD exception=null`. Token und `try/catch` sind drin. |
-| A8 Abschneiden | ❌ nur für den Fall ohne Datenlücke behoben | N1 |
-| A8 offen sichtbar | ✅ behoben | Test `A8: Laufendes Training steht offen …`, Prüftest N1 |
-| A8 Name „Training" | ✅ behoben | `activity_list.dart:93`, gilt für den Heute-Tab |
-| A8 Speichern nach 30 Minuten | ❌ für den Tag behoben, nicht über Mitternacht | Test `A8: Abgeschlossenes Training wird gespeichert`, N3 |
-| A9 Sportwahl per Tipp, Handball | ✅ Hauptweg behoben | Gespeichert: Test im Repo. Offen: Prüftest `OFFEN NAME handball=1 sessions=0`, danach `GESPEICHERT [suggestion:d:… handball]`. |
-| A9 Verwerfen zieht andere Tabs nach | ❌ nur die Listen | N4 |
-| A13 Frische bleibt nicht stehen | ✅ behoben | Prüftest ohne Einfluss von außen: `TICK vorher=gerade eben`, `TICK nachher=vor 1 Min` |
-| A13 Rückkehr lädt neu | ✅ behoben | Prüftest: `VOR RESUME sichtbar=1`, `NACH RESUME sichtbar=2` |
-| A13 Tageswechsel | ✅ nur gelesen | `_onTick` vergleicht `_day` mit `todayLabel()`. Liegt der Kopf außerhalb des ListView-Puffers, tickt `MinuteTick` nicht. Dann greift das Neuladen beim Zurückkehren. |
-| A15 Reste und Bitten | ❌ Rest bleibt | Community-Gruppe und Nudges sind aus. Es bleiben die Punkte unter N6. |
-| A16 Herkunft, Lizenz, Copyright, Haftung | ✅ behoben | `about.dart:27-32`, `takt_text.dart:51-53`, bei 200 % auf 360 px ohne Fehler gerendert |
-| A16 Änderungshinweis | ✅ behoben | `NOTICE.md`, mit Datum und Urheber |
-| Kein Firebase | ✅ im Code | Siehe Sicherheit |
-| Keine Abflüsse an OpenStrap | ✅ im Code | Siehe Sicherheit |
-| Keine Platzhalter-URLs | ⚪ | Im Code keine. `.env` per Auftrag nicht gelesen. |
-| Import bestätigt keine alten Vorschläge | ✅ behoben | Vorschlag von gestern: `pending=1`, `sessions=0`. Der Preis dafür ist N3. |
+| N1 Abschneiden nach Datenlücke | ✅ Reproduktion behoben | R1: `NACH PULL sessions=[] pending=1`, nach der Berechnung mit 5 Minuten Nachlauf weiter offen, später `other 90min`. Restlücken: D3 bis D5. |
+| N2 App öffnet nicht auf Heute | ✅ Hauptweg behoben | S3: `nach resumed heuteVorn=true`. Neue Nebenwirkungen: D2, D6. |
+| N3 Abendtraining über Mitternacht | ✅ behoben | Grenze ist jetzt 36 Stunden. Restlücke: D4. Die empfohlene Kopplung an den Import fehlt, siehe D10. |
+| N4.1 Doppeltipp im Picker | ✅ behoben | R12: `heute=1 picker=0`, `handball 29min`. Doppeltipp auf die Zeile öffnet nur einen Picker (R6). |
+| N4.2 Verwerfen scheitert still | ⚠️ teilweise | R8: Die Liste lädt neu, der zweite Tipp wirkt. Der erste Tipp bewirkt weiter nichts, ein Hinweis fehlt. |
+| N4.3 Tages-Strain nach Verwerfen | ❌ offen | Unverändert, D7. |
+| N4.4 Health Connect nach Verwerfen | ❌ offen | Unverändert, D7. |
+| N4.5 Wahl geht beim Speichern verloren | ⚠️ teilweise | Das Fenster ist kleiner, aber nicht zu. R9, D8. |
+| N5 Update-Hinweis im Dauerbetrieb | ✅ behoben | `refreshTaktUpdate` läuft auch bei `resumed` (`takt_today_screen.dart:80`). Neue Folge: D9. |
+| N6 OpenStrap sichtbar | ⚠️ teilweise | Coach, wger-Link, Fehlermeldung und `openstrap_export_*` sind umgestellt. Offen: D11. |
+| N7 CI-Build | ✅ behoben | `build.yml` ist entfernt. |
+| N8 Lokale Berichte | ✅ erreichbar | Der Eintrag ist zurück. Rest: D12. |
+| Risiko `taktTodayVisible` im Build | ✅ erledigt | Wird jetzt in `_go`, `onSelect` und `initState` gesetzt, nicht mehr im `build`. |
 
-## Neue und offene Funde, nach Schwere
+## Prüfung der neuen Bedingung in `isSettled`
 
-### N1 (hoch): Ein laufendes Training wird weiter abgeschnitten (A8)
-`takt_today_screen.dart:106` nimmt `AppState.lastRecordAt` als Maß für „die Daten reichen 30 Minuten über das Ende hinaus". `lastRecordAt` läuft aber mit dem Sync, das Ende der Erkennung erst mit der Ableitung. `isSettled` (`auto_confirm.dart:11`) vergleicht also frische Daten mit einer alten Erkennung.
+| Frage | Ergebnis |
+|---|---|
+| Schreitet `computed_at` für heute fort? | Ja. `_dayInputFingerprint` gibt für heute `null` zurück (`derivation_engine.dart:3343`), heute wird also nie als unverändert übersprungen. Ein leichter Lauf nimmt heute zuerst (`selectLightDeriveDays`, Zeile 2496). |
+| Wird `computed_at` in der richtigen Einheit gelesen? | Ja, Millisekunden an allen Schreibstellen. `_kComputedAtToMs = 1` ist nur eine überflüssige Konstante. |
+| Können die zwei Uhren dauerhaftes Warten erzeugen? | Nein. `lastRecordAt` ist Bandzeit, `computed_at` Handyzeit, aber das Band wird beim Verbinden ab 2 Sekunden Abweichung gestellt (`ble_engine.dart:3706-3734`), und die Rechnung läuft mindestens 2 bis 8 Sekunden nach dem Sync. |
+| Bleibt ein Workout dauerhaft ungespeichert? | Nicht dauerhaft, aber ohne Eingriff unbegrenzt lange: D1. Echt dauerhaft nur, wenn binnen 36 Stunden ab Start nie genug Daten kommen, dann liegt es unter „Mehr zu heute". |
+| Fenster zwischen Sync-Ende und Einreihen | Für die Reproduktion der zweiten Prüfung harmlos, weil `computed_at` dort älter ist als der Datenstand und die Bedingung auch ohne `busy` greift (R1). `busy` allein schützt dieses Fenster nicht: `syncNow` reiht unawaited ein, `_refresh` liest danach sofort (`sync_controller.dart:1020`, `takt_today_screen.dart:220`). Offen bleibt der Fall D3. |
 
-Der sichere Weg dorthin ist Herunterziehen: `_refresh` wartet auf `syncNow` und ruft sofort `_load` (`takt_today_screen.dart:184-194`). `syncNow` fordert die Ableitung nur an und wartet nicht auf sie (`sync_controller.dart:1006`, `markStoredData` und `requestHeavy` sind `unawaited`). Dasselbe Fenster gibt es bei `resumed` während eines laufenden Abrufs und beim Zurückkehren aus einem Detail-Screen.
+## Neue Funde, nach Schwere
 
-Das ist Felix' Normalfall: Das Handy liegt beim Handball in der Tasche oder der Kabine, die App hat nach 12 bis 30 Minuten eine Erkennung, dann fehlt die Verbindung, und nach dem Training landet der ganze Rest auf einmal. Reproduktion mit der echten Datenbank: 29 Minuten erkannt, Training bis Minute 90, Rückstand bis Minute 95, dann Herunterziehen, danach die Ableitung mit dem ganzen Training:
+### D1 (mittel, verfälscht den Gerätetest): Das Ende der Berechnung löst kein Speichern aus (A8)
+`bumpInsights` läuft in `afterDrain` (`derive_coordinator.dart:135`), also solange `DeriveScheduler._running` wahr ist. `_load` liest genau dann `busy = true` (`takt_today_screen.dart:110`) und speichert nichts. Nach dem Ende ruft der Scheduler nur `onChanged` auf (`derive_scheduler.dart:255-259`), das ist `notifyListeners`, kein Revisionswechsel. Damit kann eine Berechnung das Speichern nie auslösen. Gespeichert wird nur bei Rückkehr aus dem Hintergrund, Herunterziehen, Rückkehr aus einem Detail-Screen, Sportwahl, Verwerfen oder Tageswechsel. Ein Tabwechsel lädt ebenfalls nicht neu.
+
 ```
-VOR SYNC offen: 1
-NACH PULL sessions: [suggestion:d:1793919900 29 min]
-PENDING NACH ABLEITUNG: 0
-NACH ABLEITUNG sessions: [suggestion:d:1793919900 29 min]
+R2 WAEHREND ABLEITUNG sessions=0
+R2 NACH ENDE DER ABLEITUNG sessions=0 pending=1
+R2 NACH RUECKKEHR sessions=[suggestion:d:1793919900 other 90min]
 ```
-Die 61 fehlenden Minuten kommen nicht zurück, weil die Entscheidung gilt (`activity_store.dart:190-192`). Der Bruchteil wird außerdem nach Health Connect exportiert, wenn der Export an ist (`local_repository_impl.dart:91`). Die Spec sagt „nie abgeschnitten". Der Maßstab muss die letzte abgeschlossene Ableitung sein, nicht der Datenstand. Die Takt-Tests sehen das nicht, weil sie `lastRecordAt` und Erkennung immer passend zueinander setzen.
+So sieht es für Felix aus: Er öffnet die App nach dem Training, der Sync läuft, die Berechnung ist fertig, das Training bleibt „erkannt" ohne Strain. Einmal Herunterziehen reicht meist auch nicht, weil dann wieder `busy` gilt. Erst das zweite Herunterziehen oder App zu und wieder auf speichert. Daten gehen nicht verloren. Die Takt-Tests sehen das nicht, weil ihr `AppState` nie `deriving` meldet. Korrektur: beim Wechsel von `busy` auf frei einmal neu laden.
 
-### N2 (hoch): Die App öffnet im Normalfall nicht auf Heute (A1, A6, A12)
-`app.dart:520` setzt den Tab nur beim Erzeugen von `_ShellState`. Auf Android überlebt dieser State aber das Schließen: `MainActivity.kt:33` hält die Engine mit `shouldDestroyEngineWithHost() = false`, der Kommentar in `MainActivity.kt:12-14` nennt ausdrücklich das Wegwischen aus den letzten Apps, und der Vordergrunddienst hält den Prozess am Leben. `_ShellState` hat keinen Lifecycle-Beobachter. `didChangeAppLifecycleState` gibt es nur in `_OpenStrapAppState` (`app.dart:93`), und dort wird kein Tab gesetzt.
+### D2 (mittel): Die Rückkehr auf Heute überschreibt Benachrichtigungen (A1)
+Android liefert den Tipp vor `onResume`: `onNewIntent` schickt `didReceiveNotificationResponse` (`FlutterLocalNotificationsPlugin.java:1907-1922`), `onResume` schickt danach `appIsResumed` (`FlutterActivityAndFragmentDelegate.java:570-575`). `_consume` öffnet also erst das Ziel, dann schließt `app.dart:534-535` es wieder.
 
-Reproduktion aus dem Code, am Gerät in 20 Sekunden zu bestätigen: Gesundheit-Tab wählen, Home-Taste oder Wegwischen, App öffnen. Es erscheint Gesundheit, und der Puls läuft nicht, weil `taktTodayVisible` falsch bleibt. Ein echter Kaltstart kommt mit gekoppeltem Band fast nur nach einem Neustart oder Absturz vor. Der Fix berührt eine Entscheidung: Soll auch eine kurze Rückkehr nach zehn Sekunden auf Heute springen, oder erst nach einer Mindestzeit im Hintergrund?
-
-### N3 (mittel): Abendtraining wird nicht gespeichert, wenn die Daten erst nach Mitternacht reichen (A8)
-`auto_confirm.dart:26` überspringt alles, was vor Mitternacht begann, und gibt es auch nicht mehr als offen zurück. Damit ist der Import geschützt, aber auch ein Training von gestern Abend. Reproduktion, Training 21 bis 22 Uhr gestern, Daten bis jetzt:
 ```
-GESTERN pending=1
-GESTERN sessions=0
+S1 nach resumed heuteVorn=true detected=0        (Tipp vor resumed, Ziel ist weg)
+S2 heuteVorn=true detected=1                     (Tipp nach resumed, Gegenprobe)
+S3 nach Tipp heuteVorn=false
+S3 nach resumed heuteVorn=true                   (Tab-Ziel überschrieben)
 ```
-Es wird nicht gespeichert, hat keinen Strain und steht nicht in der Liste von Heute. Es liegt nur noch unter „Mehr zu heute" zur Handbestätigung. Das trifft jedes Training, nach dessen Ende bis Mitternacht kein `_load` mit genug Daten lief, etwa weil das Band erst morgens wieder Kontakt hat oder ein Training kurz vor Mitternacht beginnt. Die Grenze trennt Import und Alltag am falschen Merkmal. Der Import ist an seinem eigenen Zeitpunkt erkennbar, `suppressImportedAlerts` macht das bereits für Benachrichtigungen.
+Betroffen ist jeder Tipp nach mindestens 5 Minuten Hintergrund, also der Normalfall für Benachrichtigungen: „Did you nap?", Erholung bereit, Wecker-Hinweise, Rückblick. Die Reihenfolge ist aus den Quellen abgeleitet und im Test nachgestellt, am Gerät in einer Minute zu bestätigen. Korrektur: eine offene oder gerade verbrauchte Anfrage hat Vorrang vor der Rückkehr.
 
-### N4 (mittel): Sportwahl und Verwerfen sind an den Rändern unsauber (A9)
-1. **Doppeltipp im Picker führt zu einem leeren Bildschirm, wenn die Datenbank kurz belegt ist.** `_pickSport` (`takt_today_screen.dart:149-159`) hat den `busy`-Schutz nicht, den das Original an derselben Stelle hat und begründet (`summary.dart:948-952`). Zwei Tipps, bevor `setSessionType` fertig ist, poppen zweimal. Prüftest: `DOPPELTIPP exception=null heute=0 picker=0`, der Heute-Screen ist weg. Auf dem Gerät braucht das eine laufende Ableitung oder einen Abruf, der den Schreibvorgang verzögert.
-2. **Verwerfen scheitert still.** `_discard` hat keinen Fehlerpfad. Ändert eine Ableitung die Erkennung, bevor die Liste neu geladen ist, wirft `discardActivity` wegen der Revision (`activity_store.dart:416`). Prüftest: `ActivityReviewException`, danach `pending=1`. Der Tipp bewirkt für Felix nichts, und die Ausnahme geht verloren. Das gilt gerade für wachsende offene Erkennungen.
-3. **Verworfen, aber der Tages-Strain bleibt.** Ein schon gespeichertes Workout läuft über `deleteWorkout`. `LocalDb.deleteSession` (`db.dart:14908`) markiert den Tag nicht als geändert, anders als `confirm` und `discard` im `ActivityStore`. Die Listen ziehen über `bumpInsights` nach, der angehobene Tageswert (`strainFlooredAtSessions`, `derivation_engine.dart:8318`) erst mit der nächsten Ableitung. Ohne Band bleibt er stehen. Nur gelesen.
-4. **Verworfen, aber in Health Connect bleibt es.** `confirmActivity` exportiert das Workout (`local_repository_impl.dart:91`), `deleteWorkout` entfernt den Eintrag dort nicht. Im Original hat Felix vorher selbst bestätigt. In Takt landen Fehlerkennungen ohne Klick dort und bleiben nach dem Verwerfen stehen. Gilt nur bei eingeschaltetem Export. Nur gelesen, am Gerät zu prüfen.
-5. **Die Wahl geht verloren, wenn das Speichern dazwischenkommt.** Bestätigt ein Reload im Hintergrund die Erkennung, während der Picker offen ist, schreibt `_pickSport` nur noch in die Einstellungen. Prüftest: `RENNEN [suggestion:d:… other] handball sichtbar=0 training=1`. Selten, das Fenster ist klein.
+### D3 (niedrig): Zwei Uhren lassen eine fremde Rechnung als passend durchgehen (A8)
+`isSettled` vergleicht die Handyzeit der Rechnung mit der Bandzeit der Daten. Rückstand trägt alte Zeitstempel. Lief eine Rechnung, nachdem diese Zeit verstrichen war, aber bevor die Daten ankamen, gilt sie als aktuell, obwohl sie die Daten nie gesehen hat:
+```
+R3 sessions=[suggestion:d:1793919900 other 29min] pending=0
+```
+Das Beispiel: Rechnung um Minute 95 ohne neue Daten, gelandet sind nur Daten bis Minute 70, das Training lief bis 90. Dazu muss ein Abruf vor der Gegenwart abbrechen, eine Rechnung in der Lücke gelaufen sein und ein Reload genau in die wenigen Sekunden vor dem Einreihen fallen. Felix' Normalfall trifft das nicht: Die Rechnung nach Verbindungsverlust läuft rund 20 Minuten nach dem letzten Datensatz, das liegt vor der 30-Minuten-Schwelle. Auch Nap-Änderungen setzen `computed_at` (`db.dart:14294`). Treffer wären dauerhaft. Korrektur: den Datenstand vergleichen, den die Rechnung tatsächlich gesehen hat, statt ihrer Uhrzeit.
 
-### N5 (niedrig): Der Update-Hinweis wird im Dauerbetrieb nicht aktualisiert (A25)
-`refreshTaktUpdate` läuft nur in `initState` von `TaktTodayScreen` (`takt_today_screen.dart:60`). Aus demselben Grund wie bei N2 entsteht dieser State selten neu. Ein Release, das erscheint, während die Engine läuft, zeigt die App erst nach dem nächsten Neustart des Prozesses, also womöglich wochenlang nicht. „Höchstens einmal am Tag" ist eingehalten, dass der Hinweis dasteht, nicht.
+### D4 (niedrig): Vor Mitternacht begonnen, aber nur der heutige Tag gerechnet (A8)
+`_derivedAt` liest nur die Zeile von heute. Ein leichter Lauf rechnet nach Mitternacht nur heute, gestern nicht:
+```
+R5 leichter Lauf rechnet: [2026-11-06] (today-priority), Training liegt in 2026-11-05
+R5 sessions=[suggestion:d:1793914200 other 29min] pending=0
+```
+Trifft nur Trainings, deren Rückstand nach Mitternacht ankommt und bei denen kein schwerer Lauf vorausgeht, etwa beim gedrosselten Wiederverbinden im Hintergrund (`sync_controller.dart:885-888`). Korrektur: die Zeile des Tages prüfen, zu dem das Training gehört.
 
-### N6 (niedrig): OpenStrap ist noch sichtbar (A15)
-- `coach_prompt.dart:12`: „You are the OpenStrap coach". Der Coach stellt sich so vor, sobald Felix ihn danach fragt.
-- `exercise_picker.dart:232`: Der wger-Hinweis führt weiter auf `openstrap.github.io/edge/notice.html`. Die Einstellungen sind umgestellt, diese Stelle nicht, obwohl `NOTICE.md` den Text selbst enthält.
-- Dateinamen im Teilen-Dialog und im Backup-Ordner: `openstrap_export_*.db` (`db.dart:10740`), `openstrap_*.csv` (`csv_export.dart:426, 521`), `openstrap-<Datum>.db` (`auto_backup.dart:144`). Die Muster hängen an Aufräum- und Importlogik, sie sind also nicht einfach zu tauschen.
-- `db.dart:11617`: Fehlermeldung „not an OpenStrap database".
+### D5 (niedrig): Gescheiterte Berechnung zählt als Berechnung (A8)
+Scheitert die zweite Hälfte der Ableitung, läuft `reconcile` nicht (`derivation_engine.dart:6445`, `6469`), die Zeile wird trotzdem als `partial` mit frischem `computed_at` geschrieben. `_derivedAt` prüft weder `partial` noch `skipped`:
+```
+R4 partial sessions=[suggestion:d:1793919900 other 29min] pending=0
+```
+Selten, die Korrektur ist eine Zeile.
 
-Grenzfälle, die zu entscheiden sind: „OpenStrap-Backup" in `app_de.arb:129, 322` stimmt für den Import aus Edge, gilt aber auch für Takts eigene Sicherung. Die Maskottchen in `assets/images/mascot_*.png` stammen von OpenStrap, und `TRADEMARKS.md` verlangt, „other branding" zu ersetzen. Ob sie dazu zählen, ist offen.
+### D6 (niedrig): Rückkehr auf Heute setzt die Scrollposition nicht zurück, und sie schließt alles (A1)
+1. Steht Heute schon vorne, tut `_go` nichts. Heruntergescrollt bleibt heruntergescrollt: `S6 Scroll vorher=218.0 nachher=218.0 ringe_y=-150.0` auf 360×640. A1 verlangt Ringe und Puls ohne Scrollen, die Änderung vom 06.11. wertet diese Rückkehr als Öffnen.
+2. `popUntil` schließt jede Route. Dialoge gehen mit `null` zu (S4: `zu:null`, ohne Ausnahme). Halb ausgefüllte Formulare wie „Workout nachtragen" oder Journal sind weg, ebenso eine offene Atemübung, denn die Ausnahme gilt nur für `activeWorkout`. Das deckt die Spec-Änderung formal ab. Dialoge mit `barrierDismissible: false` gibt es nicht, ein Hänger durch verwaiste Fortschrittsdialoge ist also ausgeschlossen.
+3. Nur gelesen: Wer länger als 5 Minuten in der Dateiauswahl, im Teilen-Dialog oder in den Health-Connect-Rechten bleibt, kommt zurück auf Heute, der aufrufende Screen ist weg. Pairing läuft ohne längeren Hintergrund, dort sehe ich kein Risiko.
 
-### N7 (niedrig): Der CI-Build ist noch der von OpenStrap
-Der Workflow startet bei einem Tag `v*`, also genau dann, wenn A25 ein Release braucht. `build.yml:199` setzt `ENABLE_HEALTH_DATA_CONTRIBUTION=true`. Im so gebauten APK erscheint „Gesundheitsdaten spenden" wieder (`settings.dart:226`). Ohne `COMPANION_URL`-Secret geht nichts raus, die Zeile steht aber da. `build.yml:230-235` nennt das Ergebnis `openstrap-edge-*.apk`.
+Laufendes Workout: Die Ausnahme greift, gelesen und per Einheitentest. Doppelte Syncs entstehen beim Neuaufbau nicht (S5: von 1 auf 2).
 
-### N8 (niedrig): Lokale Fehlerberichte sind nicht mehr erreichbar
-Der Kommentar in `report_issue.dart:92` sagt „Das lokale Teilen bleibt". `ReportIssueScreen` hat aber nur den einen Einstieg in `settings.dart:874`, und der ist jetzt ausgeblendet. Felix kann also auch keinen Diagnosebericht mehr für sich selbst teilen.
+### D7 (niedrig, aus N4 offen): Verwerfen eines gespeicherten Workouts räumt nicht nach (A9)
+`deleteWorkout` führt zu `LocalDb.deleteSession` (`db.dart:14908`), ohne den Tag als geändert zu markieren und ohne `HealthExporter.deleteWorkoutWindow` (`health_export.dart:608`). Der angehobene Tages-Strain bleibt bis zur nächsten Berechnung, ohne Band also stehen. Bei eingeschaltetem Export bleibt die Fehlerkennung in Health Connect. Nur gelesen.
 
-### Offenes Risiko, nicht belegt
-`app.dart:614` setzt `taktTodayVisible` weiter im `build`. Neu ist, dass daran über `_onVisible` jetzt ein Sync hängt. Springt eine Benachrichtigung bei getrenntem Band von einem anderen Tab auf Heute, laufen `syncNow`, `openSession` und `refreshActivityReviews` samt `bumpInsights` synchron im Build an. Ob das eine Assertion auslöst, habe ich nicht nachgestellt, `_Shell` ist privat und braucht die ganze App.
+### D8 (niedrig): Sportwahl während des Speicherns geht verloren (A9)
+Liegt das Speichern gerade im Schreibvorgang, wenn die Wahl fällt, findet `setSessionType` keine Zeile, und die Session landet als `other`:
+```
+R9 nach Wahl, Aufrufe=[other, handball, handball]
+R9 ERGEBNIS sessions=[suggestion:d:1793919900 other 29min] pending=0 handball=0 training=1
+```
+Felix sieht „Training" und kann neu wählen. Parallele Reloads sind sonst unkritisch: R10 ergibt genau eine Session.
+
+### D9 (niedrig): Die Update-Prüfung kann zweimal am selben Tag fragen (A25)
+Der Stempel wird erst nach der Antwort gesetzt (`update_check.dart:54`). `R11 Abfragen=2` bei zwei parallelen Aufrufen. Genau das passiert bei Rückkehr von einem anderen Tab: Der alte Screen ruft bei `resumed`, der neu aufgebaute in `initState`. Ohne Gesundheitsdaten, aber das Kriterium sagt „höchstens einmal". Korrektur: Stempel vor dem Abruf setzen.
+
+### D10 (niedrig): Importierte Vorschläge der letzten 36 Stunden werden ohne Nachfrage gespeichert (A17)
+Die 36-Stunden-Grenze trennt Import und Alltag weiter nur über das Alter. Offene Edge-Vorschläge von gestern werden nach dem Import als „Training" gespeichert und bei eingeschaltetem Export nach Health Connect geschrieben. Die Spec schließt das nicht aus, die vorige Fassung tat es nicht. Nur gelesen, am Gerät beim Band-Umzug anzusehen.
+
+### D11 (niedrig): OpenStrap bleibt in Dateinamen sichtbar (A15)
+Der Commit nennt die Exportnamen einheitlich, das stimmt nicht ganz:
+- `auto_backup.dart:144`: `openstrap-<Datum>.db.gz` im selbst gewählten Backup-Ordner.
+- `csv_export.dart:426, 521`: `openstrap_*.csv` im Teilen-Dialog.
+
+Durch die Umbenennung bricht nichts. Alle Muster und Schreibstellen passen zusammen (`takt_export_`, `takt_report_`, `takt_days_`, `_healthCopyName` seit `4d51296f`). Der Import erkennt Dateien am Inhalt und an der Endung, nicht am Namen, die Edge-Datei `openstrap_export_*.db` lässt sich also weiter importieren. Wer den Backup-Namen ändert, muss `_backupNamePattern` (`auto_backup.dart:164`) so erweitern, dass vorhandene Dateien weiter erkannt werden.
+
+Weiter von Felix zu entscheiden: „OpenStrap-Backup" in `app_de.arb:129, 322`, die Maskottchen in `assets/images/mascot_*.png`. Neu dazu, aber vertretbar: `settings.dart:2001` nennt die Aktion `wtf.openstrap.openstrap_edge.BUZZ_STRAP`, das ist ein technischer Bezeichner, den der Text korrekt angibt.
+
+### D12 (Schönheitsfehler)
+- `report_issue.dart:346-350`: „Bericht senden" steht ausgegraut da, `reportIncludedNote` beschreibt weiter eine Übertragung an die Entwickler.
+- `takt_today_screen.dart:174-176`: Scheitert das Schreiben im Picker, bleibt er kommentarlos offen.
+- `takt_today_screen.dart:39`: `_kComputedAtToMs = 1` ist wirkungslos.
+- `takt.sport.<id>` wird nach dem Speichern nie aus den Einstellungen entfernt.
+- Der Sammelersatz hat Pfade in Upstream-Tests mitgenommen (`test/real_export_m5_gate_test.dart:35`, Rig-Tests). Das ändert nichts am Verhalten, erzeugt aber Merge-Konflikte gegen die Konvention „Upstream punktuell".
 
 ## Anforderungen
 
 | ID | Ergebnis | Befund |
 |---|---|---|
-| A1 | ❌ | N2. Die Reihenfolge stimmt. Ringe und Puls passen ohne Scrollen, erneut gemessen auf 360×640: Pulsunterkante bei 364 px. |
-| A2 | ✅ | Lädt ohne Assertion, der Test im Repo baut jetzt den echten Screen. |
-| A3 | ✅ | Unverändert. Dieselben Detail-Screens. |
-| A4 | ✅ | Genau drei Karten. Die HRV läuft jetzt durch `overnightMetric`, der Mangel aus der ersten Prüfung ist weg. |
-| A5 | ✅ | Prüftest: `MORE exception=null`. Krankheitswarnung nur bei Anschlag. Keine Community-Nudges mehr im alten Screen. |
-| A6 | ⚪ | Die 5 Sekunden und der laufende Wert brauchen ein Band. Vor dem ersten Wert steht jetzt „Warte auf den Puls …". Betroffen von N2. |
-| A7 | ✅ | Alter Prüftest erneut bestanden: Der Zähler fällt bei Push, Tabwechsel, Hintergrund und `dispose`. Das tatsächliche Ende des Stroms am Band zeigt nur das Gerät. |
-| A8 | ❌ | N1 und N3. Sichtbarkeit, Felder und Name stimmen. `avg_bpm` kommt so aus dem Detektor (`derivation_engine.dart:10740`). Strain nur gelesen, die Prüftests laufen ohne Herzfrequenz-Daten. |
-| A9 | ❌ | N4. Der Hauptweg funktioniert: Handball wählbar, auch für offene Erkennungen, die Wahl überlebt das Speichern. Verworfenes kommt nicht zurück (`pending=0` nach Ableitung mit dem ganzen Training). Der Repo-Test deckt nur gespeicherte Workouts ab. |
-| A10 | ✅ | Eine Liste, neueste oben. |
-| A11 | ✅ | Prüftest: `manual:… handball 60`. |
-| A12 | ⚪ | Braucht Band. `_syncIfDue` läuft jetzt auch bei `resumed` und Tabwechsel, gedrosselt auf fünf Minuten. Betroffen von N2. |
-| A13 | ✅ | Siehe Tabelle oben. |
-| A14 | ⚪ | Braucht Band und eine Stunde. Das Risiko aus der ersten Prüfung besteht unverändert: Die schwere Ableitung läuft im Hintergrund höchstens alle 30 Minuten (`sync_controller.dart:885-890`). |
-| A15 | ❌ | N6. Benachrichtigung, Widget, Health-Connect-Titel, User-Agents und ChatGPT-Name sind umgestellt, die Community-Bitten sind aus. Nebeneinander-Installieren bleibt ⚪, das braucht ein Gerät. |
-| A16 | ✅ | Die Links führen erst nach dem bekannten Push zum Inhalt. |
-| A17 | ⚪ | Braucht eine echte Edge-Datenbank. Alte Vorschläge bleiben unbestätigt. Heutige offene Edge-Vorschläge werden beim ersten Load gespeichert, sobald die Daten reichen. |
-| A18 | ✅ | Unverändert. Die Uhrzeit trägt weiter kein Datum, ein Wert von gestern steht als „zuletzt um 14:32" da. |
-| A19 | ✅ | Der Mangel aus der ersten Prüfung ist weg: Gekoppelt ohne Messwert zeigt nicht mehr „Band koppeln". |
+| A1 | ❌ | D2, D6. Die Rückkehr selbst funktioniert, die Reihenfolge stimmt. Ein Benachrichtigungs-Tipp verliert sein Ziel, der Screen bleibt heruntergescrollt. |
+| A2 | ✅ | Tests bestanden, seit der zweiten Prüfung unverändert. |
+| A3 | ✅ | Unverändert. |
+| A4 | ✅ | Unverändert. |
+| A5 | ✅ | Unverändert. |
+| A6 | ⚪ | Braucht Band. Der Weg zum Heute-Tab ist jetzt da. |
+| A7 | ✅ | Tests bestanden. Das Ende des Stroms am Band zeigt nur das Gerät. |
+| A8 | ❌ | D1 (Speichern bleibt aus), D3 bis D5 (enge Restfälle von Abschneiden). Der Normalfall aus der zweiten Prüfung ist behoben. Strain nur gelesen, die Prüftests laufen ohne Herzfrequenz-Daten. |
+| A9 | ❌ | D7, D8, erster Tipp bei veralteter Erkennung ohne Hinweis. Doppeltipp behoben, Verworfenes kommt nicht wieder (R7: `Wiedererkennung pending=0`, auch für gespeicherte). |
+| A10 | ✅ | Unverändert. |
+| A11 | ✅ | Unverändert. |
+| A12 | ⚪ | Braucht Band. `_syncIfDue` läuft bei `resumed`, Neuaufbau und Tabwechsel. |
+| A13 | ✅ | Unverändert. |
+| A14 | ⚪ | Braucht Band und eine Stunde. Im Hintergrund drosselt `DeriveDebouncer` auf 20 bis 45 Minuten (`ble_state.dart`), das Risiko aus den Vorprüfungen besteht unverändert. |
+| A15 | ❌ | D11. Nebeneinander-Installieren bleibt ⚪. |
+| A16 | ✅ | Der wger-Link zeigt auf eine vorhandene Überschrift in `NOTICE.md`. Inhalte erst nach dem bekannten Push erreichbar. |
+| A17 | ⚪ | Braucht eine echte Edge-Datenbank. Der Dateiname ist kein Hindernis. D10. |
+| A18 | ✅ | Unverändert. |
+| A19 | ✅ | Unverändert. |
 | A20 | ✅ | Tests bestanden. |
 | A21 | ✅ | Tests bestanden. |
 | A22 | ✅ | Tests bestanden. |
-| A23 | ✅ | Nur gelesen, unverändert. |
-| A24 | ✅ | Prüftest bei 360×640 und 390×844 mit 200 %: `errors=[]`. Doto ist im Test nicht geladen. |
-| A25 | ❌ | N5. Nur GitHub, keine Parameter, Stempel für 24 Stunden. Der Upstream-Hinweis bleibt tot. |
+| A23 | ✅ | Gelesen. Die Rückkehr auf Heute lässt ein laufendes Workout in Ruhe. |
+| A24 | ✅ | Unverändert, nicht erneut gemessen. |
+| A25 | ❌ | D9. Hinweis, Link, Quelle und Aktualisierung im Dauerbetrieb stimmen. Der Upstream-Hinweis bleibt aus (`update_service.dart:67`). |
 
 ## Sicherheit und Datenschutz
 
-| Punkt | Ergebnis | Befund |
-|---|---|---|
-| Firebase im Code | ✅ | `firebase_options.dart` ist entfernt, `FirebaseBridge.initialize` wirft, `main.dart:40-44` fängt das ab. Die Aufrufe in `telemetry_service.dart` hängen an `isInitialized`. Keine `google-services.json`, die Gradle-Plugins werden dann nicht angewendet. Die Projekt-ID steht im Code nirgends mehr. Der Schalter „Absturzberichte" ist weg. |
-| Firebase zur Laufzeit | ⚪ | Die Pakete stecken weiter im APK. Dass ohne App-ID kein Verkehr entsteht, zeigt nur ein Mitschnitt am Gerät. |
-| Fehlerberichte an OpenStrap | ✅ | `reports.openstrap.site` ist nur über `sendReport` und `deleteReport` aus `ReportIssueScreen` erreichbar. `_send` bricht ab, der Einstieg ist ausgeblendet. |
-| Sonstige Abflüsse an OpenStrap | ✅ | Alle Adressen in `lib` und Kotlin durchgesehen. Sonst nur OpenAI und selbst gewählte Coach-Anbieter, Open Food Facts, OpenStreetMap, GitHub (Takt) und Links, die Felix selbst antippt. |
-| Update-Prüfung | ✅ | GET ohne Parameter auf das Takt-Repo. |
-| Platzhalter-URLs im Code | ✅ | Keine Treffer in `lib`, `android`, `pubspec.yaml`. Die Standardwerte für `COMPANION_URL` und `BACKEND_URL` sind leer. |
-| Platzhalter-URLs im Build | ⚪ | `.env` per Auftrag nicht gelesen, das APK deshalb nicht durchsucht. Zu bestätigen: `COMPANION_URL` und `BACKEND_URL` sind in `.env` leer oder fehlen. |
+Keine neuen Abflüsse. Die Aufräumliste für „Alles löschen" erfasst seit `4d51296f` die neuen Namen. In `bbc3be49` war das eine Lücke, unverschlüsselte Kopien wären liegen geblieben. Die offenen Punkte der zweiten Prüfung bleiben ⚪: Firebase zur Laufzeit (nur per Mitschnitt am Gerät) sowie `COMPANION_URL` und `BACKEND_URL` in `.env`, die ich per Auftrag nicht gelesen habe.
 
-## Reihenfolge der Korrekturen
+## Einordnung für den Gerätetest
 
-1. N1: Gegen den Stand der letzten Ableitung prüfen statt gegen `lastRecordAt`.
-2. N2: Heute auch beim Zurückkehren. Vorher von Felix entscheiden lassen, ab welcher Zeit im Hintergrund.
-3. N3: Die Grenze für den Import am Import festmachen, nicht an Mitternacht.
-4. N4: `busy`-Schutz und Fehlerpfad, Tag als geändert markieren, Health-Connect-Eintrag beim Verwerfen entfernen.
-5. N5 bis N8, die Grenzfälle aus N6 mit Felix klären.
-6. Tests: einer für N1 mit veralteter Erkennung, einer für die Sportwahl auf offener Erkennung, einer für den Doppeltipp.
+**Blocker: keiner.** Nichts stürzt ab oder verhindert den Test.
+
+**Vor dem Test beheben oder Felix sagen:**
+1. D1: Sonst sieht A8 am Gerät wie gescheitert aus. Ohne Korrektur gilt: nach dem Training App schließen und wieder öffnen, dann erst bewerten.
+2. D2: Sonst wirkt jeder Benachrichtigungs-Tipp kaputt.
+
+**Vor der Freigabe, aber nach dem Gerätetest:** D3 bis D5 (Treffer wären dauerhaft, deshalb trotz Seltenheit zu schließen), D6, D7, D8, D9.
+
+**Schönheitsfehler:** D10 bis D12, soweit Felix bei den Grenzfällen nichts anderes entscheidet.
+
+**Am Gerät gezielt ansehen:** Reihenfolge von Tipp und `resumed` (D2), Heute nach Rückkehr von einem anderen Tab, Band-Umzug mit offenen Edge-Vorschlägen (D10), A6, A12, A14, A17.
+
+## Tests, die fehlen
+
+- D1: `AppState` meldet `deriving` beim Revisionswechsel und danach frei.
+- D2: `_Shell` mit Tipp vor `resumed`. `shouldReturnToToday` ist bisher nur als reine Funktion getestet, der Shell-Weg gar nicht.
+- D3 bis D5: `computed_at` nach Wanduhr jünger als der Datenstand, Zeile `partial`, Workout von gestern.

@@ -51,7 +51,7 @@ void main() {
         pending: () async => items,
         confirm: (x) async => done.add(x.id),
         dataThrough: at(through),
-        derivedAt: at(derived ?? through),
+        derivedAt: (_) async => at(derived ?? through),
         busy: busy,
         now: now ?? day,
       );
@@ -78,15 +78,24 @@ void main() {
       expect(left, isEmpty);
     });
     test('A8: Training vor Mitternacht bleibt nicht liegen', () async {
-      final (done, _) = await run([w(end)], through: end + 1800, now: DateTime(2026, 11, 7, 7));
+      final morning = DateTime(2026, 11, 7, 7).millisecondsSinceEpoch ~/ 1000;
+      final (done, _) = await run([w(end)],
+          through: morning, derived: end + 3600, now: DateTime(2026, 11, 7, 7));
       expect(done, ['w']);
+    });
+    test('A8: Gestern ohne spätere Rechnung bleibt offen', () async {
+      final morning = DateTime(2026, 11, 7, 7).millisecondsSinceEpoch ~/ 1000;
+      final (done, left) = await run([w(end)],
+          through: morning, derived: end + 60, now: DateTime(2026, 11, 7, 7));
+      expect(done, isEmpty);
+      expect(left.single.id, 'w');
     });
     test('A8: Scheitert das Speichern, bleibt das Workout sichtbar', () async {
       final left = await autoConfirmWorkouts(
         pending: () async => [w(end)],
         confirm: (x) async => throw const ActivityReviewException('Überlappung'),
         dataThrough: at(end + 1800),
-        derivedAt: at(end + 1800),
+        derivedAt: (_) async => at(end + 1800),
         busy: false,
         now: day,
       );
