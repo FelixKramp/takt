@@ -1226,7 +1226,7 @@ void main() {
       'the failure', () async {
     List<String> leftovers() => [
       for (final f in tmp.listSync().whereType<File>())
-        if (p.basename(f.path).startsWith('openstrap_export_'))
+        if (p.basename(f.path).startsWith('takt_export_'))
           p.basename(f.path),
     ];
     LocalDb.debugFailExportStrip = true;

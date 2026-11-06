@@ -28,7 +28,7 @@
 // `cardio_stager` its own epoch means, both from raw samples).
 //
 // Run:
-//   OPENSTRAP_TEST_DBS=~/Documents/openstrap/openstrap_export_1786730410696.db \
+//   OPENSTRAP_TEST_DBS=~/Documents/openstrap/takt_export_1786730410696.db \
 //     flutter test test/cadence_decimation_rig_test.dart --concurrency=1
 //
 // Writes `build/cadence_baseline.json` (gitignored) and prints the same table.

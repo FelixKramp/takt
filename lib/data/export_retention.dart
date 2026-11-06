@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 /// Where the manual "Export database" / "Export encrypted" snapshots go.
 ///
 /// Their own folder, not the temp root: automatic backups, issue reports and
-/// the health upload also write `openstrap_export_*.db` snapshots to temp and
+/// the health upload also write `takt_export_*.db` snapshots to temp and
 /// delete them when done, so a sweep over the temp root could remove one of
 /// those mid-flight. Inside this folder every file belongs to a manual export.
 Future<Directory> sharedExportDir() async {
@@ -25,7 +25,7 @@ Future<Directory> sharedExportDir() async {
 /// ever removed them, so every tap added one more.
 const kSharedExportsKept = 2;
 
-final _exportName = RegExp(r'^openstrap_export_(\d+)\.db(\.osbk)?$');
+final _exportName = RegExp(r'^takt_export_(\d+)\.db(\.osbk)?$');
 
 /// Delete all but the [keep] newest manual exports in [dir].
 ///
@@ -86,7 +86,7 @@ Future<void> pruneLegacyRootExports(
   }
 }
 
-final _reportName = RegExp(r'^openstrap_report_(\d+)\.zip$');
+final _reportName = RegExp(r'^takt_report_(\d+)\.zip$');
 
 /// Delete all but the [keep] newest issue-report archives in [tmpRoot].
 ///

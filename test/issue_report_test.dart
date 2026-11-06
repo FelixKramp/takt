@@ -275,11 +275,11 @@ void main() {
     final dir = await Directory.systemTemp.createTemp('sweep');
     addTearDown(() => dir.delete(recursive: true));
     final now = DateTime.now();
-    final old = File('${dir.path}/openstrap_report_1.zip')..writeAsStringSync('db');
+    final old = File('${dir.path}/takt_report_1.zip')..writeAsStringSync('db');
     old.setLastModifiedSync(now.subtract(const Duration(hours: 2)));
-    final oldGz = File('${dir.path}/openstrap_report_2.db.gz')..writeAsStringSync('db');
+    final oldGz = File('${dir.path}/takt_report_2.db.gz')..writeAsStringSync('db');
     oldGz.setLastModifiedSync(now.subtract(const Duration(days: 3)));
-    final fresh = File('${dir.path}/openstrap_report_3.zip')..writeAsStringSync('db');
+    final fresh = File('${dir.path}/takt_report_3.zip')..writeAsStringSync('db');
     final other = File('${dir.path}/something_else.zip')..writeAsStringSync('x');
     other.setLastModifiedSync(now.subtract(const Duration(days: 3)));
     expect(await sweepStaleReports(dir.path, now: now), 2);

@@ -39,49 +39,49 @@ void main() {
     tearDown(() async => dir.delete(recursive: true));
 
     test('keeps the two newest exports, .db and .osbk alike', () async {
-      await _touch(dir, 'openstrap_export_1000.db');
-      await _touch(dir, 'openstrap_export_2000.db.osbk');
-      await _touch(dir, 'openstrap_export_3000.db');
-      await _touch(dir, 'openstrap_export_4000.db');
-      await _touch(dir, 'openstrap_export_4000.db.osbk');
+      await _touch(dir, 'takt_export_1000.db');
+      await _touch(dir, 'takt_export_2000.db.osbk');
+      await _touch(dir, 'takt_export_3000.db');
+      await _touch(dir, 'takt_export_4000.db');
+      await _touch(dir, 'takt_export_4000.db.osbk');
 
       await pruneSharedExports(dir);
 
       expect(_names(dir), [
-        'openstrap_export_3000.db',
-        'openstrap_export_4000.db',
-        'openstrap_export_4000.db.osbk',
+        'takt_export_3000.db',
+        'takt_export_4000.db',
+        'takt_export_4000.db.osbk',
       ]);
     });
 
     test('the export being handed back survives a clock set back', () async {
-      await _touch(dir, 'openstrap_export_8000.db');
-      await _touch(dir, 'openstrap_export_9000.db');
+      await _touch(dir, 'takt_export_8000.db');
+      await _touch(dir, 'takt_export_9000.db');
       // Written after the clock went back, so its stamp ranks oldest.
-      final current = await _touch(dir, 'openstrap_export_5000.db');
+      final current = await _touch(dir, 'takt_export_5000.db');
 
       await pruneSharedExports(dir, current: current.path);
 
       expect(_names(dir), [
-        'openstrap_export_5000.db',
-        'openstrap_export_9000.db',
+        'takt_export_5000.db',
+        'takt_export_9000.db',
       ]);
     });
 
     test('leaves files that are not exports alone', () async {
-      await _touch(dir, 'openstrap_export_1.db');
-      await _touch(dir, 'openstrap_export_2.db');
-      await _touch(dir, 'openstrap_export_3.db');
+      await _touch(dir, 'takt_export_1.db');
+      await _touch(dir, 'takt_export_2.db');
+      await _touch(dir, 'takt_export_3.db');
       await _touch(dir, 'notes.txt');
-      await _touch(dir, 'openstrap_export_x.db');
+      await _touch(dir, 'takt_export_x.db');
 
       await pruneSharedExports(dir);
 
       expect(_names(dir), [
         'notes.txt',
-        'openstrap_export_2.db',
-        'openstrap_export_3.db',
-        'openstrap_export_x.db',
+        'takt_export_2.db',
+        'takt_export_3.db',
+        'takt_export_x.db',
       ]);
     });
   });
@@ -93,18 +93,18 @@ void main() {
 
     test('removes stale root copies but not in-flight snapshots', () async {
       final now = DateTime(2026, 10, 17, 12);
-      await _touch(dir, 'openstrap_export_1.db',
+      await _touch(dir, 'takt_export_1.db',
           at: now.subtract(const Duration(days: 3)));
-      await _touch(dir, 'openstrap_export_2.db.osbk',
+      await _touch(dir, 'takt_export_2.db.osbk',
           at: now.subtract(const Duration(days: 2)));
-      await _touch(dir, 'openstrap_export_3.db',
+      await _touch(dir, 'takt_export_3.db',
           at: now.subtract(const Duration(minutes: 1)));
       await _touch(dir, 'something_else.db',
           at: now.subtract(const Duration(days: 9)));
 
       await pruneLegacyRootExports(dir, now: now);
 
-      expect(_names(dir), ['openstrap_export_3.db', 'something_else.db']);
+      expect(_names(dir), ['takt_export_3.db', 'something_else.db']);
     });
   });
 
@@ -115,7 +115,7 @@ void main() {
       databaseFactory = databaseFactoryFfi;
       root = await Directory.systemTemp.createTemp('osx_root_');
       PathProviderPlatform.instance = _FakePathProvider(root.path);
-      LocalDb.dbName = 'openstrap_export_retention_test.db';
+      LocalDb.dbName = 'takt_export_retention_test.db';
       final dbDir = await databaseFactory.getDatabasesPath();
       await databaseFactory.deleteDatabase(p.join(dbDir, LocalDb.dbName));
     });
@@ -144,7 +144,7 @@ void main() {
         root
             .listSync()
             .whereType<File>()
-            .where((f) => p.basename(f.path).startsWith('openstrap_export_')),
+            .where((f) => p.basename(f.path).startsWith('takt_export_')),
         isEmpty,
       );
     });
@@ -157,27 +157,27 @@ void main() {
 
     test('keeps the two newest locally shared report archives', () async {
       for (final us in [100, 300, 200, 400]) {
-        await _touch(dir, 'openstrap_report_$us.zip');
+        await _touch(dir, 'takt_report_$us.zip');
       }
-      await _touch(dir, 'openstrap_report_50.db.gz');
+      await _touch(dir, 'takt_report_50.db.gz');
       await _touch(dir, 'notes.txt');
       await pruneSharedReports(dir);
       expect(_names(dir), [
         'notes.txt',
-        'openstrap_report_300.zip',
-        'openstrap_report_400.zip',
-        'openstrap_report_50.db.gz',
+        'takt_report_300.zip',
+        'takt_report_400.zip',
+        'takt_report_50.db.gz',
       ]);
     });
 
     test('the archive being shared survives a clock set back', () async {
-      for (final n in ['openstrap_report_8.zip', 'openstrap_report_9.zip']) {
+      for (final n in ['takt_report_8.zip', 'takt_report_9.zip']) {
         await _touch(dir, n);
       }
       // Built after the clock went back, so its stamp ranks oldest.
-      final current = await _touch(dir, 'openstrap_report_5.zip');
+      final current = await _touch(dir, 'takt_report_5.zip');
       await pruneSharedReports(dir, current: current);
-      expect(_names(dir), ['openstrap_report_5.zip', 'openstrap_report_9.zip']);
+      expect(_names(dir), ['takt_report_5.zip', 'takt_report_9.zip']);
     });
   });
 
@@ -188,21 +188,21 @@ void main() {
 
     test('removes every shared or staged copy, nothing else', () async {
       final share = Directory(p.join(dir.path, 'db_share'))..createSync();
-      await _touch(share, 'openstrap_export_2.db');
+      await _touch(share, 'takt_export_2.db');
       final csv = Directory(p.join(dir.path, 'openstrap_csv', '9'))
         ..createSync(recursive: true);
       await _touch(csv, 'heart_rate.csv');
       Directory(p.join(dir.path, 'osm_tiles')).createSync();
       for (final n in [
-        'openstrap_export_1.db',
-        'openstrap_export_1.db.osbk',
-        'openstrap_report_7.zip',
-        'openstrap_report_8.db.gz',
+        'takt_export_1.db',
+        'takt_export_1.db.osbk',
+        'takt_report_7.zip',
+        'takt_report_8.db.gz',
         'openstrap_slice_9.db',
-        'openstrap_days_10.db',
-        'openstrap_days_11.db-journal',
-        'openstrap_days_12.db-wal',
-        'openstrap_days_12.db-shm',
+        'takt_days_10.db',
+        'takt_days_11.db-journal',
+        'takt_days_12.db-wal',
+        'takt_days_12.db-shm',
         'unrelated.db',
       ]) {
         await _touch(dir, n);

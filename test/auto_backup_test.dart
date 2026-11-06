@@ -695,7 +695,7 @@ void main() {
           .listSync()
           .whereType<File>()
           .map((f) => p.basename(f.path))
-          .where((n) => n.startsWith('openstrap_export_'))
+          .where((n) => n.startsWith('takt_export_'))
           .toList();
       expect(leftovers, isEmpty);
     });

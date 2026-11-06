@@ -9,7 +9,7 @@
 // `tsSec` supplied.
 //
 // Run:
-//   OPENSTRAP_TEST_DBS=~/Documents/openstrap/openstrap_export_1786730410696.db \
+//   OPENSTRAP_TEST_DBS=~/Documents/openstrap/takt_export_1786730410696.db \
 //     flutter test test/cadence_group_c_nocturnal_rig_test.dart --concurrency=1
 //
 // Skips cleanly with no export, and reads the night window the rig already
