@@ -104,7 +104,7 @@ void main() {
 
       await pruneLegacyRootExports(dir, now: now);
 
-      expect(_names(dir), ['takt_export_3.db', 'something_else.db']);
+      expect(_names(dir), ['something_else.db', 'takt_export_3.db']);
     });
   });
 
