@@ -6,7 +6,7 @@ publish_to: 'none'
 # Watch App" targets in ios/Runner.xcodeproj/project.pbxproj — they aren't wired
 # to FLUTTER_BUILD_NAME/FLUTTER_BUILD_NUMBER. See guides/IOS_INSTALLATION.md
 # "Version Numbers".
-version: 0.11.3+78
+version: 0.1.0+1
 
 environment:
   sdk: ^3.11.4
@@ -726,7 +726,7 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   # The icon's own plate, so the ring the mask leaves around the artwork is the
   # same colour as the artwork's edge rather than the old cream.
-  adaptive_icon_background: "#020D1C"
+  adaptive_icon_background: "#D8D8D3"
   adaptive_icon_foreground: "assets/launcher/icon_adaptive.png"
 
 flutter:
@@ -748,6 +748,9 @@ flutter:
   # SIL Open Font License (OFL.txt alongside the .ttf files, from
   # https://github.com/google/fonts).
   fonts:
+    - family: Doto
+      fonts:
+        - asset: assets/fonts/Doto/Doto.ttf
     - family: Barlow Condensed
       fonts:
         - asset: assets/fonts/BarlowCondensed/BarlowCondensed-Bold.ttf

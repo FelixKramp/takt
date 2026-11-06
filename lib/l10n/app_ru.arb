@@ -1,6 +1,6 @@
 {
   "@@locale": "ru",
-  "appTitle": "OpenStrap",
+  "appTitle": "Takt",
   "profileTitle": "Профиль",
   "profileMyDevices": "Мои устройства",
   "profileLanguage": "Язык",
@@ -1983,7 +1983,7 @@
   "coachNoDataTitle": "Пока нет данных для чтения",
   "coachNoModelsListed": "Сервис не предоставил список моделей. Введите название ниже.",
   "coachNotSetUp": "Не настроено",
-  "coachNotSetUpBody": "Выберите модель на своём компьютере или любого совместимого с OpenAI провайдера со своим ключом. Данные в любом случае не проходят через OpenStrap.",
+  "coachNotSetUpBody": "Выберите модель на своём компьютере или любого совместимого с OpenAI провайдера со своим ключом. Данные в любом случае не проходят через Takt.",
   "coachNotSetUpTitle": "Тренер не настроен",
   "coachPastChats": "ПРОШЛЫЕ ЧАТЫ",
   "coachPickModelFirst": "Сначала выберите или укажите модель.",
@@ -4373,7 +4373,7 @@
       }
     }
   },
-  "workoutDeleteBodyOwn": "Тренировка исчезнет из OpenStrap. Копия в {storeName}, если она есть, останется.",
+  "workoutDeleteBodyOwn": "Тренировка исчезнет из Takt. Копия в {storeName}, если она есть, останется.",
   "@workoutDeleteBodyOwn": {
     "placeholders": {
       "storeName": {
@@ -4381,7 +4381,7 @@
       }
     }
   },
-  "workoutDeleteBodyImported": "Тренировка исчезнет из OpenStrap и не будет импортирована снова. Оригинал в {storeName} останется.",
+  "workoutDeleteBodyImported": "Тренировка исчезнет из Takt и не будет импортирована снова. Оригинал в {storeName} останется.",
   "@workoutDeleteBodyImported": {
     "placeholders": {
       "storeName": {
@@ -5576,8 +5576,8 @@
   "settingsCopied": "Скопировано",
   "settingsCopyTheToken": "Скопировать токен",
   "bandStatusBluetoothDeniedTitle": "Bluetooth запрещён для приложения",
-  "bandStatusBluetoothDeniedReason": "Телефон не даёт OpenStrap использовать Bluetooth, поэтому подключиться нельзя. Разрешите Bluetooth для OpenStrap в настройках телефона.",
-  "bandStatusBluetoothDeniedFix": "Откройте «Настройки → OpenStrap» и разрешите Bluetooth",
+  "bandStatusBluetoothDeniedReason": "Телефон не даёт Takt использовать Bluetooth, поэтому подключиться нельзя. Разрешите Bluetooth для Takt в настройках телефона.",
+  "bandStatusBluetoothDeniedFix": "Откройте «Настройки → Takt» и разрешите Bluetooth",
   "bandStatusBluetoothOffTitle": "Bluetooth выключен",
   "bandStatusBluetoothOffReason": "Bluetooth телефона выключен, поэтому ни одно приложение не может связаться с браслетом. Он продолжает запись, данные не теряются.",
   "bandStatusBluetoothOffFix": "Включить Bluetooth",
@@ -6372,7 +6372,7 @@
   "supplementADoseIsDue1543e3": "Пора принять дозу.",
   "supplementALocalModelCanTake62d4a8": "Локальной модели может понадобиться время на загрузку перед первым ответом. По умолчанию 5 минут (300 с). Облачные провайдеры всегда используют 2 минуты.",
   "supplementALowConfidenceOverlayA9fbabe": "Оценка с низкой уверенностью: датчик на запястье не видит медленные волны мозга. Глубокий сон здесь определяется по стабильности пульса внутри NREM.",
-  "supplementAMinuteOfNotesTonightac2cf6": "Минута вечерних записей помогает OpenStrap узнать, что связано с вашим восстановлением.",
+  "supplementAMinuteOfNotesTonightac2cf6": "Минута вечерних записей помогает Takt узнать, что связано с вашим восстановлением.",
   "supplementAPossibleNapIsReady84b3cf": "Можно проверить возможный дневной сон.",
   "supplementAPossibleWorkoutIsReady2861bb": "Можно проверить возможную тренировку.",
   "supplementAStepGoalOf500f44746": "Цель по шагам должна быть от 500 до 100 000. Ничего не сохранено.",
@@ -6588,7 +6588,7 @@
   "supplementEveryDaya3fd74": "каждый день",
   "supplementFiguref85bdc": "график",
   "supplementG54fd17": "г",
-  "supplementIOSCanOnlyShowThe2139b2": "iOS показывает окно сопряжения, только пока приложение не использовало Bluetooth. Полностью закройте OpenStrap и откройте снова.",
+  "supplementIOSCanOnlyShowThe2139b2": "iOS показывает окно сопряжения, только пока приложение не использовало Bluetooth. Полностью закройте Takt и откройте снова.",
   "supplementKcal72037b": "ккал",
   "supplementKg138984": "кг",
   "supplementKm08ec69": "км",
@@ -6775,7 +6775,7 @@
   "coachApiFormatLabel": "API",
   "settingsResetBackupWarning": "Данные приложения удалены. Очистка резервных копий завершилась не полностью: некоторые файлы или доступ к папке могут остаться.",
   "settingsResetPairingKeyWarning": "Данные приложения удалены, но ключ сопряжения датчика не удалось удалить из защищённого хранилища. Удалите всё ещё раз, чтобы повторить попытку.",
-  "settingsResetChatGptWarning": "Данные приложения удалены, но вход в ChatGPT, возможно, удалён не полностью. Отключите OpenStrap в настройках ChatGPT, чтобы его доступ точно был отозван. Повторное удаление всего лишь ещё раз попробует убрать то, что осталось на этом устройстве.",
+  "settingsResetChatGptWarning": "Данные приложения удалены, но вход в ChatGPT, возможно, удалён не полностью. Отключите Takt в настройках ChatGPT, чтобы его доступ точно был отозван. Повторное удаление всего лишь ещё раз попробует убрать то, что осталось на этом устройстве.",
   "dataBackupFolder": "Папка резервных копий",
   "dataBackupFolderDefault": "Папка приложения (по умолчанию)",
   "dataBackupFolderSub": "Выберите, куда сохранять новые резервные копии. Существующие копии останутся на месте",
@@ -7197,7 +7197,7 @@
       }
     }
   },
-  "iosUninstallUnpairsWarning": "На iOS удаление OpenStrap также снимает с телефона сопряжение всех браслетов и датчиков, сопряжённых здесь, поэтому другие приложения, включая приложение производителя, тоже их теряют.",
+  "iosUninstallUnpairsWarning": "На iOS удаление Takt также снимает с телефона сопряжение всех браслетов и датчиков, сопряжённых здесь, поэтому другие приложения, включая приложение производителя, тоже их теряют.",
   "logFoodEditTitle": "Изменить запись",
   "logFoodDateLabel": "Дата",
   "logFoodTimeLabel": "Время",

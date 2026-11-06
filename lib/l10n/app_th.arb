@@ -1,6 +1,6 @@
 {
   "@@locale": "th",
-  "appTitle": "OpenStrap",
+  "appTitle": "Takt",
   "@appTitle": {
     "description": "App name shown in the OS task switcher / MaterialApp title."
   },
@@ -4486,7 +4486,7 @@
   "@coachNotSetUp": {
     "description": "Coach screen: subtitle shown wherever the coach has no model configured yet"
   },
-  "coachNotSetUpBody": "เลือกโมเดลบนคอมพิวเตอร์ของคุณ หรือผู้ให้บริการที่รองรับ OpenAI โดยใช้คีย์ของคุณเอง ทั้งสองแบบไม่ส่งข้อมูลผ่าน OpenStrap",
+  "coachNotSetUpBody": "เลือกโมเดลบนคอมพิวเตอร์ของคุณ หรือผู้ให้บริการที่รองรับ OpenAI โดยใช้คีย์ของคุณเอง ทั้งสองแบบไม่ส่งข้อมูลผ่าน Takt",
   "@coachNotSetUpBody": {
     "description": "Coach screen: body text explaining how to set up the coach and its privacy stance"
   },
@@ -9407,7 +9407,7 @@
       }
     }
   },
-  "workoutDeleteBodyOwn": "จะหายไปจาก OpenStrap สำเนาใน {storeName} ถ้ามี จะยังอยู่",
+  "workoutDeleteBodyOwn": "จะหายไปจาก Takt สำเนาใน {storeName} ถ้ามี จะยังอยู่",
   "@workoutDeleteBodyOwn": {
     "description": "Confirm-delete dialog body for a session this band recorded",
     "placeholders": {
@@ -9416,7 +9416,7 @@
       }
     }
   },
-  "workoutDeleteBodyImported": "จะหายไปจาก OpenStrap และไม่นำเข้าซ้ำ ต้นฉบับใน {storeName} ยังอยู่",
+  "workoutDeleteBodyImported": "จะหายไปจาก Takt และไม่นำเข้าซ้ำ ต้นฉบับใน {storeName} ยังอยู่",
   "@workoutDeleteBodyImported": {
     "description": "Confirm-delete dialog body for an imported session",
     "placeholders": {
@@ -11377,7 +11377,7 @@
   "@settingsResetPairingKeyWarning": {
     "description": "Warning after reset when a sensor pairing key could not be removed from secure storage"
   },
-  "settingsResetChatGptWarning": "ลบข้อมูลแอปแล้ว แต่การลงชื่อเข้าใช้ ChatGPT อาจยังไม่ถูกลบออกทั้งหมด ให้ยกเลิกการเชื่อมต่อ OpenStrap ในการตั้งค่า ChatGPT เพื่อให้แน่ใจว่าสิทธิ์การเข้าถึงถูกเพิกถอนแล้ว การลบทั้งหมดอีกครั้งจะลองลบเฉพาะสิ่งที่ยังเหลืออยู่ในอุปกรณ์นี้เท่านั้น",
+  "settingsResetChatGptWarning": "ลบข้อมูลแอปแล้ว แต่การลงชื่อเข้าใช้ ChatGPT อาจยังไม่ถูกลบออกทั้งหมด ให้ยกเลิกการเชื่อมต่อ Takt ในการตั้งค่า ChatGPT เพื่อให้แน่ใจว่าสิทธิ์การเข้าถึงถูกเพิกถอนแล้ว การลบทั้งหมดอีกครั้งจะลองลบเฉพาะสิ่งที่ยังเหลืออยู่ในอุปกรณ์นี้เท่านั้น",
   "@settingsResetChatGptWarning": {
     "description": "Warning after reset when the ChatGPT sign-in may not have been revoked or removed from secure storage"
   },
@@ -11981,11 +11981,11 @@
   "@bandStatusBluetoothDeniedTitle": {
     "description": "BandStatus card title: app-level Bluetooth permission denied"
   },
-  "bandStatusBluetoothDeniedReason": "โทรศัพท์ไม่อนุญาตให้ OpenStrap ใช้ Bluetooth จึงเชื่อมต่อไม่ได้ โปรดอนุญาต Bluetooth ให้ OpenStrap ในการตั้งค่าโทรศัพท์",
+  "bandStatusBluetoothDeniedReason": "โทรศัพท์ไม่อนุญาตให้ Takt ใช้ Bluetooth จึงเชื่อมต่อไม่ได้ โปรดอนุญาต Bluetooth ให้ Takt ในการตั้งค่าโทรศัพท์",
   "@bandStatusBluetoothDeniedReason": {
     "description": "BandStatus card body: app-level Bluetooth permission denied"
   },
-  "bandStatusBluetoothDeniedFix": "เปิด การตั้งค่า → OpenStrap แล้วอนุญาต Bluetooth",
+  "bandStatusBluetoothDeniedFix": "เปิด การตั้งค่า → Takt แล้วอนุญาต Bluetooth",
   "@bandStatusBluetoothDeniedFix": {
     "description": "BandStatus fix action: app-level Bluetooth permission denied"
   },
@@ -13379,7 +13379,7 @@
   "@supplementALowConfidenceOverlayA9fbabe": {
     "description": "Presentation-only text for existing interface, exports or notifications."
   },
-  "supplementAMinuteOfNotesTonightac2cf6": "จดบันทึกสักนาทีคืนนี้ ช่วยให้ OpenStrap เรียนรู้สิ่งที่สัมพันธ์กับการฟื้นตัวของคุณจริง ๆ",
+  "supplementAMinuteOfNotesTonightac2cf6": "จดบันทึกสักนาทีคืนนี้ ช่วยให้ Takt เรียนรู้สิ่งที่สัมพันธ์กับการฟื้นตัวของคุณจริง ๆ",
   "@supplementAMinuteOfNotesTonightac2cf6": {
     "description": "Presentation-only text for existing interface, exports or notifications."
   },
@@ -14243,7 +14243,7 @@
   "@supplementG54fd17": {
     "description": "Presentation-only text for existing interface, exports or notifications."
   },
-  "supplementIOSCanOnlyShowThe2139b2": "iOS แสดงหน้าต่างจับคู่ได้เฉพาะก่อนแอปใช้ Bluetooth ปิด OpenStrap ให้สนิทแล้วเปิดใหม่เพื่อแสดงหน้าต่างนี้",
+  "supplementIOSCanOnlyShowThe2139b2": "iOS แสดงหน้าต่างจับคู่ได้เฉพาะก่อนแอปใช้ Bluetooth ปิด Takt ให้สนิทแล้วเปิดใหม่เพื่อแสดงหน้าต่างนี้",
   "@supplementIOSCanOnlyShowThe2139b2": {
     "description": "Presentation-only text for existing interface, exports or notifications."
   },
@@ -15100,9 +15100,9 @@
   "@devicePickerBlurbMiscale2": {
     "description": "Device picker blurb under this device category."
   },
-  "iosUninstallUnpairsWarning": "บน iOS การลบ OpenStrap จะยกเลิกการจับคู่สายรัดและเซ็นเซอร์ทั้งหมดที่จับคู่ที่นี่ออกจากโทรศัพท์ด้วย แอปอื่นรวมถึงแอปผู้ผลิตจะสูญเสียการจับคู่เหล่านั้นเช่นกัน",
+  "iosUninstallUnpairsWarning": "บน iOS การลบ Takt จะยกเลิกการจับคู่สายรัดและเซ็นเซอร์ทั้งหมดที่จับคู่ที่นี่ออกจากโทรศัพท์ด้วย แอปอื่นรวมถึงแอปผู้ผลิตจะสูญเสียการจับคู่เหล่านั้นเช่นกัน",
   "@iosUninstallUnpairsWarning": {
-    "description": "iOS only: AccessorySetupKit pairings are removed by iOS for all apps when OpenStrap is deleted."
+    "description": "iOS only: AccessorySetupKit pairings are removed by iOS for all apps when Takt is deleted."
   },
   "logFoodEditTitle": "แก้ไขรายการนี้",
   "@logFoodEditTitle": {

@@ -1,3 +1,5 @@
+import 'takt/today/takt_today_screen.dart';
+import 'takt/today/visibility.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -31,7 +33,6 @@ import 'ui2/screens/ai_briefing.dart';
 import 'ui2/screens/calm_breathing.dart';
 import 'ui2/screens/what_changed.dart';
 import 'ui2/screens/health_screen.dart';
-import 'ui2/screens/home_screen.dart';
 import 'ui2/screens/journal_compose.dart';
 import 'ui2/screens/log_workout.dart';
 import 'ui2/screens/detected_activities.dart';
@@ -149,7 +150,7 @@ class _OpenStrapAppState extends State<OpenStrapApp> with WidgetsBindingObserver
     final twelveHour = !context.watch<ClockFormatController>().resolve24h(
         MediaQuery.alwaysUse24HourFormatOf(context));
     return MaterialApp(
-      title: 'OpenStrap',
+      title: 'Takt',
       debugShowCheckedModeBanner: false,
       // The palette is the design system's, the CHOICE is still the user's.
       theme: buildTheme(Brightness.light),
@@ -355,7 +356,7 @@ class _InitFailed extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('OpenStrap could not start',
+                Text('Takt could not start',
                     style: F.t2.copyWith(color: p.ink)),
                 const SizedBox(height: 8),
                 Text(
@@ -610,16 +611,18 @@ class _ShellState extends State<_Shell> {
     // SELECT, not watch: a bool that flips twice a workout, not the ~1 Hz
     // AppState tick.
     final live = context.select<AppState, bool>((a) => a.activeWorkout != null);
+    taktTodayVisible.value = _domain == ShellDomain.today;
     return AppShell(
       key: ValueKey(_rev),
       initial: _domain,
       banner: live ? const _LiveSessionBar() : null,
       onSelect: (d) {
         _domain = d;
+        taktTodayVisible.value = d == ShellDomain.today;
         Prefs.setInt(Prefs.shellTabV2, d.index);
       },
       builder: (c, d) => switch (d) {
-        ShellDomain.today => const HomeScreen(),
+        ShellDomain.today => const TaktTodayScreen(),
         ShellDomain.sleep => const SleepTab(),
         ShellDomain.activity => const WorkoutScreen(),
         ShellDomain.health => const HealthScreen(),

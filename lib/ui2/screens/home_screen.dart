@@ -2698,3 +2698,49 @@ Widget coachChip(BuildContext c) {
     ),
   );
 }
+
+// TAKT: Öffentliche Sicht auf den Ring-Zustand für lib/takt/today. Bewusst am
+// Dateiende und nur additiv, damit Upstream-Merges hier nicht kollidieren.
+class RingView {
+  const RingView({
+    required this.kind,
+    required this.label,
+    required this.value,
+    this.sub = '',
+    this.frac,
+    this.calibrating = false,
+    this.provisional = false,
+    this.measured = true,
+    this.have,
+    this.need,
+    this.why,
+  });
+
+  final HomeRingKind kind;
+  final String label, value, sub;
+  final double? frac;
+  final bool calibrating, provisional, measured;
+  final int? have, need;
+  final String? why;
+}
+
+RingView ringViewOf(HomeRingKind k, HomeData d, AppLocalizations? l) {
+  final r = _ringOf(k, d, l);
+  return RingView(
+    kind: r.kind,
+    label: r.label,
+    value: r.value,
+    sub: r.sub,
+    frac: r.frac,
+    calibrating: r.calibrating,
+    provisional: r.provisional,
+    measured: r.measured,
+    have: r.have,
+    need: r.need,
+    why: r.why,
+  );
+}
+
+/// TAKT: Die Krankheitswarnung für den neuen Heute-Screen.
+List<Widget>? bodyWatchOf(BuildContext c, HomeData d, String today) =>
+    _HomeScreenState._bodyWatch(c, d, today);

@@ -3,6 +3,7 @@
 // on the phone (lib/support/report_crypto.dart). "Share locally" hands the same
 // archive to the share sheet with no network and no size limit.
 
+import '../../takt/brand.dart' show kTaktNoReportUpload;
 import 'dart:io';
 import 'dart:async';
 
@@ -87,6 +88,9 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   }
 
   Future<void> _send() async {
+    // TAKT: Der Ticket-Dienst gehört OpenStrap, Berichte von Takt gehen dort
+    // nicht hin. Das lokale Teilen bleibt.
+    if (kTaktNoReportUpload) return;
     if (_full) return; // the full database is never uploaded
     if (_title.text.trim().isEmpty) {
       setState(() => _error = -1);
@@ -156,7 +160,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       await pruneSharedReports(r.zip.parent, current: r.zip);
       _setStep(l.reportStageSharing);
       await Share.shareXFiles([XFile(r.zip.path)],
-          subject: 'OpenStrap issue report', sharePositionOrigin: origin);
+          subject: 'Takt issue report', sharePositionOrigin: origin);
     } catch (e) {
       if (mounted) setState(() => _error = e is ReportSendError ? e.status : -2);
     } finally {
@@ -343,7 +347,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                       _step != null && _ticketBusy ? _step! : l.reportSend,
                       icon: LucideIcons.send,
                       busy: _step != null && _ticketBusy,
-                      onTap: _busy || _full ? null : _send),
+                      onTap: _busy || _full || kTaktNoReportUpload ? null : _send),
                 ),
                 if (_full) ...[
                   const SizedBox(height: S.x2),

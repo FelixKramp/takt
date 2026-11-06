@@ -1,3 +1,4 @@
+import '../../takt/about.dart';
 import '../../l10n/display_text.dart';
 import 'step_calibration.dart';
 // Settings, and editing the profile.
@@ -938,6 +939,7 @@ class MoreSettingsView extends StatelessWidget {
                               'https://openstrap.github.io/edge/notice.html'),
                           mode: LaunchMode.externalApplication)),
                 ]),
+                const TaktAboutGroup(),
                 if (devMode)
                   settingsGroup(c, l?.settingsGroupDeveloper ?? 'Developer', [
                     SetRow(LucideIcons.layoutGrid, C.purple,

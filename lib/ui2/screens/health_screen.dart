@@ -1,3 +1,4 @@
+import '../../takt/today/more_for_today.dart';
 import '../../l10n/display_text.dart';
 // HEALTH — observation-oriented. "What is happening, what is changing, is
 // anything unusual?"
@@ -666,7 +667,9 @@ class _HealthScreenState extends State<HealthScreen> with RevisionReload {
       ScreenTitle(l?.healthTitle ?? 'Health',
           trailing: const ProfileAvatar(accent: C.domHealth)),
       SubTabs(_tabsOf(l), _tab, _select, color: C.blue),
-      const SizedBox(height: S.x5),
+      const SizedBox(height: S.x3),
+      const MoreForTodayRow(),
+      const SizedBox(height: S.x3),
       if (_loading && _d == null)
         const Padding(
           padding: EdgeInsets.only(top: S.x8),
