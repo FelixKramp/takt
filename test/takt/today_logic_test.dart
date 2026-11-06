@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openstrap_edge/takt/today/activity_items.dart';
 import 'package:openstrap_edge/takt/today/dial_ring.dart';
 import 'package:openstrap_edge/takt/today/pulse_state.dart';
+import 'package:openstrap_edge/ui2/activity/catalogue.dart';
 
 void main() {
   group('Drehregler', () {
@@ -73,6 +74,9 @@ void main() {
       final yesterday = ts(18) - 86400;
       final items = todayActivities([w('alt', yesterday), w('live', ts(9), status: 'live')], day);
       expect(items, isEmpty);
+    });
+    test('A11: Handball steht im Katalog', () {
+      expect(activityByName('handball')?.name, 'Handball');
     });
     test('A8: Unbekannte Sportart bleibt lesbar', () {
       expect(readableType('handball'), 'Handball');

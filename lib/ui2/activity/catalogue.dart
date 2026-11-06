@@ -179,6 +179,8 @@ const activityLibrary = <ActGroup>[
     Activity('Hockey', LucideIcons.target, C.blue, Track.duration, 8.0),
     Activity('Baseball', LucideIcons.target, C.red, Track.duration, 5.0),
     Activity('Rugby', LucideIcons.volleyball, C.green, Track.duration, 8.3),
+    // TAKT: MET laut Compendium of Physical Activities, Code 15320.
+    Activity('Handball', LucideIcons.volleyball, C.orange, Track.duration, 12.0),
     Activity('Golf', LucideIcons.flag, C.green, Track.duration, 4.8, gps: true),
     // Compendium 15092, "bowling, indoor, bowling alley". This row IS the
     // alley — that assumption is the choice being made here, not a fact about

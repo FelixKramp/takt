@@ -1,6 +1,6 @@
 # Plan: Heute-Screen
 
-Fortschritt: 9/11 Aufgaben · nächste: 10
+Fortschritt: 10/11 Aufgaben · nächste: 11
 
 | Anforderung | Aufgaben |
 |---|---|
@@ -24,5 +24,5 @@ Fortschritt: 9/11 Aufgaben · nächste: 10
 - [x] 7. Aktivitätenliste mit Nachtragen, leer und viele Einträge (A8–A11, A21, A22, A24) (A9 bis A11, A21, A22)
 - [x] 8. Sync beim Öffnen, Frische-Anzeige, laufendes Workout, alter Heute-Screen im Gesundheit-Tab (A5, A12, A13, A14, A23) (A5, A12, A13; A14 und A23 nur auf dem Gerät prüfbar)
 - [x] 9. Über-diese-App, Update-Prüfung, Fehlerberichte an OpenStrap aus (A16, A25) (A16, A25)
-- [ ] 10. Datenübernahme aus Edge prüfen und Release-APK bauen (A17)
+- [x] 10. Datenübernahme aus Edge prüfen und Release-APK bauen (A17; Import ist Upstream-Funktion, Beweis steht im Gerätetest aus)
 - [ ] 11. 🙋 Gerätetest durch Felix: Band umziehen, A6, A12, A14 prüfen
