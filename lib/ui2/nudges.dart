@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../l10n/app_localizations.dart';
 import '../state/prefs.dart';
+import '../takt/brand.dart' show kTaktNoReportUpload;
 import 'ui2.dart';
 
 enum _Ask { discord, donate }
@@ -47,7 +48,10 @@ class _CommunityNudgeState extends State<CommunityNudge> {
   @override
   void initState() {
     super.initState();
-    _asks = [for (final a in _Ask.values) if (_eligible(a)) a];
+    // TAKT: Keine Discord- und Spendenbitte für OpenStrap.
+    _asks = kTaktNoReportUpload
+        ? []
+        : [for (final a in _Ask.values) if (_eligible(a)) a];
     // Mark each shown ask as seen NOW, not only on snooze/silence — otherwise
     // the cooldown never actually starts and leaving Home without tapping
     // anything shows the same ask again on the very next rebuild.

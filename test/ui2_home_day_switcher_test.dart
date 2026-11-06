@@ -408,8 +408,10 @@ void main() {
       await _settle(t);
 
       final tile = find.text(label);
-      await t.scrollUntilVisible(tile, 300,
-          scrollable: find.byType(Scrollable).first);
+      // TAKT: Ohne Community-Karte ist die Liste kürzer, die Kachel ist schon
+      // gebaut und muss nur ins Bild.
+      await t.ensureVisible(tile);
+      await t.pump();
       await t.tap(tile);
       await _settle(t);
 
