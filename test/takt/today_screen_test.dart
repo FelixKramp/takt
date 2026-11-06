@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:openstrap_edge/data/activity_store.dart';
+import 'package:openstrap_edge/data/day_label.dart' show todayLabel;
 import 'package:openstrap_edge/data/db.dart';
 import 'package:openstrap_edge/data/local_repository_impl.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
@@ -56,6 +57,8 @@ Future<void> settle(WidgetTester t, [int n = 80]) async {
   }
 }
 
+int derivedAt(int sec) => sec * 1000;
+
 void main() {
   setUpAll(() {
     sqfliteFfiInit();
@@ -81,6 +84,12 @@ void main() {
       final db = await LocalDb.instance;
       await db.update('activity_review_meta', {'activated_at': start - 1});
       repo = LocalRepositoryImpl(getProfileMap: () => {});
+      await db.insert('day_result', {
+        'day_id': todayLabel(),
+        'algo_version': 1,
+        'payload_json': '{}',
+        'computed_at': derivedAt(start + 86400),
+      });
       await ActivityStore(db).reconcile(ActivityKind.workout, [
         {'id': 'd:$start', 'start_ts': start, 'end_ts': start + 1800, 'avg_bpm': 150, 'duration_min': 30, 'sport': null},
       ]);
@@ -149,6 +158,20 @@ void main() {
     await t.tap(find.text('Handball').last);
     await settle(t);
     expect(find.text('Handball'), findsOneWidget);
+    await close(t);
+  });
+
+  testWidgets('A9: Auch eine offene Erkennung bekommt ihre Sportart', (t) async {
+    await seed(t);
+    await open(t, at(start + 1800 + 60));
+    await t.tap(find.textContaining('erkannt,'));
+    await settle(t, 10);
+    await t.enterText(find.byType(TextField), 'Handball');
+    await settle(t, 5);
+    await t.tap(find.text('Handball').last);
+    await settle(t);
+    expect(find.text('Handball'), findsOneWidget);
+    await t.runAsync(() async => expect((await repo.pendingActivities()).length, 1));
     await close(t);
   });
 

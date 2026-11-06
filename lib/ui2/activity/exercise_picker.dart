@@ -229,7 +229,7 @@ class _ExercisePickerState extends State<_ExercisePicker> {
             Pressable(
               onTap: () => launchUrl(
                 Uri.parse(
-                  'https://openstrap.github.io/edge/notice.html'
+                  'https://github.com/FelixKramp/takt/blob/main/NOTICE.md'
                   '#wger-exercise-data',
                 ),
                 mode: LaunchMode.externalApplication,

@@ -36,6 +36,7 @@ import 'pulse_display.dart';
 import 'visibility.dart';
 
 const _kSportPick = 'takt.sport.';
+const _kComputedAtToMs = 1; // `day_result.computed_at`
 
 class TaktTodayScreen extends StatefulWidget {
   const TaktTodayScreen({super.key});
@@ -76,6 +77,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     if (state != AppLifecycleState.resumed) return;
     reload();
     _syncIfDue();
+    unawaited(refreshTaktUpdate());
   }
 
   void _onVisible() {
@@ -103,7 +105,9 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     if (repo == null) return;
     final token = beginRead(#taktToday);
     final l = AppLocalizations.of(context);
-    final dataThrough = context.read<AppState>().lastRecordAt;
+    final app = context.read<AppState>();
+    final dataThrough = app.lastRecordAt;
+    final busy = app.syncingNow || app.deriving || app.derivePending;
     try {
       final prefs = await SharedPreferences.getInstance();
       String sportOf(ActivitySuggestion s) =>
@@ -115,6 +119,8 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         pending: repo.pendingActivities,
         confirm: (s) => repo.confirmActivity(s, workoutType: sportOf(s)),
         dataThrough: dataThrough,
+        derivedAt: await _derivedAt(),
+        busy: busy,
         now: now,
       );
       final data = await HomeData.load(repo, l);
@@ -143,15 +149,31 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     }
   }
 
+  /// Wann die Berechnung für heute zuletzt lief.
+  Future<DateTime?> _derivedAt() async {
+    final row = await LocalDb.dayResult(todayLabel());
+    final at = row?['computed_at'];
+    return at is num ? DateTime.fromMillisecondsSinceEpoch(at.toInt() * _kComputedAtToMs) : null;
+  }
+
   Future<void> _pickSport(ActivityItem item) async {
     final s = item.suggestion;
+    var picking = false;
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => ActivityPicker(onPick: (pc, activity) async {
-        if (s != null) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('$_kSportPick${s.id}', activity.typeKey);
-        } else {
+        if (picking) return;
+        picking = true;
+        try {
+          if (s != null) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('$_kSportPick${s.id}', activity.typeKey);
+          }
+          // Auch bei offener Erkennung: Sie kann während der Wahl gespeichert
+          // worden sein. Gibt es die Zeile nicht, ändert das nichts.
           await LocalDb.setSessionType(item.id, activity.typeKey);
+        } catch (_) {
+          picking = false;
+          return;
         }
         if (!pc.mounted) return;
         bumpInsights(pc);
@@ -165,11 +187,16 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     final repo = repoOf(context);
     if (repo == null) return;
     final s = item.suggestion;
-    if (s != null) {
-      await repo.discardActivity(s);
-    } else {
-      // Über AppState, damit Verlauf und Tageswerte mitziehen.
-      await context.read<AppState>().deleteWorkout(item.id);
+    try {
+      if (s != null) {
+        await repo.discardActivity(s);
+      } else {
+        // Über AppState, damit ein noch laufendes Workout mit beendet wird.
+        await context.read<AppState>().deleteWorkout(item.id);
+      }
+    } catch (_) {
+      // Zum Beispiel eine veraltete Erkennung: Die Liste zeigt danach den
+      // aktuellen Stand, und man kann es erneut versuchen.
     }
     if (!mounted) return;
     bumpInsights(context);

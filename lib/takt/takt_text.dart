@@ -43,6 +43,9 @@ class TaktText {
   String get moreForTodaySub =>
       de ? 'Plan, Hinweise und Wecker' : 'Plan, tips and alarm';
 
+  String get reportSub => de
+      ? 'Erstellt einen Bericht, den du selbst teilen kannst'
+      : 'Creates a report you can share yourself';
   String get about => de ? 'Über diese App' : 'About this app';
   String get basedOn => de ? 'Basiert auf OpenStrap' : 'Based on OpenStrap';
   String get sourceCode => de ? 'Quellcode von Takt' : 'Takt source code';

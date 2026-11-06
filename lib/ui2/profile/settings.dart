@@ -1,5 +1,6 @@
 import '../../takt/about.dart';
 import '../../takt/brand.dart';
+import '../../takt/takt_text.dart';
 import '../../l10n/display_text.dart';
 import 'step_calibration.dart';
 // Settings, and editing the profile.
@@ -860,7 +861,7 @@ class MoreSettingsView extends StatelessWidget {
                 ]),
                 settingsGroup(c, l?.settingsGroupPrivacy ?? 'Privacy', [
                   // TAKT: Absturzberichte und Tickets gingen an OpenStrap.
-                  if (!kTaktNoReportUpload) ...[
+                  if (!kTaktNoReportUpload)
                   SetRow(LucideIcons.bug, C.orange,
                       l?.settingsCrashReportsRowTitle ?? 'Crash reports',
                       sub: l?.settingsCrashReportsRowSub ??
@@ -869,10 +870,8 @@ class MoreSettingsView extends StatelessWidget {
                       onTap: onToggleTelemetry),
                   SetRow(LucideIcons.messageSquareWarning, C.orange,
                       l?.settingsReportIssueRowTitle ?? 'Report an issue',
-                      sub: l?.settingsReportIssueRowSub ??
-                          'Sends what you choose to the maintainers, encrypted',
+                      sub: TaktText.of(c).reportSub,
                       onTap: () => goto(c, const ReportIssueScreen())),
-                  ],
                   // The food log's one outbound call. Named by what it sends,
                   // not by the feature it powers — a scan is the only thing
                   // that triggers it and the barcode is the whole payload.

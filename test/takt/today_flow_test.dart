@@ -3,6 +3,7 @@ import 'package:openstrap_edge/models/activity_suggestion.dart';
 import 'package:openstrap_edge/takt/takt_text.dart';
 import 'package:openstrap_edge/takt/today/auto_confirm.dart';
 import 'package:openstrap_edge/takt/today/freshness.dart';
+import 'package:openstrap_edge/takt/today/visibility.dart';
 import 'package:openstrap_edge/takt/update_check.dart';
 
 ActivitySuggestion s(String id, ActivityKind k) =>
@@ -38,46 +39,73 @@ void main() {
     final end = start + 1800;
     DateTime at(int sec) => DateTime.fromMillisecondsSinceEpoch(sec * 1000);
 
-    test('A8: Laufendes Training wird nicht gespeichert, bleibt aber sichtbar', () async {
+    Future<(List<String>, List<ActivitySuggestion>)> run(
+      List<ActivitySuggestion> items, {
+      required int through,
+      int? derived,
+      bool busy = false,
+      DateTime? now,
+    }) async {
       final done = <String>[];
       final left = await autoConfirmWorkouts(
-        pending: () async => [w(end)],
+        pending: () async => items,
         confirm: (x) async => done.add(x.id),
-        dataThrough: at(end + 600),
-        now: day,
+        dataThrough: at(through),
+        derivedAt: at(derived ?? through),
+        busy: busy,
+        now: now ?? day,
       );
+      return (done, left);
+    }
+
+    test('A8: Laufendes Training wird nicht gespeichert, bleibt aber sichtbar', () async {
+      final (done, left) = await run([w(end)], through: end + 600);
       expect(done, isEmpty);
       expect(left.single.id, 'w');
     });
+    test('A8: Nach einer Datenlücke wartet es auf die Berechnung', () async {
+      final (done, left) = await run([w(end)], through: end + 5400, derived: end + 60);
+      expect(done, isEmpty);
+      expect(left.single.id, 'w');
+    });
+    test('A8: Während Sync oder Berechnung wird nichts gespeichert', () async {
+      final (done, _) = await run([w(end)], through: end + 1800, busy: true);
+      expect(done, isEmpty);
+    });
     test('A8: Abgeschlossenes Training wird gespeichert, Nickerchen nicht', () async {
-      final done = <String>[];
-      final left = await autoConfirmWorkouts(
-        pending: () async => [w(end), s('n', ActivityKind.nap)],
-        confirm: (x) async => done.add(x.id),
-        dataThrough: at(end + 1800),
-        now: day,
-      );
+      final (done, left) = await run([w(end), s('n', ActivityKind.nap)], through: end + 1800);
       expect(done, ['w']);
       expect(left, isEmpty);
+    });
+    test('A8: Training vor Mitternacht bleibt nicht liegen', () async {
+      final (done, _) = await run([w(end)], through: end + 1800, now: DateTime(2026, 11, 7, 7));
+      expect(done, ['w']);
     });
     test('A8: Scheitert das Speichern, bleibt das Workout sichtbar', () async {
       final left = await autoConfirmWorkouts(
         pending: () async => [w(end)],
         confirm: (x) async => throw const ActivityReviewException('Überlappung'),
         dataThrough: at(end + 1800),
+        derivedAt: at(end + 1800),
+        busy: false,
         now: day,
       );
       expect(left.single.id, 'w');
     });
     test('A17: Ältere Vorschläge aus einem Import bleiben unberührt', () async {
-      final done = <String>[];
-      await autoConfirmWorkouts(
-        pending: () async => [w(start - 86400 + 1800, from: start - 86400)],
-        confirm: (x) async => done.add(x.id),
-        dataThrough: at(end + 1800),
-        now: day,
-      );
+      final old = start - 3 * 86400;
+      final (done, _) = await run([w(old + 1800, from: old)], through: end + 1800);
       expect(done, isEmpty);
+    });
+  });
+
+  group('Rückkehr aus dem Hintergrund', () {
+    test('A1: Nach fünf Minuten geht es zurück auf Heute', () {
+      expect(shouldReturnToToday(leftAt: now.subtract(const Duration(minutes: 6)), now: now, workoutLive: false), isTrue);
+      expect(shouldReturnToToday(leftAt: now.subtract(const Duration(minutes: 1)), now: now, workoutLive: false), isFalse);
+    });
+    test('A23: Ein laufendes Workout wird nicht verlassen', () {
+      expect(shouldReturnToToday(leftAt: now.subtract(const Duration(hours: 1)), now: now, workoutLive: true), isFalse);
     });
   });
 

@@ -10737,7 +10737,7 @@ class LocalDb {
     final db = await instance;
     final tmp = into ?? await getTemporaryDirectory();
     final stamp = DateTime.now().millisecondsSinceEpoch;
-    final dest = p.join(tmp.path, 'openstrap_export_$stamp.db');
+    final dest = p.join(tmp.path, 'takt_export_$stamp.db');
     final f = File(dest);
     if (await f.exists()) await f.delete(); // VACUUM INTO requires a fresh path
     Database? copy;
@@ -10965,7 +10965,7 @@ class LocalDb {
     final src = await instance;
     final tmp = await getTemporaryDirectory();
     final stamp = DateTime.now().millisecondsSinceEpoch;
-    final dest = p.join(tmp.path, 'openstrap_days_$stamp.db');
+    final dest = p.join(tmp.path, 'takt_days_$stamp.db');
     await deleteDatabase(dest);
     final out = await openDatabase(
       dest,
@@ -11614,7 +11614,7 @@ class LocalDb {
       if (inflated == null ||
           await sniffFile(inflated) != ImportContainer.sqlite) {
         throw const ImportFormatException(
-          'That file unpacked to something that is not an OpenStrap database.',
+          'That file unpacked to something that is not a Takt database.',
         );
       }
       return await _mergeFromDbFile(inflated);

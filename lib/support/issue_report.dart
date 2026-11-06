@@ -210,7 +210,7 @@ Future<File> gzipFile(String path, String to) async {
   return File(to);
 }
 
-const _kReportPrefix = 'openstrap_report_';
+const _kReportPrefix = 'takt_report_';
 
 String _tmp(String dir, String ext) =>
     '$dir/$_kReportPrefix${DateTime.now().microsecondsSinceEpoch}$ext';

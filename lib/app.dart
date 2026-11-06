@@ -515,7 +515,28 @@ class _Shell extends StatefulWidget {
   State<_Shell> createState() => _ShellState();
 }
 
-class _ShellState extends State<_Shell> {
+class _ShellState extends State<_Shell> with WidgetsBindingObserver {
+  DateTime? _leftAt; // TAKT: seit wann die App im Hintergrund ist
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _leftAt ??= DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      final app = _app;
+      final back = shouldReturnToToday(
+        leftAt: _leftAt,
+        now: DateTime.now(),
+        workoutLive: app?.activeWorkout != null,
+      );
+      _leftAt = null;
+      if (back && mounted) {
+        Navigator.of(context).popUntil((r) => r.isFirst);
+        _go(ShellDomain.today);
+      }
+    }
+  }
+
   /// Restore the last-selected tab so a relaunch lands where the user left off.
   late ShellDomain _domain = ShellDomain.today; // TAKT: A1, immer auf Heute öffnen
 
@@ -534,6 +555,8 @@ class _ShellState extends State<_Shell> {
     super.initState();
     // A tapped notification asks for a tab via AppState.navRequest. Jump there,
     // then clear the request so it isn't replayed on rebuild.
+    WidgetsBinding.instance.addObserver(this);
+    taktTodayVisible.value = true;
     _app = context.read<AppState>();
     _app!.navRequest.addListener(_consumeSoon);
     _app!.screenRequest.addListener(_consumeSoon);
@@ -592,6 +615,7 @@ class _ShellState extends State<_Shell> {
 
   void _go(ShellDomain d) {
     if (d == _domain) return;
+    taktTodayVisible.value = d == ShellDomain.today;
     setState(() {
       _domain = d;
       _rev++;
@@ -601,6 +625,7 @@ class _ShellState extends State<_Shell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _app?.navRequest.removeListener(_consumeSoon);
     _app?.screenRequest.removeListener(_consumeSoon);
     super.dispose();
@@ -611,7 +636,6 @@ class _ShellState extends State<_Shell> {
     // SELECT, not watch: a bool that flips twice a workout, not the ~1 Hz
     // AppState tick.
     final live = context.select<AppState, bool>((a) => a.activeWorkout != null);
-    taktTodayVisible.value = _domain == ShellDomain.today;
     return AppShell(
       key: ValueKey(_rev),
       initial: _domain,
