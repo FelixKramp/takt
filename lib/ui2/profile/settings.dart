@@ -939,7 +939,6 @@ class MoreSettingsView extends StatelessWidget {
                               'https://openstrap.github.io/edge/notice.html'),
                           mode: LaunchMode.externalApplication)),
                 ]),
-                const TaktAboutGroup(),
                 if (devMode)
                   settingsGroup(c, l?.settingsGroupDeveloper ?? 'Developer', [
                     SetRow(LucideIcons.layoutGrid, C.purple,
@@ -953,6 +952,7 @@ class MoreSettingsView extends StatelessWidget {
                         l?.settingsDeveloperModeRowTitle ?? 'Developer mode',
                         value: on, chevron: false, onTap: onToggleDev),
                   ]),
+                const TaktAboutGroup(),
                 const SizedBox(height: S.x6),
                 Surface(
                   pad: const EdgeInsets.symmetric(horizontal: S.x4),

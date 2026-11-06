@@ -42,3 +42,6 @@ def write_png(path, n, data):
 
 write_png(sys.argv[1], 512, render(512, 1.0, False))
 write_png(sys.argv[2], 512, render(512, 0.62, True))
+if len(sys.argv) > 3:
+    ORANGE = INK
+    write_png(sys.argv[3], 512, render(512, 1.0, False))

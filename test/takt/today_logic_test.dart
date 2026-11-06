@@ -74,6 +74,10 @@ void main() {
       final items = todayActivities([w('alt', yesterday), w('live', ts(9), status: 'live')], day);
       expect(items, isEmpty);
     });
+    test('A8: Unbekannte Sportart bleibt lesbar', () {
+      expect(readableType('handball'), 'Handball');
+      expect(readableType('table_tennis'), 'Table tennis');
+    });
     test('A22: Höchstens fünf, Rest zählt als weitere', () {
       final items = todayActivities([for (var i = 0; i < 7; i++) w('w$i', ts(8 + i))], day);
       final v = visibleActivities(items);

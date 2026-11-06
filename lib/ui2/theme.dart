@@ -168,8 +168,10 @@ class P {
   /// surface cannot un-clear the first.
   Color on(Color accent) {
     final toward = dark ? ink : C.n900;
-    final flat = _solve(accent, toward, card2, dark);
-    return _solve(flat, toward, Color.alphaBlend(wash(accent), card2), dark);
+    // TAKT: Im hellen Pult ist `bg` die dunkelste Fläche, nicht `card2`.
+    final worst = dark ? card2 : bg;
+    final flat = _solve(accent, toward, worst, dark);
+    return _solve(flat, toward, Color.alphaBlend(wash(accent), worst), dark);
   }
 
   /// [accent] rendered as a FILLED surface under [inkOnFill], darkened until

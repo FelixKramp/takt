@@ -209,7 +209,8 @@ void main() {
     expect(sw(0).value, isTrue);
     expect(find.text('database_14d.db.gz'), findsOneWidget);
     expect(find.text('database.db.gz'), findsNothing);
-    expect(ticket().onTap, isNotNull);
+    // TAKT: Tickets gehen nicht an den Dienst von OpenStrap, der Knopf bleibt aus.
+    expect(ticket().onTap, isNull);
 
     // Full on: Create ticket is off, the 2-week switch is covered, and the
     // list shows the full file instead of the slice.
@@ -225,7 +226,7 @@ void main() {
 
     await tester.tap(find.text(full));
     await tester.pumpAndSettle();
-    expect(ticket().onTap, isNotNull);
+    expect(ticket().onTap, isNull);
     expect(find.text(noUpload), findsNothing);
   });
 

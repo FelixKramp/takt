@@ -236,9 +236,8 @@ class TaktTodayView extends StatelessWidget {
       const SizedBox(height: S.x3),
       Row(children: [
         Text(kAppName.toLowerCase(), style: F.t2.copyWith(color: p.ink)),
-        const Spacer(),
-        Flexible(
-          flex: 3,
+        const SizedBox(width: S.x3),
+        Expanded(
           child: Text(status,
               key: const ValueKey('takt-status'),
               textAlign: TextAlign.end,
@@ -301,6 +300,7 @@ class _Card extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(S.x3),
         decoration: BoxDecoration(
           color: p.card,

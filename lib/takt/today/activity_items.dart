@@ -84,3 +84,10 @@ List<ActivityItem> todayActivities(
     hidden: items.length - kMaxShownActivities,
   );
 }
+
+/// Für Sportarten, die der Katalog nicht kennt: aus `table_tennis` wird
+/// „Table tennis".
+String readableType(String type) {
+  final t = type.replaceAll('_', ' ').trim();
+  return t.isEmpty ? t : t[0].toUpperCase() + t.substring(1);
+}

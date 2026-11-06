@@ -1,3 +1,13 @@
+# Takt
+
+Eine App für WHOOP-Bänder ohne Abo: öffnen und sofort Ringe, Live-Puls und das heutige Training sehen. Alle Daten bleiben auf dem Handy.
+
+Takt basiert auf [OpenStrap](https://github.com/OpenStrap) und nutzt dessen Bluetooth-Anbindung und Algorithmen unverändert. Takt ist kein offizielles OpenStrap-Projekt und steht in keiner Verbindung zu WHOOP. Lizenz: AGPL-3.0.
+
+Was anders ist, steht in `CLAUDE.md` und `docs/features/`. Darunter folgt das README des Originals.
+
+---
+
 <img width="1774" height="887" alt="OpenStrap Edge" src="https://github.com/user-attachments/assets/66653a25-ac97-4f8c-8be1-6c9fceeaf08b" />
 
 A health app for your wearables. No subscription, no fees, private by default.

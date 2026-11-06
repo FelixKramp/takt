@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
 import 'package:openstrap_edge/models/metric.dart';
 import 'package:openstrap_edge/takt/takt_text.dart';
@@ -85,6 +86,13 @@ void main() {
     expect(hits, ['resting_hr', 'hrv', 'steps']);
   });
 
+  testWidgets('A4: Die drei Karten sind gleich breit', (t) async {
+    await pump(t, TaktTodayView(data: full, hrv: m(58), pulse: livePulse));
+    double w(String label) => t.getSize(find.ancestor(of: find.text(label), matching: find.byType(Container)).first).width;
+    expect(w('HRV'), w('Schritte'));
+    expect(w('HRV'), w('Ruhepuls'));
+  });
+
   testWidgets('A13: Status zeigt Frische oder den laufenden Sync', (t) async {
     final now = DateTime(2026, 11, 6, 12);
     await pump(t, TaktTodayView(data: full, pulse: livePulse, now: now, lastData: now.subtract(const Duration(minutes: 2))));
@@ -140,7 +148,7 @@ void main() {
     await pump(t, TaktTodayView(data: full, pulse: livePulse, items: [item('suggestion:a', 18, detected: true)], onDiscard: (i) => gone = i));
     await t.drag(find.byType(ListView), const Offset(0, -900));
     await t.pump();
-    await t.tap(find.bySemanticsLabel(RegExp('verwerfen')));
+    await t.tap(find.byIcon(LucideIcons.x));
     expect(gone?.id, 'suggestion:a');
   });
 
