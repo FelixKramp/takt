@@ -4,6 +4,8 @@
 // OpenStrap's tables and not NOOP's `hrSample` is an OpenStrap database,
 // whatever it is called.
 
+import 'dart:io';
+
 import 'package:sqflite/sqflite.dart';
 
 import '../import/import_container.dart';
@@ -23,5 +25,26 @@ Future<bool> isUnnamedEdgeDatabase(String path) async {
     return false;
   } finally {
     await db?.close();
+  }
+}
+
+/// Runs [run] with a private copy of the database file at [path] and deletes
+/// the copy afterwards. The restore attaches the picked file and reads it
+/// through a second connection; on the phone those two locked each other out
+/// (SQLITE_BUSY, Gerätetest 2026-11-07). With the copy, every file has exactly
+/// one connection.
+Future<T> withPrivateCopy<T>(
+    String path, Future<T> Function(String copy) run) async {
+  final dir = await Directory.systemTemp.createTemp('takt_src_');
+  try {
+    final copy = '${dir.path}/source.db';
+    await File(path).copy(copy);
+    return await run(copy);
+  } finally {
+    try {
+      if (dir.existsSync()) await dir.delete(recursive: true);
+    } catch (_) {
+      /* the OS reclaims the temp dir eventually */
+    }
   }
 }

@@ -44,6 +44,7 @@ import '../ble/adapters/_registry.dart' show kAdapterSignals;
 import '../ble/adapters/adapter.dart' show NeutralSample;
 import '../ble/adapters/signals.dart' show InputSignal;
 import '../import/import_container.dart';
+import '../takt/import_route.dart';
 import 'coverage_resolver.dart' show CoverageInterval;
 import 'day_label.dart';
 import 'activity_store.dart';
@@ -11606,7 +11607,8 @@ class LocalDb {
       throw const FileSystemException('Backup file not found');
     }
     if (await sniffFile(path) != ImportContainer.gzip) {
-      return _mergeFromDbFile(path);
+      return withPrivateCopy(
+          path, (copy) => _mergeFromDbFile(path, readerPath: copy));
     }
     final work = await Directory.systemTemp.createTemp('openstrap_restore_');
     try {
@@ -11617,7 +11619,8 @@ class LocalDb {
           'That file unpacked to something that is not a Takt database.',
         );
       }
-      return await _mergeFromDbFile(inflated);
+      return await withPrivateCopy(
+          inflated, (copy) => _mergeFromDbFile(inflated, readerPath: copy));
     } finally {
       // The inflated copy is a full second copy of the database, so it goes
       // whether the import worked or not.
@@ -11849,16 +11852,19 @@ class LocalDb {
     String path, {
     List<String>? only,
     bool tolerant = false,
-  }) => _withReaderInvalidated(() =>
-      _mergeFromDbFileImpl(path, only: only, tolerant: tolerant));
+    String? readerPath,
+  }) => _withReaderInvalidated(() => _mergeFromDbFileImpl(path,
+      only: only, tolerant: tolerant, readerPath: readerPath));
 
   static Future<Map<String, int>> _mergeFromDbFileImpl(
     String path, {
     List<String>? only,
     bool tolerant = false,
+    // Takt: the reader connection reads this copy, see withPrivateCopy.
+    String? readerPath,
   }) async {
     final db = await instance;
-    final src = await openDatabase(path, readOnly: true);
+    final src = await openDatabase(readerPath ?? path, readOnly: true);
     const tables = _restoreTables;
     const bulkTables = {
       'decoded_onehz',
