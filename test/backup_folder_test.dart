@@ -259,9 +259,9 @@ void main() {
         documents.files[backupFileName(DateTime(2026, 10, day))] = [day];
       }
       documents.files['important.txt'] = [42];
-      documents.files['openstrap-notes.db'] = [42];
+      documents.files['takt-notes.db'] = [42];
       documents.files['download.partial'] = [42];
-      documents.files['openstrap-20260101-000000.db.gz.partial'] = [0];
+      documents.files['takt-20260101-000000.db.gz.partial'] = [0];
       expect((await run()).succeeded, isTrue);
       expect(
         documents.files.keys.where((n) => n.endsWith('.db.gz')),
@@ -272,11 +272,11 @@ void main() {
         isNot(contains(backupFileName(DateTime(2026, 10, 1)))),
       );
       expect(documents.files['important.txt'], [42]);
-      expect(documents.files['openstrap-notes.db'], [42]);
+      expect(documents.files['takt-notes.db'], [42]);
       expect(documents.files['download.partial'], [42]);
       expect(
         documents.files,
-        isNot(contains('openstrap-20260101-000000.db.gz.partial')),
+        isNot(contains('takt-20260101-000000.db.gz.partial')),
       );
     },
   );
@@ -284,7 +284,7 @@ void main() {
   test(
     'cleanup failure does not turn a completed backup into a failed one',
     () async {
-      documents.files['openstrap-20260101-000000.db.gz.partial'] = [0];
+      documents.files['takt-20260101-000000.db.gz.partial'] = [0];
       documents.failDelete = true;
       final result = await run();
       expect(result.succeeded, isTrue);
@@ -316,7 +316,7 @@ void main() {
       final directory = await backupDirectory();
       final backup = File(p.join(directory.path, backupFileName(when)));
       final staging = File('${backup.path}.partial');
-      final unrelated = File(p.join(directory.path, 'openstrap-notes.db'));
+      final unrelated = File(p.join(directory.path, 'takt-notes.db'));
       final download = File(p.join(directory.path, 'download.partial'));
       for (final file in [backup, staging, unrelated, download]) {
         await file.writeAsBytes([1]);

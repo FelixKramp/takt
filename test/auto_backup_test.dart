@@ -148,7 +148,7 @@ void main() {
 
     test('is zero-padded so widths match', () {
       expect(backupFileName(DateTime(2026, 1, 2, 3, 4, 5)),
-          'openstrap-20260102-030405.db.gz');
+          'takt-20260102-030405.db.gz');
     });
 
     test('two runs in the same minute get different names', () {
@@ -175,16 +175,16 @@ void main() {
         File(p.join(tmp.path, name))..writeAsStringSync('x');
 
     test('orders newest first', () {
-      touch('openstrap-20260101-000000.db');
-      touch('openstrap-20260301-000000.db');
-      touch('openstrap-20260201-000000.db');
+      touch('takt-20260101-000000.db');
+      touch('takt-20260301-000000.db');
+      touch('takt-20260201-000000.db');
       final out = sortBackupsNewestFirst(tmp.listSync());
       expect(
         out.map((f) => p.basename(f.path)),
         [
-          'openstrap-20260301-000000.db',
-          'openstrap-20260201-000000.db',
-          'openstrap-20260101-000000.db',
+          'takt-20260301-000000.db',
+          'takt-20260201-000000.db',
+          'takt-20260101-000000.db',
         ],
       );
     });
@@ -194,15 +194,15 @@ void main() {
       // files into. A loose openstrap-*.db glob would eat their notes.
       touch(backupFileName(DateTime(2026, 1, 1, 0, 0, 0)));
       touch('holiday-photos.zip');
-      touch('openstrap-notes.txt');
-      touch('openstrap-notes.db');
-      touch('openstrap-2026.db');
-      touch('openstrap-20260101.db');
+      touch('takt-notes.txt');
+      touch('takt-notes.db');
+      touch('takt-2026.db');
+      touch('takt-20260101.db');
       touch('random.db');
-      touch('openstrap-20260101-000000.db.gz.bak');
+      touch('takt-20260101-000000.db.gz.bak');
       final out = sortBackupsNewestFirst(tmp.listSync());
       expect(out.map((f) => p.basename(f.path)), [
-        'openstrap-20260101-000000.db.gz',
+        'takt-20260101-000000.db.gz',
       ]);
     });
 
@@ -211,12 +211,12 @@ void main() {
       // backups. If the pattern stopped matching them they would never be
       // counted toward retention and never pruned — five full-size copies
       // leaked permanently, which is the opposite of the point.
-      touch('openstrap-20260101-000000.db');
-      touch('openstrap-20260102-000000.db.gz');
+      touch('takt-20260101-000000.db');
+      touch('takt-20260102-000000.db.gz');
       final out = sortBackupsNewestFirst(tmp.listSync());
       expect(out.map((f) => p.basename(f.path)), [
-        'openstrap-20260102-000000.db.gz',
-        'openstrap-20260101-000000.db',
+        'takt-20260102-000000.db.gz',
+        'takt-20260101-000000.db',
       ]);
     });
 
@@ -224,9 +224,9 @@ void main() {
       // These leaked for the same reason: two runs inside one second produce a
       // `-2` suffix that the pattern never covered, so the file was invisible
       // to retention forever.
-      touch('openstrap-20260101-000000.db.gz');
-      touch('openstrap-20260101-000000-2.db.gz');
-      touch('openstrap-20260101-000000-3.db');
+      touch('takt-20260101-000000.db.gz');
+      touch('takt-20260101-000000-2.db.gz');
+      touch('takt-20260101-000000-3.db');
       expect(sortBackupsNewestFirst(tmp.listSync()).length, 3);
     });
 
@@ -235,15 +235,15 @@ void main() {
       // `.` (0x2E), so `-2` compared LESS than the unsuffixed name and the
       // second backup of that second was ranked the older of the pair — the
       // one retention evicts first. A higher index is always the later write.
-      touch('openstrap-20260101-000000.db.gz');
-      touch('openstrap-20260101-000000-2.db.gz');
-      touch('openstrap-20260101-000000-10.db.gz');
+      touch('takt-20260101-000000.db.gz');
+      touch('takt-20260101-000000-2.db.gz');
+      touch('takt-20260101-000000-10.db.gz');
       expect(
         sortBackupsNewestFirst(tmp.listSync()).map((f) => p.basename(f.path)),
         [
-          'openstrap-20260101-000000-10.db.gz',
-          'openstrap-20260101-000000-2.db.gz',
-          'openstrap-20260101-000000.db.gz',
+          'takt-20260101-000000-10.db.gz',
+          'takt-20260101-000000-2.db.gz',
+          'takt-20260101-000000.db.gz',
         ],
       );
     });
@@ -266,24 +266,24 @@ void main() {
 
     test('keeps the newest and deletes the rest', () async {
       for (final d in ['0101', '0201', '0301', '0401', '0501']) {
-        File(p.join(tmp.path, 'openstrap-2026$d-000000.db'))
+        File(p.join(tmp.path, 'takt-2026$d-000000.db'))
             .writeAsStringSync('x');
       }
       await pruneBackups(tmp, keep: 2);
       expect(
         sortBackupsNewestFirst(tmp.listSync()).map((f) => p.basename(f.path)),
-        ['openstrap-20260501-000000.db', 'openstrap-20260401-000000.db'],
+        ['takt-20260501-000000.db', 'takt-20260401-000000.db'],
       );
     });
 
     test('never touches a file that is not a backup', () async {
-      File(p.join(tmp.path, 'openstrap-20260101-000000.db'))
+      File(p.join(tmp.path, 'takt-20260101-000000.db'))
           .writeAsStringSync('x');
       final other = File(p.join(tmp.path, 'important.txt'))
         ..writeAsStringSync('x');
       // Deliberately close to ours: this is the one retention would have
       // deleted under a prefix match.
-      final lookalike = File(p.join(tmp.path, 'openstrap-notes.db'))
+      final lookalike = File(p.join(tmp.path, 'takt-notes.db'))
         ..writeAsStringSync('x');
       await pruneBackups(tmp, keep: 0);
       expect(other.existsSync(), isTrue);
@@ -292,7 +292,7 @@ void main() {
     });
 
     test('fewer backups than the limit is a no-op', () async {
-      File(p.join(tmp.path, 'openstrap-20260101-000000.db'))
+      File(p.join(tmp.path, 'takt-20260101-000000.db'))
           .writeAsStringSync('x');
       await pruneBackups(tmp, keep: 5);
       expect(sortBackupsNewestFirst(tmp.listSync()), hasLength(1));
@@ -520,7 +520,7 @@ void main() {
       // see it — otherwise a partial would still be counted and still evict.
       final dir = await backupDirectory();
       File(
-        p.join(dir.path, 'openstrap-20260809-180000.db.gz$kBackupStagingSuffix'),
+        p.join(dir.path, 'takt-20260809-180000.db.gz$kBackupStagingSuffix'),
       ).writeAsStringSync('half a backup');
       try {
         final seen = sortBackupsNewestFirst(dir.listSync())
@@ -545,10 +545,10 @@ void main() {
       final dir = await backupDirectory();
       final foreign = File(p.join(dir.path, 'holiday-video.mp4.partial'))
         ..writeAsStringSync('someone else is downloading this');
-      final lookalike = File(p.join(dir.path, 'openstrap-notes.db.partial'))
+      final lookalike = File(p.join(dir.path, 'takt-notes.db.partial'))
         ..writeAsStringSync('not ours either');
       final ours = File(
-        p.join(dir.path, 'openstrap-20260809-181500.db.gz$kBackupStagingSuffix'),
+        p.join(dir.path, 'takt-20260809-181500.db.gz$kBackupStagingSuffix'),
       )..writeAsStringSync('half a backup');
 
       await pruneStagingFiles(dir);
