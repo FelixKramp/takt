@@ -14,6 +14,9 @@ Fortschritt: 10/11 Aufgaben · nächste: 11
 | A24 | 3, 4, 7 |
 | A25 | 9 |
 
+## Offene Punkte aus der dritten Prüfung
+Vor der Freigabe nach dem Gerätetest entscheiden: D3 (seltene Lücke zwischen Bandzeit und Handyzeit beim Speichern), D7 (Verwerfen lässt Tages-Strain bis zur nächsten Berechnung und den Health-Connect-Eintrag stehen), D8 (Sportwahl während des Speicherns kann verloren gehen), D10 (Edge-Vorschläge der letzten 36 Stunden werden nach dem Import gespeichert), Maskottchen und Text „OpenStrap-Backup".
+
 ## Aufgaben
 - [x] 1. Grundlage: Abhängigkeiten holen, bestehende Testsuite läuft, Debug-APK baut (Toolchain, pub get)
 - [x] 2. Eigene Identität: `applicationId`, Name Takt, Icon, `lib/takt/brand.dart` (A15) (A15, Icon aus tool/takt/make_icon.py)
