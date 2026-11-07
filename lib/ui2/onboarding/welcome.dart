@@ -26,6 +26,7 @@ import '../../import/journal_csv_import.dart';
 import '../../import/lab_csv_import.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_state.dart';
+import '../../takt/import_route.dart';
 import '../ui2.dart';
 
 /// What an import actually achieved, including what it could NOT use.
@@ -411,7 +412,13 @@ Future<ImportOutcome> runImport(
   // multi-select and this used to return inside the winning branch, so a
   // backup selected alongside a vendor CSV imported the backup and threw the
   // CSV away without a word.
-  final db = [...plain.where(_isDbBackup), ...decrypted];
+  // Takt: a SQLite file counts as an OpenStrap backup by content too, see
+  // isUnnamedEdgeDatabase.
+  final dbPlain = <String>[
+    for (final p in plain)
+      if (_isDbBackup(p) || await isUnnamedEdgeDatabase(p)) p,
+  ];
+  final db = [...dbPlain, ...decrypted];
   // Raw-vs-vendor is decided by what the file HOLDS, not by what it is called.
   // See [isNoopExport]: routing on the extension sent NOOP's raw-sensor `.csv`
   // to the vendor importer and WHOOP's `.zip` to the NOOP one — both files
@@ -419,12 +426,12 @@ Future<ImportOutcome> runImport(
   final raw = <String>[];
   final csv = <String>[];
   for (final p in plain) {
-    if (_isDbBackup(p)) continue;
+    if (dbPlain.contains(p)) continue;
     (await isNoopExport(p) ? raw : csv).add(p);
   }
 
   if (decrypted.isNotEmpty) sources.add('Encrypted backup');
-  if (plain.any(_isDbBackup)) sources.add('OpenStrap backup');
+  if (dbPlain.isNotEmpty) sources.add('OpenStrap backup');
   try {
     for (final p in db) {
       days += await app.importEdgeBackup(p);
