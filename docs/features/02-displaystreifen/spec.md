@@ -1,6 +1,6 @@
 ---
 feature: 02-displaystreifen
-freigegeben: offen
+freigegeben: 2026-11-08
 ---
 # Spec: Displaystreifen
 
