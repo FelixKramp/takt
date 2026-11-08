@@ -15,6 +15,9 @@ class TaktLook extends StatelessWidget {
   static bool on(BuildContext c) =>
       c.dependOnInheritedWidgetOfExactType<_TaktMark>() != null;
 
+  /// Wie [on], ohne Abhängigkeit, für initState.
+  static bool peek(BuildContext c) => c.getInheritedWidgetOfExactType<_TaktMark>() != null;
+
   @override
   Widget build(BuildContext c) {
     final p = P.of(c);

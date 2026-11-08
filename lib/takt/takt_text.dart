@@ -33,6 +33,9 @@ class TaktText {
   String get restingHr => de ? 'Ruhepuls' : 'Resting HR';
   String hoursShort(String hm) => de ? '$hm Std' : '$hm h';
   String get steps => de ? 'Schritte' : 'Steps';
+  String get today => de ? 'heute' : 'today';
+  String get noValueYet => de ? 'Noch kein Wert.' : 'No value yet.';
+  String get allReadings => de ? 'Alle Messwerte' : 'All readings';
 
   /// Von wann ein Kartenwert stammt, der nicht von heute ist: „gestern“, der
   /// Wochentag innerhalb einer Woche, sonst das Datum.

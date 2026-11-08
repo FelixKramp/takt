@@ -9,6 +9,13 @@
 // Every metric goes through THIS screen. Forty bespoke detail screens is how
 // the old UI ended up with forty different opinions about what a chart is.
 
+import '../../takt/detail/value_card.dart';
+import '../../takt/pult_tokens.dart';
+import '../../takt/sleep/night_parts.dart' show TaktLinksCard;
+import '../../takt/takt_text.dart';
+import '../../takt/header.dart';
+import '../../takt/look.dart';
+import '../../takt/stripe/stripe.dart';
 import '../../l10n/display_text.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
@@ -88,6 +95,21 @@ class MetricSpec {
   /// Empty is the honest default: a metric nobody has classified declares no
   /// requirement, every gate below evaluates false, and the screen is today's.
   final Set<InputSignal> requires;
+
+  /// TAKT (Feature 07): dieselbe Kennzahl in einer anderen Akzentfarbe.
+  MetricSpec withColor(Color c) => MetricSpec(
+        chartKey: chartKey,
+        title: title,
+        unit: unit,
+        color: c,
+        icon: icon,
+        higherBetter: higherBetter,
+        suppress: suppress,
+        suppressFix: suppressFix,
+        method: method,
+        citation: citation,
+        requires: requires,
+      );
 
   const MetricSpec({
     required this.chartKey,
@@ -826,7 +848,8 @@ class _MetricDetailState extends State<MetricDetail> {
       _loading = false;
       return;
     }
-    if (widget.metricKey == 'resting_hr') {
+    // TAKT (H4): kein Live-Puls beim Ruhepuls, Heute zeigt ihn schon.
+    if (widget.metricKey == 'resting_hr' && !TaktLook.peek(context)) {
       _liveHrOwner = context.read<AppState>()..retainLiveHrView();
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
@@ -894,7 +917,11 @@ class _MetricDetailState extends State<MetricDetail> {
   @override
   Widget build(BuildContext c) {
     final l = AppLocalizations.of(c);
-    final spec = specOf(widget.metricKey);
+    // TAKT (H2): Akzent in Takt-Orange statt der Kennzahlfarbe.
+    final takt = TaktLook.on(c);
+    final spec = takt
+        ? specOf(widget.metricKey).withColor(Pult.orange)
+        : specOf(widget.metricKey);
     final d = _d ?? const MetricData();
 
     final all = d.series;
@@ -913,7 +940,12 @@ class _MetricDetailState extends State<MetricDetail> {
       // `data == null` is the LIVE path: every fixture and golden injects its
       // own MetricData, and those render with no Provider above them by design.
       // The live card reads AppState, so it belongs only on the real one.
-      if (widget.metricKey == 'resting_hr' && widget.data == null) ...[
+      // TAKT (H1): Wert-Karte oben, von wann der neueste Wert ist.
+      if (takt) ...[
+        _taktValue(c, spec, all),
+        const SizedBox(height: S.x3),
+      ],
+      if (widget.metricKey == 'resting_hr' && widget.data == null && !takt) ...[
         const SizedBox(height: S.x2),
         const LiveHrCard(),
         const SizedBox(height: S.x5),
@@ -1219,8 +1251,29 @@ class _MetricDetailState extends State<MetricDetail> {
     final u = ub.isEmpty ? '' : ' ${uiText(context, ub)}';
     final diff = band == null ? 0.0 : latest - band.usual;
 
+    // TAKT (H1): Bei „Heute“ steht der Wert schon in der Wert-Karte oben.
+    // Bei Zeiträumen bleibt der Durchschnitt, in Punktziffern.
+    final takt = TaktLook.on(context);
     return Surface(
       child: Column(children: [
+        if (takt && win == 1)
+          const SizedBox.shrink()
+        else if (takt)
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Flexible(
+              child: StripeDodge(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(_fmt(spec, mean), style: Pult.digits(40, p.ink)),
+                ),
+              ),
+            ),
+            const SizedBox(width: S.x2),
+            Text(uiText(context, unitBeside(spec.unit)),
+                style: F.body.copyWith(color: p.ink3)),
+          ])
+        else
         Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -1237,6 +1290,7 @@ class _MetricDetailState extends State<MetricDetail> {
             ],
           ),
           const SizedBox(height: S.x1),
+        if (!(takt && win == 1))
         Align(
           alignment: Alignment.centerLeft,
           child: Text(
@@ -1724,8 +1778,30 @@ class _MetricDetailState extends State<MetricDetail> {
     );
   }
 
+  /// TAKT (H1, H13): neuester Wert groß, mit dem Tag, von dem er ist.
+  Widget _taktValue(BuildContext c, MetricSpec spec, List<ChartPoint> all) {
+    final t = TaktText.of(c);
+    if (all.isEmpty) {
+      return TaktValueCard(
+          value: null, why: _loading ? null : t.noValueYet);
+    }
+    final last = all.last;
+    final at = DateTime.fromMillisecondsSinceEpoch(last.t * 1000);
+    final now = DateTime.now();
+    final today = at.year == now.year && at.month == now.month && at.day == now.day;
+    return TaktValueCard(
+      value: metricValue(spec.unit, last.v),
+      unit: localizedText(AppLocalizations.of(c), spec.unit),
+      when: today ? t.today : t.dayOf(at, now),
+    );
+  }
+
   Widget _stat(P p, String v, String l) => Column(children: [
-        Text(v, style: F.n24.copyWith(color: p.ink)),
+        Builder(
+            builder: (c) => TaktLook.on(c)
+                ? StripeDodge(
+                    align: .5, child: Text(v, style: Pult.digits(24, p.ink)))
+                : Text(v, style: F.n24.copyWith(color: p.ink))),
         const SizedBox(height: 3),
         Text(l, style: F.over.copyWith(color: p.ink3)),
       ]);
@@ -1958,8 +2034,37 @@ class _StepGoalGaugeState extends State<_StepGoalGauge> {
 /// in one function is the reason the back affordance is in the same place on
 /// all of them.
 Widget detailScaffold(BuildContext c, String title, List<Widget> body,
-    {String sub = '', Widget? trailing}) {
+    {String sub = '', Widget? trailing, Widget? center}) {
   final p = P.of(c);
+  // TAKT (Feature 07, H1): Zurück-Pfeil, kleiner Name, optional Tag in der
+  // Mitte, dann der Inhalt.
+  if (TaktLook.on(c)) {
+    return Scaffold(
+      backgroundColor: p.bg,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(S.x4, 0, S.x4, S.x12),
+          children: [
+            TaktHeader(title,
+                back: true,
+                center: center ??
+                    (sub.isEmpty
+                        ? null
+                        : Center(
+                            child: StripeDodge(
+                                line: true,
+                                child: Text(sub,
+                                    style: F.cap.copyWith(color: p.ink2),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis)))),
+                trailing: trailing),
+            const SizedBox(height: S.x2),
+            ...body,
+          ],
+        ),
+      ),
+    );
+  }
   return Scaffold(
     backgroundColor: p.bg,
     body: SafeArea(
@@ -2118,6 +2223,8 @@ List<Widget> dayNavRow(
 Widget detailLinkRow(BuildContext c, IconData icon, String title, String sub,
     VoidCallback onTap) {
   final p = P.of(c);
+  // TAKT (Feature 07): eine Takt-Karte mit einer Zeile.
+  if (TaktLook.on(c)) return TaktLinksCard(links: [(icon, title, sub, onTap)]);
   return Pressable(
     onTap: onTap,
     semanticLabel: '$title: $sub',
@@ -2150,7 +2257,10 @@ Widget detailLinkRow(BuildContext c, IconData icon, String title, String sub,
 Widget investigateRow(BuildContext c, VoidCallback onTap) => detailLinkRow(
     c,
     LucideIcons.cpu,
-    AppLocalizations.of(c)?.metricDetailNerdStatsTitle ?? 'Nerd stats',
+    // TAKT (H3): „Alle Messwerte“.
+    TaktLook.on(c)
+        ? TaktText.of(c).allReadings
+        : (AppLocalizations.of(c)?.metricDetailNerdStatsTitle ?? 'Nerd stats'),
     // One line at 1x. A subtitle that wraps makes this row taller than every
     // other `detailLinkRow` in the app, which is a layout change dressed up as
     // a copy change — keep it at or under the old string's length.

@@ -34,12 +34,14 @@ Während des Builds ist die Spec eingefroren: Abweichung → stoppen und Felix f
 | 03 | Schlafscore und Schlaf-Tab im Takt-Design | build | `docs/features/03-schlafscore/` |
 | 04 | Batterie statt Erholung, Wochenverlauf Belastung gegen Batterie | spec | `docs/features/04-batterie/` |
 | 05 | Aktivität und Gesundheit im Takt-Design | idee | — |
-| 06 | Schlaf-Tab ganz im Takt-Design, Tab-Leiste | spec | `docs/features/06-schlaf-tab-ganz/` |
-| 07 | Detailscreens von Heute (HRV, Ruhepuls, Schritte, Strain, Erholung) | spec | `docs/features/07-detailscreens/` |
+| 06 | Schlaf-Tab ganz im Takt-Design, Tab-Leiste | build | `docs/features/06-schlaf-tab-ganz/` |
+| 07 | Detailscreens von Heute (HRV, Ruhepuls, Schritte, Strain, Erholung) | build | `docs/features/07-detailscreens/` |
 
 ## Konventionen
 - Neuer Code liegt unter `lib/takt/`, Upstream-Dateien nur punktuell ändern, damit `git merge upstream/main` sauber bleibt.
 - Upstream-Regeln aus `AGENTS.md` und `lib/ui2/README.md` gelten: keine rohen Farben oder Größen außerhalb von `theme.dart`, nie erfundene Werte.
+- Takt-Haut: Was in einer `TaktLook` (`lib/takt/look.dart`) steht, zeichnen die Upstream-Bausteine im Takt-Stil (Karten, Ziffern, Knöpfe, Hypnogramm). Schlaf-Tab und alles, was Heute öffnet, stehen darin. Abzweigungen in Upstream-Dateien sind mit `TAKT (Feature NN)` markiert.
+- Bildschirmfotos aus Tests: `TAKT_SHOTS=1 flutter test test/takt/shots_test.dart` → `build/shots/`.
 - Jede Zahl im Takt-Design steht in einem `StripeDodge` (`lib/takt/stripe/stripe.dart`): Einzelwerte als Block, Zeilen mit Zahlen mit `line: true`. Neue Screens prüfen das wie `test/takt/stripe_today_test.dart` (Feature 02, B5).
 - Tests tragen die Anforderungs-ID im Namen: `A3: …`
 - Commits: `01-<Aufgabe>: <was>`
