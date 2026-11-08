@@ -40,4 +40,14 @@ void main() {
         findsOneWidget);
     expect(find.text('Puls im Schlaf'), findsOneWidget);
   });
+
+  testWidgets('F6: Knöpfe in TaktLook sind flach mit Rand und Tinte', (t) async {
+    await t.pumpWidget(host(TaktLook(
+        child: TextButton(onPressed: () {}, child: const Text('Zeiten stimmen')))));
+    final ctx = t.element(find.text('Zeiten stimmen'));
+    final style = Theme.of(ctx).textButtonTheme.style!;
+    final shape = style.shape!.resolve({})! as RoundedRectangleBorder;
+    expect(shape.side.width, greaterThan(0));
+    expect(style.foregroundColor!.resolve({}), P.of(ctx).ink);
+  });
 }
