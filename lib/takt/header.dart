@@ -24,6 +24,12 @@ String nightLabel(String day, bool de) {
       : 'Night to ${wdEn[d.weekday - 1]}, ${d.day} ${moEn[d.month - 1]}';
 }
 
+/// „So, 8. Nov.“ für einen Tag (yyyy-MM-dd).
+String dayShortLabel(String day, bool de) {
+  final n = nightLabel(day, de);
+  return de ? n.replaceFirst('Nacht auf ', '') : n.replaceFirst('Night to ', '');
+}
+
 class TaktHeader extends StatelessWidget {
   const TaktHeader(this.name, {super.key, this.back = false, this.center, this.trailing});
 
@@ -83,11 +89,15 @@ class TaktHeaderArrow extends StatelessWidget {
 
 /// Die gezeigte Nacht mit Pfeilen. [days] ist neueste zuerst wie bei DayNav.
 class TaktDayStepper extends StatelessWidget {
-  const TaktDayStepper({super.key, required this.day, required this.days, required this.onDay});
+  const TaktDayStepper(
+      {super.key, required this.day, required this.days, required this.onDay, this.labelOf = nightLabel});
 
   final String? day;
   final List<String> days;
   final ValueChanged<String> onDay;
+
+  /// Wie der Tag heißt: Nacht (Schlaf) oder Tag (Strain).
+  final String Function(String day, bool de) labelOf;
 
   @override
   Widget build(BuildContext c) {
@@ -114,11 +124,11 @@ class TaktDayStepper extends StatelessWidget {
                   final picked = await chooseDay(c, days, shown);
                   if (picked != null && picked != shown) onDay(picked);
                 },
-          semanticLabel: nightLabel(shown, de),
+          semanticLabel: labelOf(shown, de),
           child: StripeDodge(
             line: true,
             child: Text(
-              nightLabel(shown, de),
+              labelOf(shown, de),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

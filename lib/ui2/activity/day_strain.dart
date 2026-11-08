@@ -18,6 +18,11 @@
 //     a line on a day screen whose subject is the curve. Naming the input in a
 //     sentence is enough.
 
+import '../../takt/detail/value_card.dart';
+import '../../takt/header.dart';
+import '../../takt/look.dart';
+import '../../takt/pult_tokens.dart';
+import '../../takt/takt_text.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -188,7 +193,12 @@ class DayStrainDetail extends StatefulWidget {
 
   /// The day to read, as a local label. Null means today.
   final String? day;
-  const DayStrainDetail({super.key, this.data, this.day});
+
+  /// TAKT (Feature 07): vorgeladene Aktivitäten (Start, Ende in Sekunden)
+  /// und Tage zum Blättern, nur für Tests. Sonst aus dem Repo.
+  final List<(int, int)>? acts;
+  final List<String>? days;
+  const DayStrainDetail({super.key, this.data, this.day, this.acts, this.days});
 
   @override
   State<DayStrainDetail> createState() => _DayStrainDetailState();
@@ -198,9 +208,17 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
   DayStrainData? _d;
   bool _loading = true;
 
+  // TAKT (H6, H8): gezeigter Tag, Tage zum Blättern, Aktivitäten des Tages.
+  String? _day;
+  List<String> _days = const [];
+  List<(int, int)> _acts = const [];
+
   @override
   void initState() {
     super.initState();
+    _day = widget.day;
+    _days = widget.days ?? const [];
+    _acts = widget.acts ?? const [];
     if (widget.data != null) {
       _d = widget.data;
       _loading = false;
@@ -216,8 +234,29 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
       return;
     }
     try {
-      final d = await DayStrainData.load(repo, forDay: widget.day);
-      if (mounted) setState(() => (_d = d, _loading = false));
+      final d = await DayStrainData.load(repo, forDay: _day);
+      var days = _days;
+      var acts = const <(int, int)>[];
+      if (mounted && TaktLook.peek(context)) {
+        try {
+          days = await repo.availableDays();
+          final w = (await repo.getWorkouts(range: 'month'))['workouts'];
+          acts = [
+            for (final e in (w is List ? w : const []))
+              if (e is Map &&
+                  e['start_ts'] is int &&
+                  e['end_ts'] is int &&
+                  d.day != null &&
+                  dayLabelOf(DateTime.fromMillisecondsSinceEpoch(
+                          (e['start_ts'] as int) * 1000)) ==
+                      dayLabelOf(d.day!))
+                (e['start_ts'] as int, e['end_ts'] as int),
+          ];
+        } catch (_) {}
+      }
+      if (mounted) {
+        setState(() => (_d = d, _days = days, _acts = acts, _loading = false));
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -238,10 +277,33 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
         ? (l?.dayStrainToday ?? 'TODAY')
         : localizedDate(day, l?.localeName ?? 'en', pattern: 'd MMMM');
 
+    final takt = TaktLook.on(c);
     return detailScaffold(
       c,
-      l?.dayStrainTitle ?? 'Day strain',
+      takt ? 'Strain' : (l?.dayStrainTitle ?? 'Day strain'),
+      center: takt && _days.length > 1
+          ? TaktDayStepper(
+              day: _day ?? (day == null ? null : dayLabelOf(day)),
+              days: _days,
+              labelOf: dayShortLabel,
+              onDay: (x) {
+                setState(() => (_day = x, _loading = true));
+                _load();
+              })
+          : null,
       [
+        if (takt && !(_loading && _d == null)) ...[
+          TaktValueCard(
+            value: d.strain == null ? null : displayFixed(d.strain!, 1),
+            when: day == null
+                ? null
+                : dayLabelOf(day) == todayLabel()
+                    ? TaktText.of(c).today
+                    : dayShortLabel(dayLabelOf(day), TaktText.of(c).de),
+            why: whyFromNote(d.note, unit: 'days'),
+          ),
+          const SizedBox(height: S.x3),
+        ],
         if (_loading && _d == null) ...[
           const SizedBox(height: S.x8),
           const Center(child: CircularProgressIndicator()),
@@ -257,6 +319,11 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
   }
 
   // ── the curve, and only then the number ────────────────────────────────────
+  Widget _maybeActs(DayStrainData d, Widget chart) =>
+      TaktLook.on(context) && d.day != null && _acts.isNotEmpty
+          ? _TaktActs(day: dayLabelOf(d.day!), acts: _acts, child: chart)
+          : chart;
+
   List<Widget> _trace(P p, AppLocalizations? l, DayStrainData d) {
     if (!d.hasCurve) {
       // THE BUNDLE'S REASON, or none. This card used to state one — "it needs a
@@ -313,11 +380,14 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
             series: d.curve,
             footnote: l?.dayStrainChartFootnote(drawn) ??
                 'Effort above your usual waking pace. It can ease later if you slow back toward that pace. From $drawn recorded waking minutes.',
-            child: CustomPaint(
+            child: _maybeActs(
+              d,
+              CustomPaint(
               size: Size.infinite,
-              painter: LineChart(d.curve, p.on(C.purple),
+              painter: LineChart(d.curve,
+                  TaktLook.on(context) ? Pult.orange : p.on(C.purple),
                   axis: axis, t: animate(context, 1)),
-            ),
+            )),
           ),
           if (d.strain != null || d.peakHr != null || d.wornMin != null) ...[
             const SizedBox(height: S.x4),
@@ -411,5 +481,36 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
         style: F.cap.copyWith(color: p.ink3, height: 1.5),
       ),
     );
+  }
+}
+
+/// TAKT (H6): die Aktivitäten des Tages als Flächen über der Strain-Kurve.
+class _TaktActs extends StatelessWidget {
+  const _TaktActs({required this.day, required this.acts, required this.child});
+  final String day;
+  final List<(int, int)> acts;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext c) {
+    final d0 = DateTime.parse(day).millisecondsSinceEpoch ~/ 1000;
+    double f(int ts) => ((ts - d0) / 86400).clamp(0.0, 1.0);
+    return LayoutBuilder(builder: (c, box) {
+      final w = box.maxWidth;
+      return Stack(children: [
+        Positioned.fill(child: child),
+        for (final (i, a) in acts.indexed)
+          Positioned(
+            key: ValueKey('takt-strain-act-$i'),
+            left: f(a.$1) * w,
+            width: ((f(a.$2) - f(a.$1)) * w).clamp(3.0, w),
+            top: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: ColoredBox(color: Pult.orange.withValues(alpha: .18)),
+            ),
+          ),
+      ]);
+    });
   }
 }
