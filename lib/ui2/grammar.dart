@@ -813,7 +813,7 @@ class InsightCard extends StatelessWidget {
     // Farbfläche und ohne Symbolkachel.
     if (TaktLook.on(c)) {
       final p = P.of(c);
-      final edge = p.dark ? const Color(0xFFFF9A5C) : const Color(0xFFF0560A);
+      final edge = Pult.orangeFor(p.dark);
       return Pressable(
         onTap: onTap,
         semanticLabel: '$headline. $reason',

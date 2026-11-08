@@ -2792,7 +2792,7 @@ class _TaktStrip extends StatelessWidget {
                 key: ValueKey('takt-compare-dot-$index'),
                 decoration: BoxDecoration(
                   color: outside
-                      ? (p.dark ? const Color(0xFFFF9A5C) : const Color(0xFFF0560A))
+                      ? Pult.orangeFor(p.dark)
                       : p.ink,
                   shape: BoxShape.circle,
                   border: Border.all(color: p.card, width: 2),

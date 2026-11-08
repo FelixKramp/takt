@@ -38,6 +38,7 @@
 //    the drawn envelope is pixel-identical to the full series and every spike
 //    survives. Naive stride decimation would drop them.
 
+import '../takt/pult_tokens.dart';
 import 'grammar.dart' show taktDodge;
 import '../l10n/app_localizations.dart';
 import '../l10n/decimal_text.dart';
@@ -810,7 +811,7 @@ class Hypnogram extends CustomPainter {
         SleepStage.deep: p.ink,
         SleepStage.rem: Color.lerp(p.ink, p.card, .35)!,
         SleepStage.light: Color.lerp(p.ink, p.card, .55)!,
-        SleepStage.awake: p.dark ? const Color(0xFFFF9A5C) : const Color(0xFFF0560A),
+        SleepStage.awake: Pult.orangeFor(p.dark),
       };
 
   static double _worst(P p, Color c) => [p.bg, p.card, p.card2]

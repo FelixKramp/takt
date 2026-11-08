@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 
 class Pult {
   static const orange = Color(0xFFF0560A);
+  static const orangeOnDark = Color(0xFFFF9A5C);
+
+  /// Takt-Orange als Fläche, lesbar auf heller und dunkler Karte.
+  static Color orangeFor(bool dark) => dark ? orangeOnDark : orange;
   static const blue = Color(0xFF2F62C9);
   static const blueOnDark = Color(0xFF8CB0F5);
   static const lcdBg = Color(0xFF1D211D);
