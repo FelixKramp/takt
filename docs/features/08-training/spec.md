@@ -29,7 +29,8 @@ Rechnung bleiben die von OpenStrap.
 ### Übersicht im Takt-Design
 - **T4** – Kopf
   Ausgangslage: Übersicht offen · Ergebnis: Oben stehen der Zurück-Pfeil und der Name klein
-  geschrieben („handball“), in der Mitte Tag und Uhrzeit, rechts Stift und Teilen. Darunter folgt
+  geschrieben („handball“), darunter klein Tag und Uhrzeit, ganz lesbar auch bei langen Sportarten
+  und schmalen Handys. Rechts stehen Stift und Teilen. Darunter folgt
   eine Takt-Karte mit dem Hauptwert in großen Punktziffern, zum Beispiel „55:00“ mit „Gesamtzeit“.
   Es gibt keinen alten großen Titel und keine 48-pt-Zahl.
 - **T5** – Pulskurve
@@ -69,3 +70,6 @@ Rechnung bleiben die von OpenStrap.
 ## Nicht-Ziele
 - Der Aktivität-Tab, das Live-Training und das Teilen-Bild bleiben im OpenStrap-Design.
 - Keine neuen Werte, keine andere Rechnung.
+
+## Änderungen
+2026-11-08 · T4 · Prüfung: In der Mitte wurden Tag und Uhrzeit bei langen Sportarten und auf 360-px-Handys abgeschnitten. Sie stehen jetzt unter dem Namen.

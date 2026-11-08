@@ -31,12 +31,18 @@ String dayShortLabel(String day, bool de) {
 }
 
 class TaktHeader extends StatelessWidget {
-  const TaktHeader(this.name, {super.key, this.back = false, this.center, this.trailing});
+  const TaktHeader(this.name,
+      {super.key, this.back = false, this.center, this.trailing, this.sub});
 
   final String name;
   final bool back;
   final Widget? center;
   final Widget? trailing;
+
+  /// Feature 08: eine kleine Zeile unter dem Namen, zum Beispiel Tag und
+  /// Uhrzeit eines Trainings. Sie hat die ganze Breite neben Pfeil und
+  /// [trailing], anders als [center].
+  final Widget? sub;
 
   @override
   Widget build(BuildContext c) {
@@ -61,7 +67,15 @@ class TaktHeader extends StatelessWidget {
         // kürzen statt überlaufen. Ohne Mitte nimmt der Name den freien
         // Platz, mit Mitte höchstens zwei Fünftel der Breite.
         if (center == null)
-          Expanded(child: _name(p))
+          Expanded(
+            child: sub == null
+                ? _name(p)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [_name(p), sub!],
+                  ),
+          )
         else
           ConstrainedBox(
             constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(c).width * .4),

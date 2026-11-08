@@ -17,6 +17,10 @@ import 'package:openstrap_edge/ui2/profile/profile.dart' show SetRow;
 import 'package:openstrap_edge/ui2/screens/log_workout.dart';
 import 'package:openstrap_edge/ui2/theme.dart';
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
+import 'package:openstrap_edge/ui2/activity/catalogue.dart' show activityByName;
+
+import 'support/shot.dart' show loadRealFonts;
 import 'support/workout_fixture.dart';
 
 Future<void> pump(WidgetTester t, Widget w, {bool takt = true, bool dark = false}) async {
@@ -44,6 +48,8 @@ ActivityItem item({ActivitySuggestion? s}) => ActivityItem(
     );
 
 void main() {
+  setUpAll(loadRealFonts);
+
   group('Training öffnen', () {
     test('T1: gespeichertes Training öffnet die Übersicht', () async {
       String? asked;
@@ -123,6 +129,53 @@ void main() {
       await pump(t, ActivitySummary(handball(), weightKg: 75));
       expect(find.byType(SubTabs), findsOneWidget);
       expect(find.text('Zone 5'), findsOneWidget);
+    });
+
+    // Prüfung 08, T4: Tag und Uhrzeit dürfen auch bei langen Namen und
+    // schmalen Handys nicht abgeschnitten werden.
+    for (final width in [320.0, 360.0, 390.0]) {
+      testWidgets('T4: Tag und Uhrzeit ganz sichtbar bei ${width.round()} px, langer Name',
+          (t) async {
+        await pump(t, const SizedBox());
+        t.view.physicalSize = Size(width, 1600);
+        final base = handball();
+        final r = ActivityResult(activityByName('General workout')!,
+            start: base.start, duration: base.duration, sessionId: 'w1', hr: base.hr);
+        await pump(t, ActivitySummary(r));
+        t.view.physicalSize = Size(width, 1600);
+        await t.pumpAndSettle();
+        final when = t.renderObject<RenderParagraph>(
+            find.byKey(const ValueKey('takt-workout-when')));
+        expect(when.didExceedMaxLines, isFalse);
+        expect(t.getSize(find.byKey(const ValueKey('takt-workout-when'))).width,
+            greaterThanOrEqualTo(when.getMaxIntrinsicWidth(double.infinity) - .5));
+      });
+    }
+
+    testWidgets('Hinweis: privates Training schrumpft die Zahl nicht', (t) async {
+      final b = handball();
+      final r = ActivityResult(b.activity,
+          start: b.start, duration: b.duration, sessionId: 'w1', hr: b.hr, private: true);
+      await pump(t, ActivitySummary(r));
+      final f = find.descendant(of: find.byType(TaktValueCard), matching: find.text('55:00'));
+      final drawn = t.getSize(f).width;
+      final natural =
+          t.renderObject<RenderParagraph>(f).getMaxIntrinsicWidth(double.infinity);
+      // FittedBox skaliert: gezeichnete Breite in globalen Koordinaten.
+      final box = t.getRect(f);
+      expect(box.width, closeTo(natural, 1), reason: 'gezeichnet $drawn');
+    });
+
+    testWidgets('Hinweis: Zahlen der Fußnote weichen dem Streifen aus', (t) async {
+      await pump(t, ActivitySummary(handball(), weightKg: 75));
+      final note = find.textContaining('MET');
+      expect(note, findsOneWidget);
+      expect(find.ancestor(of: note, matching: find.byType(StripeDodge)), findsWidgets);
+    });
+
+    testWidgets('Hinweis: aktiver Reiter in Takt-Orange wie bei HRV und Strain', (t) async {
+      await pump(t, ActivitySummary(handball(), weightKg: 75));
+      expect(t.widget<SubTabs>(find.byType(SubTabs)).color, Pult.orange);
     });
 
     testWidgets('ohne Takt-Haut bleibt OpenStrap', (t) async {

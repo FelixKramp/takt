@@ -35,24 +35,31 @@ class TaktValueCard extends StatelessWidget {
       key: const ValueKey('takt-value-card'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Flexible(
-            child: StripeDodge(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(value ?? '–', style: Pult.digits(56, p.ink), maxLines: 1),
+          // Wert und Einheit teilen sich den Platz neben dem Wort. Ein loses
+          // Flexible neben einem Spacer bekäme nur die Hälfte und schrumpfte
+          // die Zahl (Prüfung 08).
+          Expanded(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Flexible(
+                child: StripeDodge(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value ?? '–', style: Pult.digits(56, p.ink), maxLines: 1),
+                  ),
+                ),
               ),
-            ),
+              if (value != null && unit.isNotEmpty) ...[
+                const SizedBox(width: S.x2),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(unit, style: F.body.copyWith(color: p.ink2)),
+                ),
+              ],
+            ]),
           ),
-          if (value != null && unit.isNotEmpty) ...[
-            const SizedBox(width: S.x2),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(unit, style: F.body.copyWith(color: p.ink2)),
-            ),
-          ],
           if (word != null) ...[
-            const Spacer(),
+            const SizedBox(width: S.x2),
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Text(word!,

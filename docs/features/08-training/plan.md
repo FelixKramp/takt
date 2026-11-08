@@ -8,5 +8,8 @@
       `log_workout_test.dart`
 - [x] 08-T5 Kopf kürzt lange Namen (Überlauf bei „training nachtragen“)
 - [x] 08-T6 Bildschirmfotos `training`, `nachtragen` in `shots_test.dart`, hell und dunkel angesehen
-- [ ] 08-T7 Unabhängige Prüfung
+- [x] 08-T7 Unabhängige Prüfung: 1 ❌ (T4 Datum abgeschnitten), Hinweise Doppeltipp, private
+      Zahl geschrumpft, MET-Fußnote ohne Streifen, Reiterfarbe
+- [x] 08-T8 Befunde behoben, Tests in `workout_takt_test.dart` (T4 bei 320/360/390 px, Hinweise)
+- [ ] 08-T9 Zweite Prüfung
 - [ ] 🙋 Gerätetest: Training auf Heute antippen, Stift, Nachtragen

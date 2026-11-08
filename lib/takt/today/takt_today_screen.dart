@@ -182,6 +182,19 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
 
   /// Feature 08, T1: Übersicht des Trainings, sonst die Sportart-Wahl (T2).
   Future<void> _openWorkout(ActivityItem item) async {
+    // Ein zweiter Tipp während des Ladens öffnet nichts doppelt (Prüfung 08).
+    if (_opening) return;
+    _opening = true;
+    try {
+      await _openWorkoutOnce(item);
+    } finally {
+      _opening = false;
+    }
+  }
+
+  bool _opening = false;
+
+  Future<void> _openWorkoutOnce(ActivityItem item) async {
     final app = context.read<AppState>();
     double? weight;
     try {

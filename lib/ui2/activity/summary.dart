@@ -1199,7 +1199,8 @@ class _ActivitySummaryState extends State<ActivitySummary> {
                 ],
                 tab,
                 (i) => setState(() => tab = i),
-                color: a.color),
+                // TAKT (Feature 08): Reiter in Takt-Orange wie bei HRV und Strain.
+                color: takt ? Pult.orange : a.color),
           ),
           Expanded(
             child: ListView(
@@ -1226,15 +1227,15 @@ class _ActivitySummaryState extends State<ActivitySummary> {
     return TaktHeader(
       a.displayName(c),
       back: true,
-      center: Center(
-        child: StripeDodge(
-          line: true,
-          child: Text('${displayDate(c, r.start)}, ${formatClockOf(r.start)}',
-              key: const ValueKey('takt-workout-when'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: F.cap.copyWith(color: p.ink2)),
-        ),
+      // Prüfung 08, T4: unter dem Namen statt in der Mitte, damit Tag und
+      // Uhrzeit auch bei langen Sportarten und schmalen Handys ganz stehen.
+      sub: StripeDodge(
+        line: true,
+        child: Text('${displayDate(c, r.start)}, ${formatClockOf(r.start)}',
+            key: const ValueKey('takt-workout-when'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: F.cap.copyWith(color: p.ink2)),
       ),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         if (canChangeType)
@@ -1348,7 +1349,8 @@ class _ActivitySummaryState extends State<ActivitySummary> {
       color: p.card2,
       child: Row(children: [
         Expanded(
-          child: Text(
+          // TAKT (Feature 08): Die Zahlen der Fußnote weichen dem Streifen aus.
+          child: taktDodge(context, line: true, Text(
               [
                 _calorieBasis(),
                 if (r.stepsCounted != null)
@@ -1356,7 +1358,7 @@ class _ActivitySummaryState extends State<ActivitySummary> {
                       "Steps came from the strap's own motion sensor, which "
                           'only counts them on foot.',
               ].join(' '),
-              style: F.cap.copyWith(color: p.ink3, height: 1.5)),
+              style: F.cap.copyWith(color: p.ink3, height: 1.5))),
         ),
       ]),
     );
