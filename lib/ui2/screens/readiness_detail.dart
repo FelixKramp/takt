@@ -1,3 +1,8 @@
+import '../../l10n/display_text.dart' show localizedText, uiText;
+import '../../takt/detail/band_row.dart';
+import '../../takt/detail/value_card.dart';
+import '../../takt/look.dart';
+import '../../takt/takt_text.dart';
 import '../../l10n/presentation_text.dart';
 // READINESS — the one composite, taken apart.
 //
@@ -19,7 +24,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/metric.dart';
 import '../../models/payloads.dart' show todayHeadlineOf;
 import '../ui2.dart';
-import 'driver_breakdown.dart' show driverAbsenceCard;
+import 'driver_breakdown.dart' show DriverFacts, driverAbsenceCard, driverFacts;
 import 'home_screen.dart';
 import 'investigate.dart';
 import 'metric_detail.dart';
@@ -155,7 +160,10 @@ class ReadinessDetail extends StatefulWidget {
 
   /// The day to read, as a local label. Null means today.
   final String? day;
-  const ReadinessDetail({super.key, this.data, this.day});
+  /// TAKT (Feature 07, H10): vorgeladene Bausteine mit Wert und Band, nur für
+  /// Tests. Sonst wie im Treiber-Screen aus dem Repo.
+  final List<DriverFacts>? facts;
+  const ReadinessDetail({super.key, this.data, this.day, this.facts});
 
   @override
   State<ReadinessDetail> createState() => _ReadinessDetailState();
@@ -168,9 +176,13 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
   /// The history slot under the finger, or null.
   int? _pick;
 
+  /// TAKT (H10): Bausteine mit Wert, Üblichem und Band.
+  List<DriverFacts>? _facts;
+
   @override
   void initState() {
     super.initState();
+    _facts = widget.facts;
     if (widget.data != null) {
       _d = widget.data;
       _loading = false;
@@ -190,10 +202,62 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
       final d = day == null || day == todayLabel()
           ? await ReadinessData.load(repo)
           : await ReadinessData.loadForDay(repo, day);
-      if (mounted) setState(() => (_d = d, _loading = false));
+      List<DriverFacts>? facts;
+      if (mounted && TaktLook.peek(context) && d.breakdown.isNotEmpty) {
+        try {
+          final heart = await repo.getDayHeart(day ?? todayLabel());
+          facts = driverFacts(
+            breakdown: d.breakdown,
+            baselines: heart['baselines'] is Map
+                ? (heart['baselines'] as Map).cast<String, dynamic>()
+                : null,
+          );
+        } catch (_) {}
+      }
+      if (mounted) setState(() => (_d = d, _facts = facts, _loading = false));
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// TAKT (H10): jeder Baustein als Vergleichszeile mit Band.
+  Widget _taktDrivers(BuildContext c, List<DriverFacts> facts) {
+    final t = TaktText.of(c);
+    final l = AppLocalizations.of(c);
+    final p = P.of(c);
+    return Surface(
+      pad: const EdgeInsets.symmetric(horizontal: S.x4),
+      child: Column(children: [
+        for (final (i, f) in facts.indexed) ...[
+          if (i > 0) Divider(height: 1, color: p.card2),
+          Builder(builder: (c) {
+            final shown = f.numeric && f.value != null;
+            final unit = localizedText(l, f.spec.unit);
+            final v = shown ? '${metricValue(f.spec.unit, f.value)} $unit'.trim() : '';
+            final hasBand = shown && f.usual != null && f.halfBand != null;
+            final sentence = !f.used
+                ? t.driverMissing(whyFromNote(f.note) ?? '')
+                : !f.beyondUsualSpread
+                    ? t.driverUsual
+                    : (f.delta ?? 0) < 0
+                        ? t.driverLower(
+                            shown ? '${metricValue(f.spec.unit, f.delta!.abs())} $unit'.trim() : '')
+                        : t.driverHigher(
+                            shown ? '${metricValue(f.spec.unit, f.delta!.abs())} $unit'.trim() : '');
+            return TaktBandRow(
+              index: i,
+              label: uiText(c, f.label),
+              value: v,
+              sentence: sentence,
+              mark: hasBand ? f.value : null,
+              bandLo: hasBand ? f.usual! - f.halfBand! : null,
+              bandHi: hasBand ? f.usual! + f.halfBand! : null,
+              outside: f.used && f.beyondUsualSpread,
+            );
+          }),
+        ],
+      ]),
+    );
   }
 
   @override
@@ -274,6 +338,15 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
                     )),
             ]);
           }),
+        ] else if (TaktLook.on(c)) ...[
+          // TAKT (H9): Wert und Stufe in einer Wert-Karte.
+          TaktValueCard(
+            value: '${v.round()}',
+            unit: '%',
+            word: band.label,
+            wordColor: p.on(band.color),
+            when: recoveryStateLine(d.head, l),
+          ),
         ] else
           Surface(
             child: Column(children: [
@@ -304,8 +377,11 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
           ),
 
         if (d.breakdown.isNotEmpty) ...[
-          Section(l?.readinessDetailWhatWentIntoIt ?? 'What went into it',
-              _breakdown(c, p, d)),
+          Section(
+              l?.readinessDetailWhatWentIntoIt ?? 'What went into it',
+              TaktLook.on(c) && _facts != null && _facts!.isNotEmpty
+                  ? _taktDrivers(c, _facts!)
+                  : _breakdown(c, p, d)),
           // Only when the headline above is absent: the footer's "parallel
           // view, not slices of the number above" caveat is true either way,
           // but it sits BELOW four rows of real-looking numbers and is easy

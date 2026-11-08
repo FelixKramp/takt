@@ -35,6 +35,15 @@ class TaktText {
   String get steps => de ? 'Schritte' : 'Steps';
   String get today => de ? 'heute' : 'today';
   String get noValueYet => de ? 'Noch kein Wert.' : 'No value yet.';
+  String get driverUsual => de ? 'im üblichen Bereich' : 'within your usual range';
+  String driverLower(String by) => de
+      ? (by.isEmpty ? 'niedriger als üblich' : '$by niedriger als üblich')
+      : (by.isEmpty ? 'lower than usual' : '$by lower than usual');
+  String driverHigher(String by) => de
+      ? (by.isEmpty ? 'höher als üblich' : '$by höher als üblich')
+      : (by.isEmpty ? 'higher than usual' : '$by higher than usual');
+  String driverMissing(String why) =>
+      (de ? 'nicht verfügbar' : 'not available') + (why.isEmpty ? '' : ': $why');
   String get allReadings => de ? 'Alle Messwerte' : 'All readings';
 
   /// Von wann ein Kartenwert stammt, der nicht von heute ist: „gestern“, der
