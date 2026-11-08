@@ -46,7 +46,9 @@ er keine Blackbox ist.
 - **C7** – Regelmäßigkeit
   Ausgangslage: Mehrere Nächte ausgewertet · Handlung: weiter scrollen · Ergebnis: Ein Diagramm
   zeigt für die letzten sechs Nächte je einen Balken von der Einschlaf- bis zur Aufwachzeit.
-  Gestrichelte Linien markieren die üblichen Zeiten. Darüber steht der Regelmäßigkeitswert.
+  Gestrichelte Linien zeigen die empfohlene Bett- und Aufstehzeit, für jeden Tag die Empfehlung,
+  die OpenStrap an diesem Tag berechnet hat. Darüber steht der Regelmäßigkeitswert, darunter die
+  Empfehlung für heute Nacht. Tage ohne gespeicherte Empfehlung lassen die Linie dort aus.
 - **C8** – Effizienz
   Ausgangslage: Letzte Nacht ausgewertet · Handlung: weiter scrollen · Ergebnis: Der Anteil der
   Zeit im Bett, in der geschlafen wurde. Darunter zwei Streifen über die Nacht, oben geschlafen,
