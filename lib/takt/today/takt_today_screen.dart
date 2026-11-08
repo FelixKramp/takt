@@ -56,6 +56,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   HomeData _data = const HomeData();
   Metric _hrv = Metric.empty;
   NightScore? _sleepScore;
+  ChartPoint? _hrvLast, _rhrLast;
   List<ActivityItem> _items = const [];
   String? _day;
   bool _wasBusy = false;
@@ -120,6 +121,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     if (repo == null) return;
     final token = beginRead(#taktToday);
     _loadSleepScore();
+    _loadLastValues();
     final l = AppLocalizations.of(context);
     final app = context.read<AppState>();
     final dataThrough = app.lastRecordAt;
@@ -238,6 +240,32 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     }
   }
 
+  /// Letzte gespeicherte HRV und letzter Ruhepuls aus dem Verlauf, dieselbe
+  /// Quelle wie die Detailansicht. Eigenständig und nicht abgewartet wie der
+  /// Schlafscore, damit `_load` nicht länger braucht (G2).
+  Future<void> _loadLastValues() async {
+    final repo = repoOf(context);
+    if (repo == null) return;
+    final token = beginRead(#taktLastValues);
+    try {
+      ChartPoint? last(Map<String, dynamic> chart) {
+        final pts = pointsOf(chart);
+        return pts.isEmpty ? null : pts.reduce((a, b) => b.t > a.t ? b : a);
+      }
+
+      final hrv = last(await repo.getChart('hrv'));
+      final rhr = last(await repo.getChart('resting_hr'));
+      if (stillNewest(#taktLastValues, token)) {
+        setState(() {
+          _hrvLast = hrv;
+          _rhrLast = rhr;
+        });
+      }
+    } catch (_) {
+      // Ohne Verlauf bleiben die Karten beim heutigen Wert oder beim Strich.
+    }
+  }
+
   Future<void> _push(Widget w) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => w));
     if (mounted) await _load();
@@ -275,6 +303,8 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         data: _data,
         hrv: _hrv,
         sleepScore: _sleepScore,
+        hrvLast: _hrvLast,
+        rhrLast: _rhrLast,
         items: _items,
         lastData: lastDataAtOf(c),
         syncing: syncing || derivingOf(c),
@@ -321,9 +351,16 @@ class TaktTodayView extends StatelessWidget {
     this.now,
     this.scroll,
     this.sleepScore,
+    this.hrvLast,
+    this.rhrLast,
   });
 
   final HomeData data;
+
+  /// Letzter gespeicherter Wert aus dem Verlauf (wie in der Detailansicht).
+  /// Gilt nur, wenn die heutige Nacht noch keinen Wert hat, und trägt dann
+  /// seinen Tag im Label (Gerätetest 0.2.0, G2).
+  final ChartPoint? hrvLast, rhrLast;
 
   /// Feature 03, C11: Schlafscore der letzten Nacht. Mit Score zeigt der
   /// Schlafring ihn in der Farbe der Stufe, ohne bleibt er wie in A2.
@@ -353,7 +390,15 @@ class TaktTodayView extends StatelessWidget {
     final slept = data.sleepMin.value;
     final rings = [
       for (final k in HomeRingKind.values)
-        if (k == HomeRingKind.sleep && score != null)
+        if (k == HomeRingKind.strain && data.strain.value != null)
+          RingView(
+            kind: k,
+            label: ringViewOf(k, data, l).label,
+            value: displayFixed(data.strain.value!, 1),
+            sub: t.strainWord(data.strain.value!.toDouble()),
+            frac: (data.strain.value! / 21).clamp(0, 1).toDouble(),
+          )
+        else if (k == HomeRingKind.sleep && score != null)
           RingView(
             kind: k,
             label: ringViewOf(k, data, l).label,
@@ -416,9 +461,11 @@ class TaktTodayView extends StatelessWidget {
       KeyedSubtree(key: const ValueKey('takt-pulse'), child: pulse),
       const SizedBox(height: S.x3),
       Row(key: const ValueKey('takt-cards'), children: [
-        Expanded(child: _Card(t.hrv, _num(hrv, 'ms'), () => onCard?.call('hrv'))),
+        Expanded(child: _lastCard(t, t.hrv, hrv, hrvLast, 'ms', () => onCard?.call('hrv'))),
         const SizedBox(width: S.x2),
-        Expanded(child: _Card(t.restingHr, _num(data.rhr, ''), () => onCard?.call('resting_hr'))),
+        Expanded(
+            child: _lastCard(
+                t, t.restingHr, data.rhr, rhrLast, '', () => onCard?.call('resting_hr'))),
         const SizedBox(width: S.x2),
         Expanded(child: _Card(t.steps, _num(data.steps, ''), () => onCard?.call('steps'))),
       ]),
@@ -429,6 +476,18 @@ class TaktTodayView extends StatelessWidget {
         child: ActivityList(items: items, onOpen: onOpen, onDiscard: onDiscard, onLog: onLog),
       ),
     ]);
+  }
+
+  /// Karte mit dem heutigen Wert, sonst dem letzten aus dem Verlauf samt Tag.
+  Widget _lastCard(TaktText t, String label, Metric today, ChartPoint? last, String unit,
+      VoidCallback onTap) {
+    if (today.value != null || last == null) return _Card(label, _num(today, unit), onTap);
+    final at = DateTime.fromMillisecondsSinceEpoch(last.t * 1000);
+    final n = now ?? DateTime.now();
+    final isToday = at.year == n.year && at.month == n.month && at.day == n.day;
+    final v = displayFixed(last.v, 0);
+    return _Card(isToday ? label : '$label, ${t.dayOf(at, n)}',
+        unit.isEmpty ? v : '$v $unit', onTap);
   }
 
   static String _num(Metric m, String unit) {

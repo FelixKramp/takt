@@ -34,6 +34,30 @@ class TaktText {
   String hoursShort(String hm) => de ? '$hm Std' : '$hm h';
   String get steps => de ? 'Schritte' : 'Steps';
 
+  /// Stufe des Tages-Strains (0 bis 21) statt „von 21“ unter dem Ring.
+  String strainWord(double v) => v < 10
+      ? (de ? 'leicht' : 'light')
+      : v < 14
+          ? (de ? 'mittel' : 'moderate')
+          : v < 18
+              ? (de ? 'hoch' : 'high')
+              : (de ? 'sehr hoch' : 'all out');
+
+  /// Von wann ein Kartenwert stammt, der nicht von heute ist: „gestern“, der
+  /// Wochentag innerhalb einer Woche, sonst das Datum.
+  String dayOf(DateTime d, DateTime now) {
+    final a = DateTime(d.year, d.month, d.day);
+    final b = DateTime(now.year, now.month, now.day);
+    final days = b.difference(a).inHours ~/ 24;
+    if (days == 1) return de ? 'gestern' : 'yesterday';
+    if (days > 1 && days < 7) {
+      const wd = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+      const we = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return (de ? wd : we)[d.weekday - 1];
+    }
+    return de ? '${d.day}.${d.month}.' : '${d.month}/${d.day}';
+  }
+
   String get syncing => de ? 'Synchronisiert …' : 'Syncing…';
   String get justNow => de ? 'gerade eben' : 'just now';
   String minutesAgo(int m) => de ? 'vor $m Min' : '$m min ago';
