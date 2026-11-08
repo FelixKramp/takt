@@ -1847,6 +1847,30 @@ _PastWorkout? _pastFromRow(Map r) {
 /// TAKT (Feature 08, T1): die Übersicht eines gespeicherten Trainings, wie
 /// sie der Aktivität-Tab öffnet. Null, wenn es das Training im letzten Monat
 /// nicht gibt.
+/// TAKT (Feature 09, W1): die zuletzt gemachten Sportarten für die
+/// Sportart-Wahl, neueste zuerst, höchstens sechs. Gleiche Regel wie die
+/// Kacheln oben im Aktivität-Tab: nur Trainings vom Band. Leer, wenn nichts
+/// zu lesen ist; dann zeigt die Liste die häufigen.
+Future<List<Activity>> taktRecentSports(AppState? app) async {
+  final repo = app?.repo;
+  if (repo == null) return const [];
+  try {
+    final rows = (await repo.getWorkouts(range: 'month'))['workouts'];
+    if (rows is! List) return const [];
+    final recent = <Activity>[];
+    for (final r in rows) {
+      if (r is! Map) continue;
+      final w = _pastFromRow(r);
+      if (w == null || w.importedFrom != null) continue;
+      if (!recent.any((x) => x.name == w.activity.name)) recent.add(w.activity);
+      if (recent.length == 6) break;
+    }
+    return recent;
+  } catch (_) {
+    return const [];
+  }
+}
+
 Future<ActivityResult?> taktWorkoutResult(AppState app, String id) async {
   final repo = app.repo;
   if (repo == null) return null;

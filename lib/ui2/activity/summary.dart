@@ -43,7 +43,8 @@ import '../grammar.dart';
 import '../paint_activity.dart';
 import '../profile/profile.dart';
 import '../screens/home_screen.dart' show unitsOf;
-import '../screens/log_workout.dart' show bumpInsights;
+import '../screens/log_workout.dart' show appOf, bumpInsights;
+import '../screens/workout_screen.dart' show taktRecentSports;
 import '../theme.dart';
 import 'catalogue.dart';
 import 'picker.dart';
@@ -59,6 +60,8 @@ import '../../takt/header.dart' show TaktHeader;
 import '../../takt/look.dart' show TaktLook;
 import '../../takt/pult_tokens.dart' show Pult;
 import '../../takt/stripe/stripe.dart' show StripeDodge;
+import '../../takt/detail/hr_scrub.dart' show TaktHrScrub;
+import '../../takt/takt_text.dart' show TaktText;
 
 /// The defining visual object of an activity. Everything else supports it.
 ///
@@ -720,11 +723,16 @@ class SessionStats extends StatelessWidget {
   Widget _taktStats(BuildContext c, P p) {
     final rows = <Widget>[];
     var i = 0;
+    final t = TaktText.of(c);
     for (final s in sessionStats(r, unitsOf(c))) {
-      // Nur die führende Zahl in Punktziffern: „16 bpm in 60 s“ wird „16“ und
-      // „bpm in 60 s“.
+      // Nur die führende Zahl in Punktziffern: „718 kcal“ wird „718“ und
+      // „kcal“.
       final m = RegExp(r'^([0-9][0-9.,:]*)\s+(\S.*)$').firstMatch(s.$2);
-      final (value, unit) = m == null ? splitStatUnit(s.$2) : (m.group(1)!, m.group(2));
+      var (value, unit) = m == null ? splitStatUnit(s.$2) : (m.group(1)!, m.group(2));
+      // Feature 09, W9: „16 bpm in 60 s“ verstand niemand. Das Fenster steht
+      // im Namen, der Satz darunter erklärt den Wert.
+      final hrr = s.$1 == 'HR recovery';
+      if (hrr) unit = 'bpm';
       rows.add(Container(
         key: ValueKey('takt-stat-${i++}'),
         constraints: const BoxConstraints(minHeight: 48),
@@ -733,8 +741,19 @@ class SessionStats extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: S.x2),
         child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           Expanded(
-            child: taktDodge(c, Text(uiText(c, s.$1), style: F.body.copyWith(color: p.ink2)),
-                line: true),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              taktDodge(c, Text(hrr ? t.hrDrop : uiText(c, s.$1), style: F.body.copyWith(color: p.ink2)),
+                  line: true),
+              if (hrr) ...[
+                const SizedBox(height: S.x1),
+                taktDodge(
+                    c,
+                    Text(t.hrDropWhy,
+                        key: const ValueKey('takt-hrr-why'),
+                        style: F.cap.copyWith(color: p.ink3, height: 1.4)),
+                    line: true),
+              ],
+            ]),
           ),
           const SizedBox(width: S.x2),
           StripeDodge(
@@ -1001,8 +1020,13 @@ class _ActivitySummaryState extends State<ActivitySummary> {
     // land on the route underneath (the picker is still mounted through its
     // exit transition), so only one pick may be in flight or land at all.
     var busy = false;
+    // TAKT (Feature 09, W1): Die Liste ist eine eigene Route und bekommt die
+    // Takt-Haut hier mit.
+    final takt = TaktLook.peek(c);
+    final recent = takt ? await taktRecentSports(appOf(c)) : const <Activity>[];
+    if (!c.mounted) return;
     await Navigator.of(c).push(MaterialPageRoute(
-      builder: (_) => ActivityPicker(onPick: (pc, newActivity) async {
+      builder: (_) => _maybeTakt(takt, ActivityPicker(recent: recent, onPick: (pc, newActivity) async {
         if (busy || picked) return;
         busy = true;
         // The stored key everywhere else uses — `startWorkout(type:
@@ -1023,7 +1047,7 @@ class _ActivitySummaryState extends State<ActivitySummary> {
         if (!pc.mounted) return;
         bumpInsights(pc);
         Navigator.of(pc).pop();
-      }),
+      })),
     ));
     if (c.mounted && picked) Navigator.of(c).pop();
   }
@@ -1868,6 +1892,17 @@ class _ActivitySummaryState extends State<ActivitySummary> {
       ?_traceNote,
       ?extra,
     ];
+    // TAKT (Feature 09, W4, W5): ablesbare Kurve, Finger auflegen und wischen.
+    if (TaktLook.on(context)) {
+      return TaktHrScrub(
+        hr: r.hr,
+        t0: r.start,
+        title: l?.activitySummaryHeartRateTitle ?? 'Heart rate',
+        height: height,
+        xLabels: [l?.activitySummaryStart ?? 'Start', hms(r.duration)],
+        footnote: note.isEmpty ? null : note.join(' '),
+      );
+    }
     return ChartFrame(
       title: l?.activitySummaryHeartRateTitle ?? 'Heart rate',
       unit: 'bpm',
@@ -2399,3 +2434,7 @@ class _ActivitySummaryState extends State<ActivitySummary> {
     ];
   }
 }
+
+/// TAKT (Feature 09): eine gepushte Route unter die Takt-Haut legen, wenn die
+/// Seite darunter eine hat.
+Widget _maybeTakt(bool takt, Widget child) => takt ? TaktLook(child: child) : child;

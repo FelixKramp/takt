@@ -114,7 +114,9 @@ void main() {
           (w.key! as ValueKey<String>).value.startsWith('takt-stat-'));
       expect(rows, findsNWidgets(5), reason: 'Ø Puls, Max. Puls, Erholung, Kalorien, Strain');
       // Das Dezimalzeichen kommt aus der App-Einstellung, nicht vom Gerät.
-      expect(find.text('bpm in 60 s'), findsOneWidget, reason: 'nur die Zahl punktiert');
+      // Feature 09, W9: Die Erholung heißt „Pulsabfall nach 1 Min.“ mit „16 bpm“.
+      expect(find.descendant(of: rows, matching: find.text('bpm')), findsNWidgets(3),
+          reason: 'nur die Zahl punktiert');
       for (final s in ['146', '197', '16', '718', RegExp(r'^11[.,]0$')]) {
         final f = find.descendant(
             of: rows,

@@ -15,6 +15,10 @@ import '../theme.dart';
 import 'catalogue.dart';
 import 'live.dart';
 import 'setup.dart';
+import '../../takt/header.dart' show TaktHeader;
+import '../../takt/look.dart' show TaktLook;
+import '../../takt/stripe/stripe.dart' show StripeDodge;
+import '../../takt/takt_text.dart' show TaktText;
 
 class ActivityPicker extends StatefulWidget {
   /// Body weight for the per-row calorie hint. Null hides it rather than
@@ -64,6 +68,7 @@ class _ActivityPickerState extends State<ActivityPicker> {
 
   @override
   Widget build(BuildContext c) {
+    if (TaktLook.on(c)) return _taktBuild(c);
     final p = P.of(c);
     final l = AppLocalizations.of(c);
     final searching = q.trim().isNotEmpty;
@@ -251,6 +256,191 @@ class _ActivityPickerState extends State<ActivityPicker> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// TAKT (Feature 09, W1, W2): Takt-Kopf, Suche als graue Zeile, alles andere
+  /// schlichte Zeilen ohne bunte Kästchen und Symbole. Die Tastatur öffnet sich
+  /// nicht von selbst: Wer die Sportart ändert, tippt meist eine der obersten
+  /// Zeilen an.
+  Widget _taktBuild(BuildContext c) {
+    final p = P.of(c);
+    final t = TaktText.of(c);
+    final needle = q.trim().toLowerCase();
+    final results = needle.isEmpty
+        ? const <Activity>[]
+        : [
+            for (final a in allActivities)
+              if (a.displayName(c).toLowerCase().contains(needle) ||
+                  a.name.toLowerCase().contains(needle))
+                a,
+          ];
+    final top = widget.recent.isEmpty ? quickStart : widget.recent;
+
+    Widget rows(List<Activity> list, String prefix) => Surface(
+          pad: const EdgeInsets.symmetric(horizontal: S.x4),
+          child: Column(children: [
+            for (var i = 0; i < list.length; i++)
+              _TaktPickRow(
+                key: ValueKey('$prefix${prefix == 'takt-pick-recent-' ? i : list[i].name}'),
+                label: list[i].displayName(c),
+                first: i == 0,
+                onTap: () => _pick(c, list[i]),
+              ),
+          ]),
+        );
+
+    Widget caption(String s) => Padding(
+          padding: const EdgeInsets.only(bottom: S.x2),
+          child: StripeDodge(
+              line: true, child: Text(s, style: F.cap.copyWith(color: p.ink2))),
+        );
+
+    return Scaffold(
+      backgroundColor: p.bg,
+      body: SafeArea(
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: S.x4),
+            child: TaktHeader(t.pickSportHead, back: true),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(S.x4, S.x2, S.x4, S.x4),
+            child: TextField(
+              key: const ValueKey('takt-pick-search'),
+              onChanged: (v) => setState(() => q = v),
+              style: F.body.copyWith(color: p.ink),
+              cursorColor: p.ink,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: t.searchSports,
+                hintStyle: F.body.copyWith(color: p.ink3),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: p.line)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: p.ink2)),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(S.x4, 0, S.x4, S.x10),
+              children: [
+                if (needle.isNotEmpty)
+                  if (results.isEmpty)
+                    StripeDodge(
+                      line: true,
+                      child: Text(t.noSportMatch, style: F.body.copyWith(color: p.ink2)),
+                    )
+                  else
+                    rows(results, 'takt-pick-row-')
+                else ...[
+                  caption(widget.recent.isEmpty ? t.quickSports : t.recentSports),
+                  rows(top, 'takt-pick-recent-'),
+                  const SizedBox(height: S.x5),
+                  Surface(
+                    pad: const EdgeInsets.symmetric(horizontal: S.x4),
+                    child: Column(children: [
+                      for (var gi = 0; gi < activityLibrary.length; gi++) ...[
+                        _TaktPickRow(
+                          key: ValueKey('takt-pick-group-$gi'),
+                          label: activityLibrary[gi].displayName(c),
+                          strong: true,
+                          count: activityLibrary[gi].items.length,
+                          open: group == gi,
+                          first: gi == 0,
+                          onTap: () => setState(() {
+                            closing = group;
+                            group = group == gi ? -1 : gi;
+                          }),
+                        ),
+                        if (group == gi)
+                          Padding(
+                            padding: const EdgeInsets.only(left: S.x4),
+                            child: Column(children: [
+                              for (final a in activityLibrary[gi].items)
+                                _TaktPickRow(
+                                  key: ValueKey('takt-pick-row-${a.name}'),
+                                  label: a.displayName(c),
+                                  onTap: () => _pick(c, a),
+                                ),
+                            ]),
+                          ),
+                      ],
+                    ]),
+                  ),
+                  if (widget.weightKg != null) ...[
+                    const SizedBox(height: S.x4),
+                    StripeDodge(
+                      line: true,
+                      child: Text(t.calorieWhy,
+                          key: const ValueKey('takt-pick-note'),
+                          style: F.cap.copyWith(color: p.ink2, height: 1.4)),
+                    ),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+
+/// TAKT (Feature 09): eine Zeile der Sportart-Wahl. Name links, bei Gruppen
+/// die Anzahl und ein Pfeil, der sich beim Aufklappen dreht.
+class _TaktPickRow extends StatelessWidget {
+  const _TaktPickRow({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.first = false,
+    this.strong = false,
+    this.count,
+    this.open = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool first, strong, open;
+  final int? count;
+
+  @override
+  Widget build(BuildContext c) {
+    final p = P.of(c);
+    return Pressable(
+      onTap: onTap,
+      semanticLabel: label,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: S.tap),
+        padding: const EdgeInsets.symmetric(vertical: S.x2),
+        decoration: BoxDecoration(
+            border: first ? null : Border(top: BorderSide(color: p.line))),
+        child: Row(children: [
+          Expanded(
+            child: StripeDodge(
+              line: true,
+              child: Text(label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: F.body.copyWith(
+                      color: p.ink, fontWeight: strong ? FontWeight.w600 : FontWeight.w400)),
+            ),
+          ),
+          if (count != null) ...[
+            const SizedBox(width: S.x2),
+            Text('$count', style: F.cap.copyWith(color: p.ink3)),
+          ],
+          if (count != null) ...[
+            const SizedBox(width: S.x1),
+            AnimatedRotation(
+              turns: open ? .25 : 0,
+              duration: motion(c, Motion.base),
+              child: Icon(LucideIcons.chevronRight, size: 16, color: p.ink3),
+            ),
+          ],
+        ]),
       ),
     );
   }

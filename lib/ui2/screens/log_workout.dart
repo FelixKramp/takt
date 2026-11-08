@@ -54,6 +54,7 @@ import '../../takt/header.dart' show TaktHeader;
 import '../../takt/pult_tokens.dart' show Pult;
 import '../../takt/stripe/stripe.dart' show StripeDodge;
 import '../../takt/takt_text.dart' show TaktText;
+import '../../takt/detail/hr_scrub.dart' show TaktHrScrub;
 
 /// One detected bout, as this screen needs it. Built straight off a
 /// `workout_suggestions` row.
@@ -135,6 +136,7 @@ class LogWorkout extends StatefulWidget {
     this.spans,
     this.now,
     this.importedUuid,
+    this.hrSamples,
   });
 
   final String? sessionId;
@@ -157,6 +159,10 @@ class LogWorkout extends StatefulWidget {
   /// Set when this scores an imported workout (#325): the saved session
   /// replaces that import, so the workout is not listed and counted twice.
   final String? importedUuid;
+
+  /// TAKT (Feature 09, W6): Pulsdaten für die Kurve als (Sekunde, bpm).
+  /// Injected in tests; null means read them from the database.
+  final Future<List<(int, int)>> Function(int fromSec, int toSec)? hrSamples;
 
   @override
   State<LogWorkout> createState() => _LogWorkoutState();
@@ -191,6 +197,68 @@ class _LogWorkoutState extends State<LogWorkout> {
     } else {
       _loadSpans();
     }
+    if (TaktLook.peek(context)) _loadHr();
+  }
+
+  // ── TAKT (Feature 09, W6 bis W8): Puls rund um den gewählten Zeitraum ──
+  List<double?>? _hr;
+  DateTime _hrFrom = DateTime(2000);
+  int _hrReq = 0;
+
+  /// 30 Minuten vor Beginn bis 30 nach Ende, auf ganze Minuten.
+  (DateTime, DateTime) get _hrRange {
+    final a = _start.isBefore(_end) ? _start : _end;
+    final b = _start.isBefore(_end) ? _end : _start;
+    final from = DateTime(a.year, a.month, a.day, a.hour, a.minute - 30);
+    final to = DateTime(b.year, b.month, b.day, b.hour, b.minute + 30);
+    return (from, to);
+  }
+
+  Future<void> _loadHr() async {
+    if (!mounted) return;
+    final req = ++_hrReq;
+    final (from, to) = _hrRange;
+    // Randfall: über zwölf Stunden keine Kurve, damit nichts hängt.
+    if (_end.difference(_start).inMinutes.abs() > 12 * 60) {
+      setState(() => _hr = const []);
+      return;
+    }
+    final fromSec = from.millisecondsSinceEpoch ~/ 1000;
+    final toSec = to.millisecondsSinceEpoch ~/ 1000;
+    List<(int, int)> rows;
+    try {
+      rows = await (widget.hrSamples ??
+          (a, b) async => [
+                for (final r in await LocalDb.hrSamplesInRange(a, b))
+                  ((r['rec_ts'] as num).toInt(), (r['hr'] as num).toInt()),
+              ])(fromSec, toSec);
+    } catch (_) {
+      rows = const [];
+    }
+    if (!mounted || req != _hrReq) return;
+    final n = to.difference(from).inMinutes;
+    final sum = List<int>.filled(n, 0), cnt = List<int>.filled(n, 0);
+    for (final (ts, bpm) in rows) {
+      final i = (ts - fromSec) ~/ 60;
+      if (i < 0 || i >= n || bpm <= 0) continue;
+      sum[i] += bpm;
+      cnt[i]++;
+    }
+    final hr = [for (var i = 0; i < n; i++) cnt[i] == 0 ? null : sum[i] / cnt[i]];
+    setState(() {
+      _hrFrom = from;
+      _hr = hr.any((v) => v != null) ? hr : const [];
+    });
+  }
+
+  void _setStartAt(DateTime at) {
+    setState(() => _start = at);
+    _loadHr();
+  }
+
+  void _setEndAt(DateTime at) {
+    setState(() => _end = at);
+    _loadHr();
   }
 
   Future<void> _loadSpans() async {
@@ -238,6 +306,7 @@ class _LogWorkoutState extends State<LogWorkout> {
           picked.year, picked.month, picked.day, _start.hour, _start.minute);
       _end = _start.add(span);
     });
+    if (TaktLook.peek(context)) _loadHr();
   }
 
   Future<void> _pickTime({required bool isStart}) async {
@@ -272,6 +341,7 @@ class _LogWorkoutState extends State<LogWorkout> {
         _end = e;
       }
     });
+    if (TaktLook.peek(context)) _loadHr();
   }
 
   Future<void> _pickActivity() async {
@@ -550,6 +620,8 @@ class _LogWorkoutState extends State<LogWorkout> {
                   ]),
                 ),
                 const SizedBox(height: S.x4),
+                _taktHrCard(c, p),
+                const SizedBox(height: S.x4),
                 if (bad != null || _failed != null) ...[
                   StatusCard(
                       l?.logWorkoutWindowInvalidTitle ?? 'That window will not save',
@@ -597,6 +669,39 @@ class _LogWorkoutState extends State<LogWorkout> {
         ]),
       ),
     );
+  }
+
+  /// TAKT (Feature 09, W6 bis W8): Puls rund um den Zeitraum, der Zeitraum
+  /// hinterlegt, mit „Beginn hier“ und „Ende hier“.
+  Widget _taktHrCard(BuildContext c, P p) {
+    final t = TaktText.of(c);
+    final hr = _hr;
+    final Widget body;
+    if (hr == null) {
+      body = const SizedBox(height: 60);
+    } else if (hr.isEmpty) {
+      body = StripeDodge(
+        line: true,
+        child: Text(t.noPulseRecorded, style: F.cap.copyWith(color: p.ink2, height: 1.4)),
+      );
+    } else {
+      final last = (hr.length - 1).clamp(1, 1 << 30);
+      double frac(DateTime d) => d.difference(_hrFrom).inMinutes / last;
+      body = TaktHrScrub(
+        hr: hr,
+        t0: _hrFrom,
+        title: t.pulse,
+        height: 110,
+        xLabels: [
+          formatMinuteOfDay(_hrFrom.hour * 60 + _hrFrom.minute),
+          formatMinuteOfDay(_hrRange.$2.hour * 60 + _hrRange.$2.minute),
+        ],
+        window: (frac(_start), frac(_end)),
+        onStart: _setStartAt,
+        onEnd: _setEndAt,
+      );
+    }
+    return Surface(key: const ValueKey('takt-log-hr'), child: body);
   }
 }
 

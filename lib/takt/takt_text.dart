@@ -28,6 +28,29 @@ class TaktText {
   // Feature 08, T8: Kopf des Nachtragens, klein geschrieben wie alle Köpfe.
   String get logWorkoutHead => de ? 'training nachtragen' : 'log a workout';
   String get retimeHead => de ? 'zeiten ändern' : 'change the times';
+  // Feature 09.
+  String get pickSportHead => de ? 'sportart wählen' : 'choose a sport';
+  String get recentSports => de ? 'Zuletzt' : 'Recent';
+  String get quickSports => de ? 'Häufig' : 'Common';
+  String get searchSports => de ? 'Sportart suchen' : 'Search sports';
+  String get noSportMatch => de ? 'Keine Sportart passt dazu.' : 'No sport matches that.';
+  String get calorieWhy => de
+      ? 'Kalorien sind geschätzt: MET-Wert mal Gewicht, verfeinert mit dem Puls.'
+      : 'Calories are estimates: MET value times weight, refined by heart rate.';
+  String get scrubHint => de ? 'Kurve antippen oder wischen' : 'Tap or swipe the curve';
+  String get noReading => de ? 'keine Messung' : 'no reading';
+  String get startHere => de ? 'Beginn hier' : 'Start here';
+  String get endHere => de ? 'Ende hier' : 'End here';
+  String get pulse => de ? 'Puls' : 'Heart rate';
+  String get noPulseRecorded => de
+      ? 'Für diese Zeit hat das Band keinen Puls aufgezeichnet.'
+      : 'The band recorded no heart rate for this time.';
+  String get hrDrop => de ? 'Pulsabfall nach 1 Min.' : 'HR drop after 1 min';
+  String get hrDropWhy => de
+      ? 'So weit ist dein Puls in der ersten Minute nach dem Training gefallen. '
+          'Mehr ist besser, über 12 gilt als normal.'
+      : 'How far your heart rate fell in the first minute after training. '
+          'More is better, above 12 counts as normal.';
   String discard(String name) => de ? '$name verwerfen' : 'Discard $name';
   String showAll(int n) => de ? '$n weitere anzeigen' : 'Show $n more';
   String get allToday => de ? 'Aktivitäten heute' : "Today's activities";

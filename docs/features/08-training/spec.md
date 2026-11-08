@@ -73,3 +73,4 @@ Rechnung bleiben die von OpenStrap.
 
 ## Änderungen
 2026-11-08 · T4 · Prüfung: In der Mitte wurden Tag und Uhrzeit bei langen Sportarten und auf 360-px-Handys abgeschnitten. Sie stehen jetzt unter dem Namen.
+2026-11-08 · T6 · Feature 09, W9: Die Zeile „Erholung nach 60 s“ heißt jetzt „Pulsabfall nach 1 Min.“, mit Erklärung darunter.

@@ -7,6 +7,7 @@ import 'package:openstrap_edge/takt/look.dart';
 import 'package:openstrap_edge/takt/sleep/sleep_head.dart';
 import 'package:openstrap_edge/models/metric.dart';
 import 'package:openstrap_edge/ui2/activity/day_strain.dart';
+import 'package:openstrap_edge/ui2/activity/picker.dart';
 import 'package:openstrap_edge/ui2/activity/summary.dart';
 import 'package:openstrap_edge/ui2/screens/log_workout.dart';
 import 'package:openstrap_edge/ui2/screens/driver_breakdown.dart';
@@ -109,5 +110,36 @@ void main() {
     addTearDown(t.platformDispatcher.clearAlwaysUse24HourTestValue);
     await detail(t, ActivitySummary(handball(), weightKg: 75), 'training');
     await detail(t, LogWorkout(spans: const [], now: DateTime(2026, 11, 8, 18, 30)), 'nachtragen');
+  });
+
+  testWidgets('Feinschliff Training (Feature 09)', (t) async {
+    t.platformDispatcher.alwaysUse24HourFormatTestValue = true;
+    addTearDown(t.platformDispatcher.clearAlwaysUse24HourTestValue);
+    await detail(t, ActivityPicker(weightKg: 75, onPick: (_, _) {}), 'sportart');
+    // Training mit abgelesener Minute.
+    await detail(t, ActivitySummary(handball(), weightKg: 75), 'training_ablesen');
+    final box = t.getRect(find.byKey(const ValueKey('takt-hr-scrub')));
+    await t.tapAt(Offset(box.left + box.width * .3, box.center.dy));
+    await t.pump();
+    await shot(t, find.byType(Scaffold).first, 'training_ablesen');
+    // Nachtragen mit Puls: 18:05 bis 18:55 hoch, gewählt 18:00 bis 19:00.
+    int sec(int h, int m) => DateTime(2026, 11, 8, h, m).millisecondsSinceEpoch ~/ 1000;
+    await detail(
+        t,
+        LogWorkout(
+          spans: const [],
+          now: DateTime(2026, 11, 8, 20),
+          start: DateTime(2026, 11, 8, 18),
+          end: DateTime(2026, 11, 8, 19),
+          hrSamples: (a, b) async => [
+            for (var s = a; s <= b; s += 20)
+              (s, s >= sec(18, 5) && s < sec(18, 55) ? 140 + (s ~/ 60 % 9) * 6 : 88 + (s ~/ 60 % 5) * 3),
+          ],
+        ),
+        'nachtragen_puls');
+    final box2 = t.getRect(find.byKey(const ValueKey('takt-hr-scrub')));
+    await t.tapAt(Offset(box2.left + box2.width * 35 / 119, box2.center.dy));
+    await t.pump();
+    await shot(t, find.byType(Scaffold).first, 'nachtragen_puls');
   });
 }

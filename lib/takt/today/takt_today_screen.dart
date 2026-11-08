@@ -20,7 +20,7 @@ import '../../ui2/activity/summary.dart' show ActivityResult, ActivitySummary;
 import '../../ui2/profile/profile.dart' show ProfileAvatar;
 import '../../ui2/screens/home_screen.dart';
 import '../../ui2/screens/log_workout.dart' show LogWorkout, bumpInsights;
-import '../../ui2/screens/workout_screen.dart' show taktWorkoutResult;
+import '../../ui2/screens/workout_screen.dart' show taktRecentSports, taktWorkoutResult;
 import '../../ui2/screens/metric_detail.dart';
 import '../../ui2/screens/readiness_detail.dart';
 import '../../ui2/screens/sleep_detail.dart';
@@ -211,8 +211,11 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   Future<void> _pickSport(ActivityItem item) async {
     final s = item.suggestion;
     var picking = false;
+    final recent = await taktRecentSports(context.read<AppState>());
+    if (!mounted) return;
     await Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => ActivityPicker(onPick: (pc, activity) async {
+      // Feature 09, W3: Die Sportart-Wahl im Takt-Design.
+      builder: (_) => TaktLook(child: ActivityPicker(recent: recent, onPick: (pc, activity) async {
         if (picking) return;
         picking = true;
         try {
@@ -230,7 +233,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         if (!pc.mounted) return;
         bumpInsights(pc);
         Navigator.of(pc).pop();
-      }),
+      })),
     ));
     if (mounted) await _load();
   }
