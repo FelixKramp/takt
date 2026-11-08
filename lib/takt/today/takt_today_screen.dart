@@ -395,7 +395,6 @@ class TaktTodayView extends StatelessWidget {
             kind: k,
             label: ringViewOf(k, data, l).label,
             value: displayFixed(data.strain.value!, 1),
-            sub: t.strainWord(data.strain.value!.toDouble()),
             frac: (data.strain.value! / 21).clamp(0, 1).toDouble(),
           )
         else if (k == HomeRingKind.sleep && score != null)

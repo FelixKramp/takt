@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
 import 'package:openstrap_edge/models/metric.dart';
-import 'package:openstrap_edge/takt/takt_text.dart';
 import 'package:openstrap_edge/takt/today/pulse_display.dart';
 import 'package:openstrap_edge/takt/today/pulse_state.dart';
 import 'package:openstrap_edge/takt/today/takt_today_screen.dart';
@@ -31,20 +30,11 @@ Future<void> pump(WidgetTester t, Widget w) async {
 }
 
 void main() {
-  test('G1: Strain-Stufe als Wort', () {
-    const t = TaktText(true);
-    expect(t.strainWord(4.2), 'leicht');
-    expect(t.strainWord(10), 'mittel');
-    expect(t.strainWord(13.9), 'mittel');
-    expect(t.strainWord(14), 'hoch');
-    expect(t.strainWord(18), 'sehr hoch');
-    expect(const TaktText(false).strainWord(12), 'moderate');
-  });
-
-  testWidgets('G1: unter dem Strain steht die Stufe statt „von 21“', (t) async {
+  testWidgets('G1: unter dem Strain steht nur die Zahl, ohne „von 21“ und ohne Stufe',
+      (t) async {
     await pump(t, TaktTodayView(data: HomeData(strain: m(12.4)), pulse: pulse, now: now));
     expect(find.text('12.4'), findsOneWidget);
-    expect(find.text('mittel'), findsOneWidget);
+    expect(find.text('mittel'), findsNothing);
     expect(find.text('von 21'), findsNothing);
     expect(find.text('of 21'), findsNothing);
   });

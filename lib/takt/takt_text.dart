@@ -34,15 +34,6 @@ class TaktText {
   String hoursShort(String hm) => de ? '$hm Std' : '$hm h';
   String get steps => de ? 'Schritte' : 'Steps';
 
-  /// Stufe des Tages-Strains (0 bis 21) statt „von 21“ unter dem Ring.
-  String strainWord(double v) => v < 10
-      ? (de ? 'leicht' : 'light')
-      : v < 14
-          ? (de ? 'mittel' : 'moderate')
-          : v < 18
-              ? (de ? 'hoch' : 'high')
-              : (de ? 'sehr hoch' : 'all out');
-
   /// Von wann ein Kartenwert stammt, der nicht von heute ist: „gestern“, der
   /// Wochentag innerhalb einer Woche, sonst das Datum.
   String dayOf(DateTime d, DateTime now) {
