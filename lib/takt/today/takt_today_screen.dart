@@ -35,6 +35,7 @@ import 'freshness.dart';
 import 'minute_tick.dart';
 import 'pulse_display.dart';
 import 'visibility.dart';
+import '../stripe/stripe.dart';
 
 const _kSportPick = 'takt.sport.';
 
@@ -336,11 +337,14 @@ class TaktTodayView extends StatelessWidget {
         Expanded(
           child: MinuteTick(
             onTick: onTick,
-            builder: (_) => Text(
-                syncing ? t.syncing : freshnessText(lastData, now ?? DateTime.now(), t),
-                key: const ValueKey('takt-status'),
-                textAlign: TextAlign.end,
-                style: F.cap.copyWith(color: p.ink2)),
+            builder: (_) => StripeDodge(
+              line: true,
+              child: Text(
+                  syncing ? t.syncing : freshnessText(lastData, now ?? DateTime.now(), t),
+                  key: const ValueKey('takt-status'),
+                  textAlign: TextAlign.end,
+                  style: F.cap.copyWith(color: p.ink2)),
+            ),
           ),
         ),
         if (header != null) ...[const SizedBox(width: S.x3), header!],
@@ -360,7 +364,7 @@ class TaktTodayView extends StatelessWidget {
       ),
       for (final g in gaps.take(1)) ...[
         const SizedBox(height: S.x2),
-        Text(g, style: F.cap.copyWith(color: p.ink2)),
+        StripeDodge(line: true, child: Text(g, style: F.cap.copyWith(color: p.ink2))),
       ],
       const SizedBox(height: S.x3),
       KeyedSubtree(key: const ValueKey('takt-pulse'), child: pulse),
@@ -413,10 +417,12 @@ class _Card extends StatelessWidget {
           ),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(value, style: Pult.digits(24, p.ink)),
+          StripeDodge(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(value, style: Pult.digits(24, p.ink)),
+            ),
           ),
           const SizedBox(height: S.x1),
           Text(label, style: F.cap.copyWith(color: p.ink2)),

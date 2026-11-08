@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../ui2/screens/home_screen.dart' show RingView;
 import '../../ui2/ui2.dart';
 import '../pult_tokens.dart';
+import '../stripe/stripe.dart';
 
 const kDialTicks = 48;
 
@@ -53,10 +54,13 @@ class DialRing extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(size * 0.24),
               child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(dialCenter(view),
-                      style: Pult.digits(size * 0.26, muted ? p.ink3 : p.ink)),
+                child: StripeDodge(
+                  align: 0.5,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(dialCenter(view),
+                        style: Pult.digits(size * 0.26, muted ? p.ink3 : p.ink)),
+                  ),
                 ),
               ),
             ),
@@ -68,9 +72,12 @@ class DialRing extends StatelessWidget {
           child: Text(view.label, style: F.cap.copyWith(color: p.ink, fontWeight: FontWeight.w600)),
         ),
         if (view.sub.isNotEmpty)
-          Text(view.sub,
-              textAlign: TextAlign.center,
-              style: F.cap.copyWith(color: p.ink3)),
+          StripeDodge(
+            line: true,
+            child: Text(view.sub,
+                textAlign: TextAlign.center,
+                style: F.cap.copyWith(color: p.ink3)),
+          ),
       ]),
     );
   }

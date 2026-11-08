@@ -9,6 +9,7 @@ import '../../ui2/ui2.dart';
 import '../pult_tokens.dart';
 import '../takt_text.dart';
 import 'activity_items.dart';
+import '../stripe/stripe.dart';
 
 String _duration(int? min) {
   if (min == null) return '';
@@ -60,7 +61,10 @@ class _ActivityListState extends State<ActivityList> {
           onTap: () => setState(() => _expanded = true),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: S.x3),
-            child: Text(t.showAll(v.hidden), style: F.body.copyWith(color: p.ink)),
+            child: StripeDodge(
+              line: true,
+              child: Text(t.showAll(v.hidden), style: F.body.copyWith(color: p.ink)),
+            ),
           ),
         ),
       const SizedBox(height: S.x3),
@@ -112,12 +116,15 @@ class _Row extends StatelessWidget {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(name, style: F.body.copyWith(color: p.ink, fontWeight: FontWeight.w600)),
-                    Text(details, style: F.cap.copyWith(color: p.ink3)),
+                    StripeDodge(line: true, child: Text(details, style: F.cap.copyWith(color: p.ink3))),
                   ]),
                 ),
                 if (item.strain != null) ...[
                   const SizedBox(width: S.x2),
-                  Text(displayFixed(item.strain!, 1), style: Pult.digits(22, p.ink)),
+                  StripeDodge(
+                    align: 1,
+                    child: Text(displayFixed(item.strain!, 1), style: Pult.digits(22, p.ink)),
+                  ),
                 ],
               ]),
             ),

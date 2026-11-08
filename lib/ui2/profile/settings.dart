@@ -955,6 +955,7 @@ class MoreSettingsView extends StatelessWidget {
                         l?.settingsDeveloperModeRowTitle ?? 'Developer mode',
                         value: on, chevron: false, onTap: onToggleDev),
                   ]),
+                const TaktDisplayGroup(),
                 const TaktAboutGroup(),
                 const SizedBox(height: S.x6),
                 Surface(

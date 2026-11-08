@@ -54,5 +54,18 @@ class TaktText {
   String get legal => de
       ? '© OpenStrap-Beitragende und Felix Kramp. Ohne jede Gewähr, kein Medizinprodukt.'
       : '© OpenStrap contributors and Felix Kramp. No warranty, not a medical device.';
+  String get display => de ? 'Anzeige' : 'Display';
+  String get stripeTitle => de ? 'Displaystreifen' : 'Display stripe';
+  String get stripeSub => de
+      ? 'Zahlen weichen einem Strich auf dem Display aus'
+      : 'Numbers move clear of a line on your screen';
+  String get stripeHow => de
+      ? 'Schieb die orange Linie genau auf den Strich in deinem Display. Danach rückt jede Zahl daneben.'
+      : 'Move the orange line exactly onto the line on your screen. Every number then moves clear of it.';
+  String get off => de ? 'aus' : 'off';
+  String get save => de ? 'Speichern' : 'Save';
+  String get remove => de ? 'Entfernen' : 'Remove';
+  String get nudgeLeft => de ? 'Linie ein Stück nach links' : 'Move the line left a little';
+  String get nudgeRight => de ? 'Linie ein Stück nach rechts' : 'Move the line right a little';
   String get newVersion => de ? 'Neue Version verfügbar' : 'New version available';
 }

@@ -21,6 +21,7 @@ import 'telemetry/firebase_bridge.dart';
 import 'package:workmanager/workmanager.dart';
 import 'dart:async';
 import 'dart:io';
+import 'takt/stripe/stripe.dart' show TaktStripe;
 import 'compute/background_derivation.dart' show kHeavyDeriveTaskName, kSyncTaskName;
 
 /// Ceiling on every pre-runApp platform-channel await. Each one is guarded
@@ -137,6 +138,7 @@ Future<void> main() async {
   // Cache SharedPreferences so UI screens can synchronously RESTORE saved
   // selections (tab, range toggles) in initState with no async flash.
   await _safeInit('Prefs', Prefs.ensureLoaded);
+  TaktStripe.load();
 
   // Resolve appearance (persisted choice + OS brightness) BEFORE the first frame
   // so login/signup already paint in the right mode (Ember on Paper / Char).

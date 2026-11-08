@@ -14,6 +14,7 @@ import '../pult_tokens.dart';
 import '../takt_text.dart';
 import 'pulse_state.dart';
 import 'visibility.dart';
+import '../stripe/stripe.dart';
 
 const _kLastPulse = 'takt.last_pulse';
 const kPulseHeight = 112.0;
@@ -135,20 +136,25 @@ class PulseView extends StatelessWidget {
       if (!live) _reason(t),
     ];
     final body = Row(children: [
-      FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(state.bpm == null ? '--' : '${state.bpm}', style: Pult.digits(72, ink)),
+      StripeDodge(
+        reserve: 0,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(state.bpm == null ? '--' : '${state.bpm}', style: Pult.digits(72, ink)),
+        ),
       ),
       const SizedBox(width: S.x3),
       Expanded(
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            for (final line in lines) Text(line, style: F.cap.copyWith(color: ink)),
-            if (_canPair)
-              Text(t.pairBand, style: F.cap.copyWith(color: Pult.lcdInk)),
-          ]),
+        child: StripeDodge(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              for (final line in lines) Text(line, style: F.cap.copyWith(color: ink)),
+              if (_canPair)
+                Text(t.pairBand, style: F.cap.copyWith(color: Pult.lcdInk)),
+            ]),
+          ),
         ),
       ),
       if (live && trace.length > 1)

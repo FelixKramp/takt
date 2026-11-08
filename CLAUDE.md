@@ -30,11 +30,15 @@ Während des Builds ist die Spec eingefroren: Abweichung → stoppen und Felix f
 | Nr | Feature | Status | Ordner |
 |---|---|---|---|
 | 01 | Heute-Screen | build | `docs/features/01-heute-screen/` |
-| 02 | Batterie statt Erholung | idee | — |
+| 02 | Displaystreifen: Zahlen weichen einem Displayfehler aus | build, Gerätetest offen | `docs/features/02-displaystreifen/` |
+| 03 | Schlafscore und Schlaf-Tab im Takt-Design | idee | — |
+| 04 | Heute-Screen voller (Kandidat: Batterie statt Erholung) | idee | — |
+| 05 | Aktivität und Gesundheit im Takt-Design | idee | — |
 
 ## Konventionen
 - Neuer Code liegt unter `lib/takt/`, Upstream-Dateien nur punktuell ändern, damit `git merge upstream/main` sauber bleibt.
 - Upstream-Regeln aus `AGENTS.md` und `lib/ui2/README.md` gelten: keine rohen Farben oder Größen außerhalb von `theme.dart`, nie erfundene Werte.
+- Jede Zahl im Takt-Design steht in einem `StripeDodge` (`lib/takt/stripe/stripe.dart`): Einzelwerte als Block, Zeilen mit Zahlen mit `line: true`. Neue Screens prüfen das wie `test/takt/stripe_today_test.dart` (Feature 02, B5).
 - Tests tragen die Anforderungs-ID im Namen: `A3: …`
 - Commits: `01-<Aufgabe>: <was>`
 
