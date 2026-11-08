@@ -50,7 +50,7 @@ Map<String, dynamic> night({bool elevated = true}) => {
 SleepData sleepData({bool elevated = true}) => SleepData(
       day: '2026-11-08',
       latestDay: '2026-11-08',
-      days: const ['2026-11-06', '2026-11-07', '2026-11-08'],
+      days: const ['2026-11-08', '2026-11-07', '2026-11-06'],
       night: night(elevated: elevated),
       timeline: {
         'hr': lane(54, 5, 40),

@@ -1,3 +1,5 @@
+import '../../takt/header.dart';
+import '../../takt/look.dart';
 import '../../l10n/display_text.dart';
 // SLEEP — one question, answered in three seconds, then revealed by scrolling.
 //
@@ -477,6 +479,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
   /// The pushed screen's scaffold, or the tab's own header and footer.
   Widget _frame(BuildContext c, String title, List<Widget> body,
       {String sub = ''}) {
+    if (TaktLook.on(c)) return _taktFrame(c, body);
     if (!widget.embedded) return detailScaffold(c, title, body, sub: sub);
     final p = P.of(c);
     return RefreshIndicator(
@@ -502,6 +505,40 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       ),
     );
   }
+
+  /// TAKT (Feature 06, F1 und F15): Kopfzeile „schlaf“ mit der Nacht und
+  /// Pfeilen, im Tab mit Profilbild, gepusht mit Zurück-Pfeil.
+  Widget _taktFrame(BuildContext c, List<Widget> body) {
+    final p = P.of(c);
+    final nav = _d ?? _lastGood;
+    final header = TaktHeader(
+      AppLocalizations.of(c)?.tabSleep ?? 'Sleep',
+      back: !widget.embedded,
+      center: TaktDayStepper(
+          day: _day ?? nav?.day, days: nav?.days ?? const [], onDay: _goDay),
+      trailing: widget.embedded ? const ProfileAvatar(accent: C.domSleep) : null,
+    );
+    final list = ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(S.x4, S.x2, S.x4, S.x16),
+      children: [
+        header,
+        const SizedBox(height: S.x2),
+        ...body,
+        if (widget.embedded) ...[
+          if (!_failed && (_d?.isLatestNight ?? _day == null))
+            ...widget.todayFooter,
+          ...widget.footer,
+        ],
+      ],
+    );
+    if (widget.embedded) return RefreshIndicator(onRefresh: _load, child: list);
+    return Scaffold(backgroundColor: p.bg, body: SafeArea(child: list));
+  }
+
+  /// Die alte Blätterzeile, im Takt-Teilbaum durch die Kopfzeile ersetzt.
+  List<Widget> _navRow(BuildContext c, String? day, List<String> days) =>
+      TaktLook.on(c) ? const [] : dayNavRow(day, days, _goDay);
 
   SleepData? _d;
 
@@ -686,7 +723,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       final nav = _d ?? _lastGood ?? d;
       final shown = _day ?? nav.latestDay ?? nav.day;
       return _frame(c, title, [
-        ...dayNavRow(shown, nav.days, _goDay),
+        ..._navRow(c, shown, nav.days),
         const SizedBox(height: S.x2),
         StatusCard(
           shown == null
@@ -716,7 +753,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       final rejected =
           (d.night['sleep_source'] as String?) == 'rejected' && rejectedDay != null;
       return _frame(c, title, [
-        ...dayNavRow(_day ?? d.day, d.days, _goDay),
+        ..._navRow(c, _day ?? d.day, d.days),
         const SizedBox(height: S.x2),
         // A day CAN be in `availableDays` and still hold no night — the band
         // was worn through the day and off overnight. Stepping onto one of
@@ -802,7 +839,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
     // would rather than printing the raw yyyy-MM-dd key.
     return _frame(c, title,
         sub: d.days.length < 2 ? dayNavLabel(d.day, l).toUpperCase() : '', [
-      ...dayNavRow(_day ?? d.day, d.days, _goDay),
+      ..._navRow(c, _day ?? d.day, d.days),
 
       // ── 1 · THE ANSWER ──
       widget.head?.call(d.day) ?? _answer(c, p, d, n),
