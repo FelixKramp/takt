@@ -44,7 +44,7 @@ class DialRing extends StatelessWidget {
           width: size,
           height: size,
           child: CustomPaint(
-            painter: _DialPainter(
+            painter: DialPainter(
               lit: dialLitTicks(view.frac),
               litColor: muted ? p.ink3 : color,
               track: p.track,
@@ -83,8 +83,8 @@ class DialRing extends StatelessWidget {
   }
 }
 
-class _DialPainter extends CustomPainter {
-  _DialPainter({
+class DialPainter extends CustomPainter {
+  DialPainter({
     required this.lit,
     required this.litColor,
     required this.track,
@@ -119,6 +119,6 @@ class _DialPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DialPainter o) =>
+  bool shouldRepaint(DialPainter o) =>
       o.lit != lit || o.litColor != litColor || o.track != track || o.knob != knob;
 }

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../takt/sleep/sleep_head_loader.dart';
 import '../profile/alarm.dart';
 import '../ui2.dart';
 import 'circadian_detail.dart';
@@ -25,6 +26,8 @@ class SleepTab extends StatelessWidget {
     final l = AppLocalizations.of(c);
     return SleepDetail(
       embedded: true,
+      // TAKT (Feature 03): Score-Kopf statt „Total sleep“.
+      head: (day) => TaktSleepHeadLoader(day: day),
       todayFooter: [
         Section(
           l?.sleepTabPlanTitle ?? 'Your sleep plan',

@@ -448,13 +448,18 @@ class SleepDetail extends StatefulWidget {
   /// back to two weeks ago it read as that night's advice.
   final List<Widget> todayFooter;
 
+  /// TAKT (Feature 03): ersetzt Abschnitt 1 („The answer“) für die gezeigte
+  /// Nacht. Null lässt den Upstream-Kopf stehen.
+  final Widget Function(String? day)? head;
+
   const SleepDetail(
       {super.key,
       this.data,
       this.day,
       this.embedded = false,
       this.footer = const [],
-      this.todayFooter = const []});
+      this.todayFooter = const [],
+      this.head});
 
   @override
   State<SleepDetail> createState() => _SleepDetailState();
@@ -800,7 +805,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       ...dayNavRow(_day ?? d.day, d.days, _goDay),
 
       // ── 1 · THE ANSWER ──
-      _answer(c, p, d, n),
+      widget.head?.call(d.day) ?? _answer(c, p, d, n),
 
       // ── 2 · THE NIGHT ITSELF ──
       const SizedBox(height: S.x3),
