@@ -31,6 +31,7 @@ class TaktText {
 
   String get hrv => 'HRV';
   String get restingHr => de ? 'Ruhepuls' : 'Resting HR';
+  String hoursShort(String hm) => de ? '$hm Std' : '$hm h';
   String get steps => de ? 'Schritte' : 'Steps';
 
   String get syncing => de ? 'Synchronisiert …' : 'Syncing…';

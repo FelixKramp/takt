@@ -9,6 +9,6 @@ feature: 03-schlafscore
 - [x] **T4** `sleep_head.dart`: Kopf, Teile, sieben Nächte · C4, C5, C12, C13 — `sleep_head_test.dart`
 - [x] **T5** `sleep_head.dart`: Dauer und Bedarf, Regelmäßigkeit, Effizienz · C6, C7, C8, C13 — `sleep_head_test.dart`, Streifen 5–95 %
 - [x] **T6** Einhängen in `SleepDetail`/`SleepTab`, Rest bleibt · C9, C10 — `sleep_tab_hook_test.dart`, Loader liest bei jeder Revision neu (Korrektur)
-- [ ] **T7** Schlafring auf Heute · C11, C12
+- [x] **T7** Schlafring auf Heute · C11, C12 — `today_view_test.dart` (C11). Score lädt getrennt vom Heute-Screen, sonst warten Ringe und Puls auf die Schlafabfragen
 - [ ] **T8** Suite, Analyse, Version 0.2.0, Release-APK
 - [ ] 🙋 **T9** Gerätetest durch Felix

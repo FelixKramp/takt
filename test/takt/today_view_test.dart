@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
 import 'package:openstrap_edge/models/metric.dart';
+import 'package:openstrap_edge/takt/sleep/sleep_score.dart';
 import 'package:openstrap_edge/takt/takt_text.dart';
 import 'package:openstrap_edge/takt/today/activity_items.dart';
 import 'package:openstrap_edge/takt/today/dial_ring.dart';
@@ -46,6 +47,7 @@ Widget host(Widget child, {double scale = 1}) => MaterialApp(
 const livePulse = PulseView(state: PulseState(PulseKind.live, bpm: 72), trace: [70, 72, 74, 72]);
 
 void main() {
+  sleepScoreRingTests();
   Future<void> pump(WidgetTester t, Widget w, {double scale = 1}) async {
     t.view.physicalSize = const Size(390, 844);
     t.view.devicePixelRatio = 1;
@@ -197,5 +199,42 @@ void main() {
   testWidgets('A24: Bei 200 % Schrift läuft nichts über', (t) async {
     await pump(t, TaktTodayView(data: full, hrv: m(58), pulse: livePulse, items: [item('suggestion:a', 18, detected: true)]), scale: 2);
     expect(t.takeException(), isNull);
+  });
+}
+
+// Feature 03, C11/C12: Der Schlafring zeigt den Schlafscore in der Farbe der
+// Stufe, darunter die Schlafdauer. Ohne Score bleibt er wie in A2.
+void sleepScoreRingTests() {
+  testWidgets('C11: Schlafring zeigt den Score und die Dauer', (t) async {
+    t.view.physicalSize = const Size(390, 844);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(host(TaktTodayView(
+      data: full,
+      pulse: livePulse,
+      sleepScore: scoreNight(durationMin: 432, needMin: 480, efficiencyPct: 89, regularity: 76),
+    )));
+    await t.pump();
+    final rings = t.widgetList<DialRing>(find.byType(DialRing)).toList();
+    final sleep = rings.firstWhere((r) => r.view.kind == HomeRingKind.sleep);
+    expect(sleep.view.value, '83');
+    expect(sleep.view.frac, closeTo(0.83, 0.001));
+    expect(sleep.view.sub, contains('7:12'));
+    expect(sleep.color, ScoreBand.okay.fill);
+  });
+
+  testWidgets('C11: ohne Score bleibt der Schlafring wie bisher', (t) async {
+    t.view.physicalSize = const Size(390, 844);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(host(TaktTodayView(
+      data: full,
+      pulse: livePulse,
+      sleepScore: scoreNight(durationMin: 432, needMin: null),
+    )));
+    await t.pump();
+    final sleep = t.widgetList<DialRing>(find.byType(DialRing))
+        .firstWhere((r) => r.view.kind == HomeRingKind.sleep);
+    expect(sleep.view.value, ringViewOf(HomeRingKind.sleep, full, null).value);
   });
 }

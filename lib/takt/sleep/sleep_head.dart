@@ -16,7 +16,7 @@ import 'sleep_score.dart';
 import 'sleep_tab_data.dart';
 import 'sleep_text.dart';
 
-String hm(num min) {
+String durHm(num min) {
   final m = min.round();
   return '${m ~/ 60}:${(m % 60).toString().padLeft(2, '0')}';
 }
@@ -173,7 +173,7 @@ class _ScoreCard extends StatelessWidget {
               const SizedBox(height: S.x1),
               StripeDodge(
                 line: true,
-                child: Text(t.slept(hm(view.sleptMin!)), style: F.body.copyWith(color: p.ink)),
+                child: Text(t.slept(durHm(view.sleptMin!)), style: F.body.copyWith(color: p.ink)),
               ),
               if (from != null && to != null)
                 StripeDodge(
@@ -190,7 +190,7 @@ class _ScoreCard extends StatelessWidget {
         if (s.score != null) ...[
           const SizedBox(height: S.x4),
           _Part(t.durationPart,
-              view.needMin == null ? '' : t.durationOf(hm(view.sleptMin!), hm(view.needMin!)),
+              view.needMin == null ? '' : t.durationOf(durHm(view.sleptMin!), durHm(view.needMin!)),
               s.duration, accent),
           _Part(t.efficiencyPart, view.effPct == null ? '' : '${view.effPct!.round()} %',
               s.efficiency, accent),
@@ -328,13 +328,13 @@ class _NeedCard extends StatelessWidget {
         ]);
     return _Card(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        row(t.sleptLabel, hm(view.sleptMin!)),
+        row(t.sleptLabel, durHm(view.sleptMin!)),
         const SizedBox(height: S.x2),
         _Bar(need == null ? 0 : view.sleptMin! / need, accent, height: 14),
         const SizedBox(height: S.x2),
         _Bar(need == null ? 0 : 1, p.track, height: 14),
         const SizedBox(height: S.x2),
-        row(t.needLabel, need == null ? '–' : hm(need)),
+        row(t.needLabel, need == null ? '–' : durHm(need)),
         const SizedBox(height: S.x3),
         if (parts == null)
           Text(t.partsTomorrow, style: F.cap.copyWith(color: p.ink3))
@@ -343,18 +343,18 @@ class _NeedCard extends StatelessWidget {
             padding: const EdgeInsets.all(S.x3),
             decoration: BoxDecoration(color: p.bg, borderRadius: R.rSm),
             child: Column(children: [
-              if (parts.baseMin != null) row(t.base, hm(parts.baseMin!), size: 15),
+              if (parts.baseMin != null) row(t.base, durHm(parts.baseMin!), size: 15),
               if ((parts.strainMin ?? 0) > 0) ...[
                 const SizedBox(height: S.x2),
-                row(t.strain, '+${hm(parts.strainMin!)}', size: 15),
+                row(t.strain, '+${durHm(parts.strainMin!)}', size: 15),
               ],
               if ((parts.debtMin ?? 0) > 0) ...[
                 const SizedBox(height: S.x2),
-                row(t.debt, '+${hm(parts.debtMin!)}', size: 15),
+                row(t.debt, '+${durHm(parts.debtMin!)}', size: 15),
               ],
               if ((parts.napMin ?? 0) > 0) ...[
                 const SizedBox(height: S.x2),
-                row(t.naps, '−${hm(parts.napMin!)}', size: 15),
+                row(t.naps, '−${durHm(parts.napMin!)}', size: 15),
               ],
             ]),
           ),
@@ -546,7 +546,7 @@ class _EfficiencyCard extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: S.x3),
-        row(t.asleep, hm(view.sleptMin!)),
+        row(t.asleep, durHm(view.sleptMin!)),
         const SizedBox(height: S.x2),
         SizedBox(
           key: const ValueKey('efficiency-strips'),
@@ -562,7 +562,7 @@ class _EfficiencyCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: S.x2),
-        row(t.awake, view.awakeMin == null ? '–' : hm(view.awakeMin!)),
+        row(t.awake, view.awakeMin == null ? '–' : durHm(view.awakeMin!)),
         const SizedBox(height: S.x3),
         Container(height: 1, color: p.line),
         const SizedBox(height: S.x3),

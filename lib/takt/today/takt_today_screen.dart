@@ -35,6 +35,9 @@ import 'freshness.dart';
 import 'minute_tick.dart';
 import 'pulse_display.dart';
 import 'visibility.dart';
+import '../sleep/sleep_head.dart' show durHm;
+import '../sleep/sleep_score.dart';
+import '../sleep/sleep_tab_data.dart' show loadTaktSleep;
 import '../stripe/stripe.dart';
 
 const _kSportPick = 'takt.sport.';
@@ -51,6 +54,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   final _syncGate = SyncOnOpenGate();
   HomeData _data = const HomeData();
   Metric _hrv = Metric.empty;
+  NightScore? _sleepScore;
   List<ActivityItem> _items = const [];
   String? _day;
   bool _wasBusy = false;
@@ -114,6 +118,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     final repo = repoOf(context);
     if (repo == null) return;
     final token = beginRead(#taktToday);
+    _loadSleepScore();
     final l = AppLocalizations.of(context);
     final app = context.read<AppState>();
     final dataThrough = app.lastRecordAt;
@@ -216,6 +221,22 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     await _load();
   }
 
+  /// Feature 03: Score der letzten Nacht für den Schlafring, getrennt vom
+  /// Laden des Heute-Screens, damit Ringe, Puls und Aktivitäten nicht auf
+  /// die Schlafabfragen warten. Schreibt nebenbei die Tagesnotiz, auch wenn
+  /// der Schlaf-Tab nie geöffnet wird.
+  Future<void> _loadSleepScore() async {
+    final repo = repoOf(context);
+    if (repo == null) return;
+    final token = beginRead(#taktSleepScore);
+    try {
+      final score = (await loadTaktSleep(repo)).score;
+      if (stillNewest(#taktSleepScore, token)) setState(() => _sleepScore = score);
+    } catch (_) {
+      // Ohne Score bleibt der Schlafring wie in A2.
+    }
+  }
+
   Future<void> _push(Widget w) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => w));
     if (mounted) await _load();
@@ -252,6 +273,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         scroll: _scroll,
         data: _data,
         hrv: _hrv,
+        sleepScore: _sleepScore,
         items: _items,
         lastData: lastDataAtOf(c),
         syncing: syncing || derivingOf(c),
@@ -293,9 +315,14 @@ class TaktTodayView extends StatelessWidget {
     this.onTick,
     this.now,
     this.scroll,
+    this.sleepScore,
   });
 
   final HomeData data;
+
+  /// Feature 03, C11: Schlafscore der letzten Nacht. Mit Score zeigt der
+  /// Schlafring ihn in der Farbe der Stufe, ohne bleibt er wie in A2.
+  final NightScore? sleepScore;
   final Metric hrv;
   final Widget pulse;
   final List<ActivityItem> items;
@@ -317,13 +344,27 @@ class TaktTodayView extends StatelessWidget {
     final p = P.of(c);
     final t = TaktText.of(c);
     final l = AppLocalizations.of(c);
+    final score = sleepScore?.score;
+    final slept = data.sleepMin.value;
     final rings = [
-      for (final k in HomeRingKind.values) ringViewOf(k, data, l),
+      for (final k in HomeRingKind.values)
+        if (k == HomeRingKind.sleep && score != null)
+          RingView(
+            kind: k,
+            label: ringViewOf(k, data, l).label,
+            value: '$score',
+            sub: slept == null ? '' : t.hoursShort(durHm(slept)),
+            frac: score / 100,
+          )
+        else
+          ringViewOf(k, data, l),
     ];
     final colors = {
       HomeRingKind.recovery: Pult.orange,
       HomeRingKind.strain: p.ink,
-      HomeRingKind.sleep: p.dark ? Pult.blueOnDark : Pult.blue,
+      HomeRingKind.sleep: score != null
+          ? sleepScore!.band!.fill
+          : (p.dark ? Pult.blueOnDark : Pult.blue),
     };
     final gaps = [
       for (final r in rings)
