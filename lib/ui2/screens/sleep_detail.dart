@@ -1,3 +1,4 @@
+import '../../takt/sleep/sleep_score.dart' show ScoreBand;
 import '../../takt/pult_tokens.dart';
 import '../../takt/sleep/night_parts.dart';
 import '../../takt/sleep/sleep_text.dart';
@@ -889,7 +890,11 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
 
       // ── 4 · AGAINST THE USER'S OWN NIGHTS ──
       if (_versusUsual(c, p, d, n) case final versus?)
-        Section(l?.sleepDetailVersusUsualSection ?? 'Against your usual', versus),
+        Section(
+            TaktLook.on(c)
+                ? SleepText.of(c).versus
+                : (l?.sleepDetailVersusUsualSection ?? 'Against your usual'),
+            versus),
 
       // ── 5 · WHAT STOOD OUT ──
       // Named after the night the nav bar is already showing. "Unusual last
@@ -2044,7 +2049,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
         child: Column(children: [
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0) const SizedBox(height: S.x5),
-            rows[i],
+            _CompareIndex(index: i, child: rows[i]),
           ],
         ]),
       ),
@@ -2163,6 +2168,14 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       // looked. Before that the section is absent rather than reassuring from
       // no evidence — and the section above has already said why.
       if (d.tstHistory.length < _recordNights) return null;
+      // TAKT (F9): eine Zeile, keine Karte.
+      if (TaktLook.on(c)) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: S.x1),
+          child: Text(SleepText.of(c).nothingStoodOut,
+              style: F.cap.copyWith(color: p.ink2)),
+        );
+      }
       return Surface(
         color: p.card2,
         elevation: 0,
@@ -2544,6 +2557,45 @@ class _Compare extends StatelessWidget {
     final lo = math.min(tonight, history.reduce(math.min));
     final hi = math.max(tonight, history.reduce(math.max));
 
+    if (TaktLook.on(c)) {
+      // TAKT (F8): Wert in Punktziffern, graues Band „üblich bei dir“, die
+      // Nacht als Punkt (orange, wenn sie außerhalb liegt), darunter der Satz.
+      final outside = tonight + blur < band.lo || tonight - blur > band.hi;
+      final i = _CompareIndex.of(c);
+      final warn = ScoreBand.okay.ink(p.dark);
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(label, style: F.body.copyWith(color: p.ink))),
+          const SizedBox(width: S.x2),
+          StripeDodge(
+            align: 1,
+            child: Text(value, style: Pult.digits(17, p.ink)),
+          ),
+        ]),
+        const SizedBox(height: S.x3),
+        _TaktStrip(
+            index: i,
+            lo: lo,
+            hi: hi,
+            bandLo: band.lo,
+            bandHi: band.hi,
+            mark: tonight,
+            outside: outside),
+        const SizedBox(height: S.x2),
+        StripeDodge(
+          line: true,
+          child: Text(verdict,
+              style: F.cap.copyWith(
+                  color: outside ? warn : p.ink2, fontWeight: FontWeight.w600)),
+        ),
+        StripeDodge(
+          line: true,
+          child: Text(SleepText.of(c).usual(fmt(band.lo), fmt(band.hi), band.n),
+              style: F.over.copyWith(color: p.ink3)),
+        ),
+      ]);
+    }
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       head,
       const SizedBox(height: S.x3),
@@ -2629,6 +2681,90 @@ class _Strip extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// TAKT (F8): Position einer Vergleichszeile, für eindeutige Schlüssel.
+class _CompareIndex extends InheritedWidget {
+  const _CompareIndex({required this.index, required super.child});
+  final int index;
+
+  static int of(BuildContext c) =>
+      c.dependOnInheritedWidgetOfExactType<_CompareIndex>()?.index ?? 0;
+
+  @override
+  bool updateShouldNotify(_CompareIndex old) => old.index != index;
+}
+
+/// TAKT (F8): graue Spur, das Band der mittleren Hälfte deiner Nächte etwas
+/// dunkler, die Nacht als Punkt.
+class _TaktStrip extends StatelessWidget {
+  const _TaktStrip({
+    required this.index,
+    required this.lo,
+    required this.hi,
+    required this.bandLo,
+    required this.bandHi,
+    required this.mark,
+    required this.outside,
+  });
+
+  final int index;
+  final double lo, hi, bandLo, bandHi, mark;
+  final bool outside;
+
+  @override
+  Widget build(BuildContext c) {
+    final p = P.of(c);
+    final span = hi - lo;
+    double f(double v) => span <= 0 ? .5 : ((v - lo) / span).clamp(0.0, 1.0);
+    return ExcludeSemantics(
+      child: LayoutBuilder(builder: (c, box) {
+        final w = box.maxWidth;
+        final width = math.max(6.0, (f(bandHi) - f(bandLo)) * w);
+        final left = math.min(f(bandLo) * w, w - width);
+        const dot = 16.0;
+        return SizedBox(
+          height: dot,
+          width: w,
+          child: Stack(children: [
+            Positioned(
+              left: 0,
+              top: 3,
+              width: w,
+              height: 10,
+              child: DecoratedBox(
+                  decoration: BoxDecoration(color: p.card2, borderRadius: R.rPill)),
+            ),
+            Positioned(
+              left: left,
+              top: 3,
+              width: width,
+              height: 10,
+              child: Container(
+                  key: ValueKey('takt-compare-band-$index'),
+                  decoration: BoxDecoration(color: p.line, borderRadius: R.rPill)),
+            ),
+            Positioned(
+              left: (f(mark) * w - dot / 2).clamp(0.0, w - dot),
+              top: 0,
+              width: dot,
+              height: dot,
+              child: Container(
+                key: ValueKey('takt-compare-dot-$index'),
+                decoration: BoxDecoration(
+                  color: outside
+                      ? (p.dark ? const Color(0xFFFF9A5C) : const Color(0xFFF0560A))
+                      : p.ink,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: p.card, width: 2),
+                ),
+              ),
+            ),
+          ]),
+        );
+      }),
     );
   }
 }

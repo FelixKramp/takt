@@ -5,7 +5,7 @@
 - [x] **T3** Kopfzeile „schlaf“ mit Blätterpfeilen und Profilbild, gepusht mit Zurück-Pfeil (F1, F15)
 - [x] **T4** Hypnogramm-Farben, Zeitpunkt-Anzeige, Geräteauswahl, Phasen-Balken (F3, F4, F5, F7)
 - [x] **T5** Korrektur-Knöpfe flach unter dem Hypnogramm (F6)
-- [ ] **T6** Gegen deine Nächte, Auffällig (F8, F9)
+- [x] **T6** Gegen deine Nächte, Auffällig (F8, F9)
 - [ ] **T7** Signale in der Nacht mit großen Ziffern (F10)
 - [ ] **T8** Kein doppelter Schlafplan, Links-Karte (F11, F12)
 - [ ] **T9** Streifen über den ganzen Tab, flüssiges Scrollen (F13, F14)

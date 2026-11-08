@@ -47,7 +47,7 @@ Map<String, dynamic> night({bool elevated = true}) => {
       'resp': {'value': 14.2},
     };
 
-SleepData sleepData({bool elevated = true}) => SleepData(
+SleepData sleepData({bool elevated = true, bool calm = false}) => SleepData(
       day: '2026-11-08',
       latestDay: '2026-11-08',
       days: const ['2026-11-08', '2026-11-07', '2026-11-06'],
@@ -58,7 +58,8 @@ SleepData sleepData({bool elevated = true}) => SleepData(
         'resp': lane(14.2, 1.2, 55),
         'skin_temp': lane(0, .4, 90),
       },
-      tstHistory: [for (var i = 0; i < 20; i++) 440 + (i % 5) * 9],
+      // calm: die Nacht liegt mitten in den bisherigen, nichts fällt auf.
+      tstHistory: [for (var i = 0; i < 20; i++) (calm ? 400 : 440) + (i % 5) * 9],
       deepHistory: [for (var i = 0; i < 20; i++) 80 + (i % 4) * 5],
       effHistory: [for (var i = 0; i < 20; i++) 90 + (i % 3).toDouble()],
       onsetHistory: [for (var i = 0; i < 20; i++) 23 * 60 + (i % 4) * 8],

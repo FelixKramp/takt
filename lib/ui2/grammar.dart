@@ -804,6 +804,45 @@ class InsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext c) {
+    // TAKT (Feature 06, F9): Takt-Karte mit orangem Rand links, ohne
+    // Farbfläche und ohne Symbolkachel.
+    if (TaktLook.on(c)) {
+      final p = P.of(c);
+      final edge = p.dark ? const Color(0xFFFF9A5C) : const Color(0xFFF0560A);
+      return Pressable(
+        onTap: onTap,
+        semanticLabel: '$headline. $reason',
+        child: Container(
+          width: double.infinity,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: p.card,
+            borderRadius: R.rSm,
+            border: Border.all(color: p.line),
+          ),
+          child: IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Container(key: const ValueKey('takt-insight-edge'), width: 4, color: edge),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(S.x3, S.x3, S.x4, S.x3),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(headline,
+                        style: F.body.copyWith(color: p.ink, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: S.x1),
+                    StripeDodge(
+                      line: true,
+                      child: Text(reason,
+                          style: F.cap.copyWith(color: p.ink2, height: 1.5)),
+                    ),
+                  ]),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      );
+    }
     final p = P.of(c);
     final ink = p.on(color);
     return Surface(

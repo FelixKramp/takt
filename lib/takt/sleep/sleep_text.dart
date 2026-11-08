@@ -13,6 +13,10 @@ class SleepText {
   // Feature 06: der Teil unter dem Kopf.
   String get theNight => de ? 'Die Nacht' : 'The night';
   String get phases => de ? 'Phasen' : 'Stages';
+  String get versus => de ? 'Gegen deine Nächte' : 'Against your nights';
+  String usual(String lo, String hi, int n) =>
+      de ? 'üblich $lo bis $hi, aus $n Nächten' : 'usual $lo to $hi, from $n nights';
+  String get nothingStoodOut => de ? 'Nichts aufgefallen.' : 'Nothing stood out.';
   String get phasesNote => de
       ? 'Phasen schätzt das Band aus Puls und Bewegung, deshalb stehen dort Spannen.'
       : 'The band estimates stages from pulse and movement, so they are ranges.';
