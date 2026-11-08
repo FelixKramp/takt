@@ -16,7 +16,7 @@ import 'support/night_fixture.dart';
 bool _hasDigit(RenderParagraph p) =>
     RegExp(r'\d').hasMatch(p.text.toPlainText(includeSemanticsLabels: false));
 
-Future<void> pump(WidgetTester t) async {
+Future<void> pump(WidgetTester t, {SleepData? data}) async {
   t.view.physicalSize = const Size(390, 7000);
   t.view.devicePixelRatio = 1;
   t.platformDispatcher.alwaysUse24HourFormatTestValue = true;
@@ -31,7 +31,7 @@ Future<void> pump(WidgetTester t) async {
         body: TaktLook(
             child: SleepDetail(
                 embedded: true,
-                data: sleepData(),
+                data: data ?? sleepData(),
                 head: (_) => TaktSleepHead(view: view)))),
   ));
   await t.pumpAndSettle();
@@ -72,5 +72,29 @@ void main() {
         }
       }
     }
+  });
+
+  testWidgets('F13: auch die selbst gesetzte Nacht mit Einschlafdauer', (t) async {
+    TaktStripe.fraction.value = 0.72;
+    final d = sleepData();
+    final n = {...d.night, 'sleep_source': 'confirmed'};
+    await pump(t,
+        data: SleepData(
+            day: d.day, latestDay: d.latestDay, days: d.days, night: n, solMin: 22,
+            timeline: d.timeline, tstHistory: d.tstHistory));
+    final bare = <String>[];
+    for (final p in t.allRenderObjects.whereType<RenderParagraph>().where(_hasDigit)) {
+      RenderObject? o = p.parent;
+      var wrapped = false;
+      while (o != null) {
+        if (o is RenderStripeDodge) {
+          wrapped = true;
+          break;
+        }
+        o = o.parent;
+      }
+      if (!wrapped) bare.add(p.text.toPlainText());
+    }
+    expect(bare, isEmpty, reason: bare.join('\n'));
   });
 }

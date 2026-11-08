@@ -1118,12 +1118,15 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
           // what it published.
           if (mine && d.solMin != null) ...[
             const SizedBox(height: S.x2),
-            Text(
-              l?.sleepDetailWindowSol(_solBand(c, d.solMin!)) ??
-                  'From the start of your window to asleep: '
-                      '${_solBand(c, d.solMin!)}.',
-              style: F.cap.copyWith(color: p.ink3),
-            ),
+            taktDodge(
+                c,
+                Text(
+                  l?.sleepDetailWindowSol(_solBand(c, d.solMin!)) ??
+                      'From the start of your window to asleep: '
+                          '${_solBand(c, d.solMin!)}.',
+                  style: F.cap.copyWith(color: p.ink3),
+                ),
+                line: true),
           ],
           const SizedBox(height: S.x2),
           if (!_correctable)
@@ -2598,9 +2601,11 @@ class _Compare extends StatelessWidget {
       Expanded(child: Text(label, style: F.body.copyWith(color: p.ink))),
       const SizedBox(width: S.x2),
       Flexible(
-        child: Text(value,
-            textAlign: TextAlign.right,
-            style: F.n17.copyWith(color: p.ink, fontWeight: FontWeight.w600)),
+        child: TaktLook.on(c)
+            ? StripeDodge(align: 1, child: Text(value, style: Pult.digits(17, p.ink)))
+            : Text(value,
+                textAlign: TextAlign.right,
+                style: F.n17.copyWith(color: p.ink, fontWeight: FontWeight.w600)),
       ),
     ]);
 
@@ -2610,10 +2615,13 @@ class _Compare extends StatelessWidget {
       return Column(children: [
         head,
         const SizedBox(height: S.x1),
-        Text(
-            l?.sleepDetailNoPersonalRangeYet(history.length, _minNights) ??
-                'No personal range yet — ${history.length} of $_minNights nights.',
-            style: F.over.copyWith(color: p.ink3)),
+        taktDodge(
+            c,
+            Text(
+                l?.sleepDetailNoPersonalRangeYet(history.length, _minNights) ??
+                    'No personal range yet — ${history.length} of $_minNights nights.',
+                style: F.over.copyWith(color: p.ink3)),
+            line: true),
       ]);
     }
 
