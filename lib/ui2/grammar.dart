@@ -1554,11 +1554,14 @@ class InlineMetrics extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  StripeDodge(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(e.$2, style: Pult.digits(24, p.ink), maxLines: 1),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: S.x2),
+                    child: StripeDodge(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(e.$2, style: Pult.digits(22, p.ink), maxLines: 1),
+                      ),
                     ),
                   ),
                   const SizedBox(height: S.x1),

@@ -314,7 +314,8 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
               _inputs(p, l, d)),
         ],
       ],
-      sub: sub,
+      // TAKT: Der Tag steht in der Wert-Karte, nicht noch einmal oben.
+      sub: takt ? '' : sub,
     );
   }
 

@@ -1010,7 +1010,10 @@ class _MetricDetailState extends State<MetricDetail> {
       ] else ...[
         _ranges(c, d, spec.color),
         const SizedBox(height: S.x5),
-        _hero(c, spec, all, series, vals, win, d.wear, d.algoBreaks, d),
+        // TAKT (H1): Bei „Heute“ trägt die Wert-Karte den Wert; der Kopf
+        // darunter hätte nichts mehr zu zeigen.
+        if (!(takt && win == 1))
+          _hero(c, spec, all, series, vals, win, d.wear, d.algoBreaks, d),
         // Today's count against the goal set on this screen's own edit
         // affordance — a trend average has no goal to be measured against, so
         // this stays win == 1 only, same gate as the Breakdown link below.

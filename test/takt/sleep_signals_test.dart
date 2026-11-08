@@ -33,7 +33,7 @@ void main() {
       expect(find.text(label), findsOneWidget, reason: label);
       final v = t.widget<Text>(find.text(value));
       expect(v.style?.fontFamily, 'Doto', reason: label);
-      expect(v.style?.fontSize, greaterThanOrEqualTo(24), reason: label);
+      expect(v.style?.fontSize, greaterThanOrEqualTo(20), reason: label);
     }
   });
 }
