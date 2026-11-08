@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../l10n/app_localizations.dart';
+import '../takt/sleep/sleep_score.dart';
 import 'grammar.dart';
 import 'theme.dart';
 
@@ -207,8 +208,18 @@ class _Tab extends StatelessWidget {
 
   @override
   Widget build(BuildContext c) {
-    final p = P.of(c);
-    final ink = on ? p.on(domain.accent) : p.ink3;
+    // TAKT (Feature 06, F2): flach, ohne Pille. Der aktive Tab ist fett und
+    // farbig: Schlaf in der Farbe des Schlafscores, die anderen in Takt-Orange.
+    if (domain == ShellDomain.sleep && on) {
+      return ValueListenableBuilder<ScoreBand?>(
+        valueListenable: TaktSleepBand.current,
+        builder: (c, band, _) => _body(c, (band ?? ScoreBand.okay).ink(P.of(c).dark)),
+      );
+    }
+    return _body(c, on ? ScoreBand.okay.ink(P.of(c).dark) : P.of(c).ink3);
+  }
+
+  Widget _body(BuildContext c, Color ink) {
     final label = domain.title(c);
     return Semantics(
       selected: on,
@@ -216,30 +227,19 @@ class _Tab extends StatelessWidget {
         onTap: onTap,
         semanticLabel: label,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-            AnimatedContainer(
-              duration: motion(c, Motion.base),
-              padding: EdgeInsets.symmetric(
-                horizontal: on ? S.x3 : 0,
-                vertical: S.x1,
-              ),
-              decoration: BoxDecoration(
-                color: on ? p.wash(domain.accent) : const Color(0x00000000),
-                borderRadius: R.rPill,
-              ),
-              child: Icon(domain.icon, size: 20, color: ink),
-            ),
-              const SizedBox(height: 3),
+              Icon(domain.icon, size: 22, color: ink),
+              const SizedBox(height: 4),
               Text(
                 label,
                 textAlign: TextAlign.center,
-              style: F.over.copyWith(
-                color: ink,
-                fontWeight: on ? FontWeight.w600 : FontWeight.w500,
-              ),
+                style: F.over.copyWith(
+                  color: ink,
+                  fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+                ),
               ),
             ],
           ),

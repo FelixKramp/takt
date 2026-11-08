@@ -8,9 +8,11 @@
 
 import 'package:flutter/material.dart';
 
+import '../../data/day_label.dart' show todayLabel;
 import '../../ui2/revision.dart';
 import '../../ui2/screens/home_screen.dart' show repoOf;
 import 'sleep_head.dart';
+import 'sleep_score.dart';
 import 'sleep_tab_data.dart';
 
 class TaktSleepHeadLoader extends StatefulWidget {
@@ -67,6 +69,8 @@ class _TaktSleepHeadLoaderState extends State<TaktSleepHeadLoader>
           : await loadTaktSleep(repo!, want: widget.day);
       if (stillNewest(#taktSleep, token) && mounted) {
         _last = v;
+        // Die Tab-Leiste färbt Schlaf nach der neuesten Nacht (F2).
+        if (v.day == todayLabel()) TaktSleepBand.current.value = v.score.band;
         setState(() => _view = v);
       }
     } catch (_) {

@@ -9,6 +9,7 @@
 // Fehlt Effizienz oder Regelmäßigkeit, zählen die übrigen Teile anteilig
 // (C2). Ohne Dauer oder Bedarf gibt es keinen Score.
 
+import 'package:flutter/foundation.dart';
 import 'dart:ui' show Color;
 
 enum ScorePart { duration, efficiency, regularity }
@@ -97,6 +98,12 @@ enum ScoreBand {
         ScoreBand.okay => 'okay',
         ScoreBand.knapp => de ? 'knapp' : 'short',
       };
+}
+
+/// Stufe des neuesten Schlafscores, für die Farbe des Schlaf-Tabs in der
+/// Tab-Leiste (Feature 06, F2). Gesetzt von den Schlafscore-Ladern.
+class TaktSleepBand {
+  static final current = ValueNotifier<ScoreBand?>(null);
 }
 
 ScoreBand bandOf(int score) => score >= 85

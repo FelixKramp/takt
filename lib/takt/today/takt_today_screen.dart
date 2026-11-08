@@ -235,6 +235,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     final token = beginRead(#taktSleepScore);
     try {
       final score = (await loadTaktSleep(repo)).score;
+      TaktSleepBand.current.value = score.band;
       if (stillNewest(#taktSleepScore, token)) setState(() => _sleepScore = score);
     } catch (_) {
       // Ohne Score bleibt der Schlafring wie in A2.
