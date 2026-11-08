@@ -152,6 +152,23 @@ void main() {
       });
     }
 
+    // Prüfung 08, Runde 2: 320 px, Textgröße 1,3, langes Datum.
+    for (final scale in [1.3, 2.0])
+    testWidgets('T4: Tag und Uhrzeit ganz sichtbar bei 320 px und Textgröße $scale', (t) async {
+      t.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(t.platformDispatcher.clearTextScaleFactorTestValue);
+      final b = handball();
+      final r = ActivityResult(b.activity,
+          start: DateTime(2026, 9, 28, 23, 59), duration: b.duration, sessionId: 'w1', hr: b.hr);
+      await pump(t, ActivitySummary(r));
+      t.view.physicalSize = const Size(320, 1600);
+      await t.pumpAndSettle();
+      final when =
+          t.renderObject<RenderParagraph>(find.byKey(const ValueKey('takt-workout-when')));
+      expect(when.didExceedMaxLines, isFalse);
+      expect(t.takeException(), isNull);
+    });
+
     testWidgets('Hinweis: privates Training schrumpft die Zahl nicht', (t) async {
       final b = handball();
       final r = ActivityResult(b.activity,

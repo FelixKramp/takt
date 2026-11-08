@@ -1233,7 +1233,9 @@ class _ActivitySummaryState extends State<ActivitySummary> {
         line: true,
         child: Text('${displayDate(c, r.start)}, ${formatClockOf(r.start)}',
             key: const ValueKey('takt-workout-when'),
-            maxLines: 1,
+            // Auf schmalen Handys mit großer Schrift bricht die Uhrzeit in eine
+            // weitere Zeile um, statt abgeschnitten zu werden (Prüfung 08, R2/R3).
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: F.cap.copyWith(color: p.ink2)),
       ),

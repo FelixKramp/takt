@@ -1,68 +1,89 @@
 ---
 feature: 08-training
 geprueft: 2026-11-08
-stand: 5675c98a
-pruefer: unabhängiger Prüfer-Agent (Phase 5, Runde 1)
+stand: 6c49e65d
+pruefer: unabhängiger Prüfer-Agent (Phase 5, Runde 2)
 ---
-# Prüfung: Training und „Workout nachtragen“ im Takt-Design (08)
+# Prüfung: Training und „Workout nachtragen“ im Takt-Design (08), Runde 2
 
 ## Grundlage
-- Gelesen: `CLAUDE.md`, `docs/features/08-training/spec.md`, `architektur.md` des Features (eine `docs/architektur.md` gibt es nicht), `git show HEAD` (5675c98a). `plan.md` bewusst nicht.
-- `flutter test test/takt/workout_takt_test.dart test/takt/today_screen_test.dart test/log_workout_test.dart test/score_imported_workout_test.dart`: **40 Tests, alle grün.**
-- `flutter test test/takt/`: **185 Tests, alle grün** (nach dem Löschen der eigenen Prüftests erneut gelaufen).
-- Upstream-Tests, die die geänderten Dateien berühren (`ui2_gallery`, `ui2_activity`, `ui2_workout_first_load`, `ui2_tokens`, `manual_session`, `workout_calorie_anchors`, `session_score_reconcile`, `set_state_future`, `live_rescore_calorie_parity`): **196 Tests, alle grün.**
-- `flutter analyze` auf alle geänderten Dateien: keine Befunde.
-- Bildschirmfotos: `training.png`, `nachtragen.png`, `strain.png`, `hrv.png` neu erzeugt und angesehen.
-- Eigene Wegwerf-Tests unter `test/takt/` (danach gelöscht, `git status` sauber): langer Sportname bei 390 und 320 px, Textgröße 1,3/1,5/2,0 mit echten Schriften, Datumsbreite im Kopf bei 360/393/412 px für mehrere Sportarten, Training ohne Puls, privat, Zeiten ändern (mit `sessionId`), dunkles Theme (Übersicht, Nachtragen, Liste), ungültiger Zeitraum, Streifen-Hüllen (B5) auf Übersicht, Grafiken und Nachtragen. Mit echter Datenbank: Stift → Sportart (DB-Wert und Rücksprung), gelöschte Zeile → Sportart-Wahl, Doppeltipp, Nachtragen von Heute speichern.
+- Gelesen: `CLAUDE.md`, `docs/features/08-training/spec.md` (mit Abschnitt „Änderungen“), `architektur.md` des Features (eine `docs/architektur.md` gibt es nicht), Bericht der Runde 1, `git show HEAD` (6c49e65d). `plan.md` bewusst nicht.
+- Geändert seit Runde 1: `lib/takt/header.dart` (neues `sub`), `lib/takt/detail/value_card.dart`, `lib/takt/today/takt_today_screen.dart` (Sperre `_opening`), `lib/ui2/activity/summary.dart` (Datum als `sub`, Reiterfarbe, Fußnote in `taktDodge`), `test/takt/workout_takt_test.dart` (+6 Tests). `log_workout.dart`, `workout_screen.dart` und der Rest sind unverändert.
+- `flutter test test/takt/`: **191 Tests, alle grün** (ohne eigene Prüftests gelaufen).
+- `flutter test test/log_workout_test.dart test/score_imported_workout_test.dart test/ui2_activity_test.dart test/ui2_gallery_test.dart test/ui2_tokens_test.dart`: **140 Tests, alle grün.**
+- `flutter analyze` auf die fünf geänderten Dart-Dateien: keine Befunde.
+- Bildschirmfotos `TAKT_SHOTS=1 flutter test test/takt/shots_test.dart` (3 Tests grün): `schlaf_tab`, `hrv`, `strain`, `erholung`, `training`, `nachtragen` neu erzeugt, zugeschnitten und angesehen.
+- Eigene Wegwerf-Tests unter `test/takt/` (danach gelöscht, ebenso die eigenen Fotos in `build/shots/`). Mit echten Schriften (`loadRealFonts`): alle 78 Sportarten aus `allActivities` × drei Daten (8. Nov. 2026, 16:57 · 28. Sept. 2026, 23:59 · 28. März 2026, 10:05) × 320/360/390 px × Textgröße 1,0 und 1,3; Textgröße 2,0 mit dem längsten Namen; Streifen über der Datumszeile; privates Training bei 320/360/390 × 1,0/1,3 und mit Distanz; `TaktValueCard` alt (HEAD~1) gegen neu mit den echten Erholungswörtern; Reiter dunkel; Fußnote gegen den Streifen; B5-Hüllen der ganzen Übersicht; Randfall ohne Puls bei 320/1,3. Mit echter Datenbank: Doppeltipp und Dreifachtipp auf Heute.
+- Hinweis: `git status` zeigt `pubspec.yaml` geändert (Version 0.3.0+7 → 0.3.1+8). Das stammt nicht von der Prüfung, vermutlich vom parallel laufenden Release-Build.
 
 ## Ergebnis
 ✅ 12 · ❌ 1 · ⚪ 0
 
 | ID | Ergebnis | Begründung |
 |---|---|---|
-| T1 | ✅ | `_openWorkout` → `taktWorkoutTarget` → `taktWorkoutResult` lädt die Zeile aus `getWorkouts('month')` und baut sie über `_pastFromRow`/`_detailOf`, also denselben Weg wie `_HistoryRow._open` im Aktivität-Tab. Test A9/T1/T3 tippt in der echten DB eine gespeicherte Erkennung an und findet `ActivitySummary` in `TaktLook`, keinen Picker. Eigener DB-Test: `sessionId` `suggestion:d:…`, Dauer 30 min wie gespeichert. Der Unit-Test T1 würde scheitern, wenn die falsche ID geladen oder kein Summary gebaut würde. |
-| T2 | ✅ | `item.suggestion != null` → null → `_pickSport`. Unit-Test prüft, dass dann gar nicht geladen wird; Integrationstest „A9: Auch eine offene Erkennung bekommt ihre Sportart“ (offene Erkennung antippen → Picker → Handball) ist grün. Eine gespeicherte Erkennung (ID mit `suggestion:`-Präfix, aber ohne `suggestion`) öffnet richtig die Übersicht. |
-| T3 | ✅ | Stift ruft das unveränderte `_changeType`: `setSessionType`, Picker zu, Übersicht zu, `_push` lädt Heute neu. Der Repo-Test prüft am Ende nur `find.text('Handball')`, nicht DB und Rücksprung. Eigener DB-Test ergänzt: Typ in der DB `handball`, keine `ActivitySummary` und kein `ActivityPicker` mehr im Baum (auch offstage), `TaktTodayScreen` sichtbar. Der Picker selbst bleibt im OpenStrap-Design (eigene Route ohne `TaktLook`); die Spec verlangt dort nichts. |
-| T4 | ❌ | Zurück-Pfeil, kleiner Name, Stift, Teilen, `TaktValueCard` mit „55:00“ in Doto und „Gesamtzeit“, keine NavBar und keine 48-pt-Zahl: erfüllt (Test T4, Foto). **Aber Tag und Uhrzeit in der Mitte gehen bei vielen Sportarten oder schmalen Geräten verloren.** Der Name darf 40 % der Bildschirmbreite nehmen, Stift und Teilen 80 px, der Rest bleibt für „8. Nov. 2026, 16:57“ (braucht 109 px). Gemessen mit echten Schriften: bei 360 px (übliche Android-Breite) ist selbst bei „handball“ nur 89 von 109 px sichtbar, die Uhrzeit ist abgeschnitten; bei „Krafttraining“ 50 px, bei „Allgemeines Training“ 32 px („8. N…“). Bei 393 px: Krafttraining 83, Allgemeines Training / Functional Training / Stand-up-Paddling / Kinderbetreuung je ca. 50 px („8. Nov…“). Bei 320 px und Textgröße 1,3 bleibt bei „handball“ nur „8…“, bei langem Namen gar nichts. **Reproduktion:** `ActivitySummary` mit `activityByName('Weight training')` oder `'General workout'` in `TaktLook`, Breite 390 oder 360, Breite von `ValueKey('takt-workout-when')` messen bzw. Foto. Kein Überlauf, nichts stürzt ab, der Text kürzt sauber mit „…“; es fehlt nur die Information. Hinweis: Das Jahr „2026“ kostet allein ca. 35 px. Der Test T4 prüft nur, dass der Schlüssel existiert, nicht dass der Text sichtbar ist. |
-| T5 | ✅ | `LineChart` bekommt unter `TaktLook` `Pult.orangeFor(p.dark)`. Test T5 prüft hell (`Pult.orange`), eigener Test dunkel (`orangeFor(true)` = #FF9A5C). Fotos hell und dunkel: orange Linie mit oranger Fläche wie die Strain-Kurve. |
-| T6 | ✅ | `SessionStats._taktStats`: Name links (`F.body`, ink2), führende Zahl in Doto 22, Rest als Einheit („16“ + „bpm in 60 s“), keine `PosterStatRow`. Jede Wertzeile und jedes Label in `StripeDodge`. Test T6 prüft fünf Zeilen, Doto und Hülle für alle fünf Zahlen, er würde bei runden Symbolen oder fehlender Hülle scheitern. Beschriftung „Ø HF“ statt „Ø Puls“ kommt aus der OpenStrap-Übersetzung (kosmetisch). |
-| T7 | ✅ | Reiter (`SubTabs`), Zonen und Fußnote bleiben, in Takt-Karten (Foto). Test T7 prüft nur Reiter und „Zone 5“, die Fußnote nicht. Am Rand: Der aktive Reiter ist in der Farbe der Sportart hinterlegt (Handball braun-orange, eine Kraftsportart lila, Laufen grün), während HRV/Strain in Feature 07 orange hinterlegen. Nicht von der Spec verlangt, aber uneinheitlich. |
-| T8 | ✅ | `_taktBuild`: `TaktHeader('training nachtragen', back: true)`, fünf `_TaktLogRow` ohne Symbolkästchen, Beginn/Ende/Dauer in Doto, Einheit „min“ klein, Chevron für antippbare Zeilen. Test T8 prüft Kopf, fehlende `SetRow`, Doto für 17:00/18:00/60 und dass Beginn den Zeit-Dialog öffnet. Hell und dunkel per Foto geprüft. |
-| T9 | ✅ | Hinweis als graue Zeile (`takt-log-note`, in `StripeDodge`), Knopf flach `Pult.orange`, `R.rSm`, Text `C.n900`, identisch zum Knopf auf Heute (`activity_list.dart`). Ungültiger Zeitraum: Knopf `onTap == null`, Farbe Orange mit 35 % Deckkraft, `StatusCard` mit Grund steht über dem Knopf (eigener Test misst die Lage). Test T9 deckt beides ab. Am Rand: Der Grund lautet „That window hasn't happened yet.“ auf Englisch. Das ist eine Übersetzungslücke von OpenStrap (`ManualWindowError.message`), im OpenStrap-Zweig genauso, nicht Feature 08. |
-| T10 | ✅ | `TaktLook.peek` vor `showModalBottomSheet`, das Blatt bekommt `TaktLook` mit; Zeilen nur mit Namen und Trennlinie, kleiner Radius oben. Test T10 tippt Aktivität, findet `takt-type-row-0`, keine `SetRow`, wählt Handball und prüft die Zeile. Foto hell und dunkel: ohne bunte Kästchen. |
-| T11 | ✅ | Der Takt-Knopf ruft dasselbe `_save` wie OpenStrap. Eigener DB-Test: Heute → „Workout nachtragen“ → Speichern schreibt `manual:… running` in die DB. Ohne Herzfrequenz im Fenster bleibt der Screen wie bisher offen und meldet „ohne Puls gespeichert“; mit Herzfrequenz schließt `nav.pop(true)`, danach lädt `_push` Heute neu (Code unverändert, im Test nicht mit Pulsdaten durchgespielt). Einen Takt-spezifischen Test für T11 gibt es im Repo nicht, nur `log_workout_test.dart` für den OpenStrap-Zweig. |
+| T1 | ✅ | Code wie in Runde 1 geprüft, nur in `_openWorkoutOnce` verschoben. Test A9/T1/T3 (echte DB: Tipp → `ActivitySummary` in `TaktLook`, kein Picker) und Unit-Test T1 grün. |
+| T2 | ✅ | Unverändert: `item.suggestion != null` → `_pickSport`. Unit-Test T2 und „A9: Auch eine offene Erkennung bekommt ihre Sportart“ grün. |
+| T3 | ✅ | `_changeType` unverändert, Stift sitzt weiter in `trailing` (Key `takt-workout-edit`). A9/T1/T3 grün; DB-Wert und Rücksprung wurden in Runde 1 geprüft. |
+| T4 | ❌ | Datum steht jetzt unter dem Namen, Stift und Teilen rechts, Wert-Karte mit „55:00“ in Doto und „Gesamtzeit“, keine NavBar und keine 48-pt-Zahl. **Bei normaler Textgröße sind Tag und Uhrzeit jetzt überall ganz sichtbar:** 78 Sportarten × 3 Daten × 320/360/390 px, kein einziger Fall gekürzt (vorher war bei 360 px schon „handball“ abgeschnitten). Bei 360 und 390 px mit Textgröße 1,3 ebenfalls alle ganz. **Bei 320 px und Textgröße 1,3 wird die Uhrzeit bei allen 78 Sportarten abgeschnitten**, unabhängig vom Namen: Die Spalte unter dem Namen ist bei 320 px fest 144 px breit (Pfeil, Abstand, Stift und Teilen nehmen 176 px). „8. Nov. 2026, 16:57“ braucht bei 1,3 147 px, „28. Sept. 2026, 23:59“ 169 px; zu sehen ist „28. Sept. 2026, …“. Ab etwa 345 px Breite oder bis Textgröße 1,1 passt es. **Reproduktion:** `ActivitySummary(handball())` in `TaktLook`, `physicalSize` 320 × 1600, `devicePixelRatio` 1, `textScaleFactorTestValue = 1.3`, `loadRealFonts`; `RenderParagraph` von `ValueKey('takt-workout-when')`: `didExceedMaxLines == true`, Breite 144 < `getMaxIntrinsicWidth` 147. Die neuen Tests „T4: Tag und Uhrzeit ganz sichtbar bei 320/360/390 px“ laufen nur mit Textgröße 1,0 und prüfen nur „General workout“ mit dem 8. Nov., deshalb sind sie grün. Kein Überlauf, kein Absturz (auch bei 2,0 nicht; der Kopf wächst dann auf 92 px). Hinweis: Das Jahr „2026“ kostet allein etwa 35 px. |
+| T5 | ✅ | Unverändert, Pulslinie `Pult.orangeFor(p.dark)`; Foto `training`: orange Linie mit oranger Fläche wie bei `strain`. Test T5 grün. |
+| T6 | ✅ | Unverändert. Foto: fünf Zeilen, Name links, Doto-Zahl rechts, keine runden Symbole. Eigener B5-Test über die ganze Übersicht mit Streifen bei 50 %: keine Zahl ohne Hülle. |
+| T7 | ✅ | Reiter, Zonen und Fußnote in flachen Takt-Karten (Foto). Aktiver Reiter jetzt Takt-Orange, siehe Hinweise. |
+| T8 | ✅ | `log_workout.dart` unverändert. Test T8 grün, Foto `nachtragen`: Kopf „training nachtragen“, fünf schlichte Zeilen, 17:00/18:00/60 in Doto. |
+| T9 | ✅ | Unverändert. Foto: grauer Hinweis, flacher oranger Knopf „Speichern“. Test T9 (ausgegraut, Grund darüber) grün. |
+| T10 | ✅ | Unverändert, Test T10 grün. |
+| T11 | ✅ | Unverändert (`_save` wie OpenStrap). `log_workout_test.dart` grün; der DB-Test „Nachtragen von Heute speichert“ aus Runde 1 betrifft unveränderten Code. Weiterhin gibt es im Repo keinen Takt-spezifischen Test für T11. |
 
 ### Randfälle
 | Randfall | Ergebnis | Begründung |
 |---|---|---|
-| Training ohne Pulsaufzeichnung | ✅ | Eigener Test: `hr` leer, kein `avgHr`/`maxHr`: keine `LineChart`, stattdessen „Keine Herzfrequenz für dieses Training“ mit „Bandverbindung prüfen →“ in einer Takt-Karte; Messwerte zeigen nur Kalorien und Strain in Punktziffern; Fußnote passt („kam keine Herzfrequenz an“). Kein Fehler. Der blaue Textlink ist derselbe wie auf dem Strain-Screen aus Feature 07. |
-| Training lässt sich nicht laden | ✅ | Unit-Test: Loader gibt null oder wirft → null → Sportart-Wahl. Eigener DB-Test: Heute geladen, danach `sessions` geleert, Antippen → `ActivityPicker`, keine Übersicht, keine Ausnahme. Ein fehlendes Gewicht wird abgefangen. |
+| Training ohne Pulsaufzeichnung | ✅ | Eigener Test bei 320 px und Textgröße 1,3: `hr` leer, keine Ausnahme, „Keine Herzfrequenz …“ steht da, Datum unter dem Namen „8. Nov. 2026, 16:57“. |
+| Training lässt sich nicht laden | ✅ | `taktWorkoutTarget` unverändert, Unit-Tests (null und Ausnahme → Sportart-Wahl) grün. Die neue Sperre gibt per `finally` auch bei einer Ausnahme wieder frei. |
 
-### Zusätzlich geprüft (aus dem Auftrag)
-| Prüfung | Ergebnis | Begründung |
+## Hinweise aus Runde 1
+| Hinweis | Ergebnis | Begründung |
 |---|---|---|
-| Lange Sportartnamen im Kopf | ✅ kein Überlauf, siehe T4 | Name kürzt mit „…“ (`maxLines: 1`), bei 320 px und Textgröße 1,3 kein RenderFlex-Fehler. Der Preis ist die abgeschnittene Uhrzeit (T4). |
-| Training mit privat-Flag | ✅ mit Einschränkung | „Privat“ steht rechts in der Wert-Karte. `TaktValueCard` setzt den Wert in `Flexible` neben ein `Spacer`; dadurch bekommt „55:00“ nur die halbe Breite und wird auf ca. 82 % verkleinert (138 statt 169 px). Genau diesen Fehler beschreibt der Kommentar im OpenStrap-Zweig („A `Flexible` hero next to a `Spacer` split the row by flex“). Bei einer Distanz wie „10,02 km“ oder „1.500 m“ schrumpft die Zahl entsprechend stärker. Kein Abschneiden, nur kleiner. |
-| Zeiten ändern (`sessionId`) | ✅ | Kopf „zeiten ändern“, keine Aktivitätszeile, Zeilen 1–4 vorhanden, erste ohne Trennlinie oben, Knopf „Neue Zeiten speichern“. Mit eigenem `title` kein Überlauf. Hinweis: `LogWorkout` mit `sessionId` wird nur aus dem Aktivität-Tab geöffnet, also ohne `TaktLook`; der Takt-Zweig dafür ist in der App derzeit nicht erreichbar. |
-| Erkennung mit `suggestion` | ✅ | Siehe T2. |
-| Dunkles Theme | ✅ | Übersicht, Nachtragen und Sportart-Liste: Karten, Linien, Doto-Ziffern hell, Pulslinie `orangeFor(true)`, kein Überlauf. Speichern-Knopf bleibt `Pult.orange` mit dunkler Schrift wie auf Heute. |
-| Streifen-Hüllen (Konvention aus Feature 02, B5) | ⚠ Hinweis | Auf Nachtragen und im Reiter Grafiken steht jede Ziffer in `StripeDodge`. In der Übersicht steht die Fußnote „Geschätzt aus 12.0 MET, deinem Gewicht …“ ohne Hülle. Die Spec verlangt die Hülle in T6 nur für die Messwerte, deshalb kein ❌; die CLAUDE.md-Regel „jede Zahl“ ist aber verletzt. Ein Test wie `stripe_today_test.dart` für die Übersicht fehlt. Nebenbei: „12.0“ mit Punkt im deutschen Text kommt aus OpenStrap. |
-| Doppeltipp auf ein Training | ⚠ Befund | `_openWorkout` lädt erst Gewicht, Monatsliste mit Pulsstatistik und das Einzeltraining und schiebt dann. Ein zweiter Tipp während des Ladens öffnet eine zweite Übersicht (eigener DB-Test: zwei schnelle Tipps → zwei `ActivitySummary` im Stapel). Vorher öffnete `_pickSport` sofort. Während des Ladens gibt es auch keine Rückmeldung. Nicht in der Spec, aber am Gerät spürbar, wenn der Monat viele Trainings hat. |
-
-## Sicherheit
-- Keine neuen Eingaben von außen: Die Trainings-ID kommt aus der eigenen Liste von Heute und wird nur als String mit `getWorkouts('month')` verglichen, kein SQL aus Nutzereingaben. Alle Lesezugriffe (`getProfile`, `getWorkouts`, `getWorkout`) und der Schreibzugriff (`setSessionType`, `logManualWorkout`) gehen an die lokale SQLite-DB über bestehende Repository-Methoden. Kein Netzwerk, keine neuen Berechtigungen, keine Secrets.
-- Der neue reguläre Ausdruck in `_taktStats` (`^([0-9][0-9.,:]*)\s+(\S.*)$`) ist verankert und ohne verschachtelte Wiederholung, also ohne Backtracking-Risiko; er läuft nur auf App-eigenen Texten.
-- Teilen öffnet das unveränderte `ShareSheet` (OpenStrap-Design, Nicht-Ziel). Nichts wird automatisch geteilt.
-- Ein Nebeneffekt, der schon im Aktivität-Tab besteht: `getWorkout` bewertet das Training beim Öffnen neu (`_rescoreSessionFromSubstrate`). Das passiert jetzt auch beim Antippen auf Heute; gewollt und lokal.
+| Doppeltipp öffnet zwei Übersichten | ✅ behoben | `_opening` sperrt `_openWorkout`, bis die Übersicht wieder zu ist und Heute neu geladen hat. Eigener DB-Test: drei Tipps im Abstand von 1 ms, während die Datenbank noch lädt → genau eine `ActivitySummary`, kein Picker; zurück, erneut antippen → öffnet wieder. Im Repo gibt es dafür keinen Test (die neuen Tests in `workout_takt_test.dart` decken T4, privat, Fußnote und Reiter ab, den Doppeltipp nicht). Weiterhin keine Ladeanzeige während des Ladens; die Spec verlangt keine. |
+| Privat schrumpft „55:00“ | ✅ behoben | Wert und Einheit stehen jetzt in einem `Expanded`, das Wort daneben in natürlicher Breite. Gemessen: „55:00“ bei 320/360/390 px mit 1,0 und bei 360/390 px mit 1,3 in voller Größe (169 bzw. 220 px). Nur bei 320 px und 1,3 schrumpft die Zahl auf 84 %, weil Zahl (220 px) und „Privat“ (62 px) dort zusammen nicht in die Karte passen. Das ist echter Platzmangel, nicht mehr die Halbierung durch den `Spacer`. Laufen mit „10.02 km“ und „Privat“ bei 320/1,3: alles ganz, nichts überlappt. Der neue Repo-Test misst bei 390 px. |
+| MET-Fußnote ohne Streifen-Hülle | ✅ behoben | `_basisNote` steht in `taktDodge(…, line: true)`, greift also nur unter `TaktLook`. Eigener Test: Streifen bei 10 % bis 90 % der Breite, keine Ziffer von „12.0“ liegt darauf. B5 über die ganze Übersicht: keine Zahl ohne Hülle. Nebenbei unverändert: „12.0“ mit Punkt kommt aus OpenStrap. |
+| Aktiver Reiter in Sportfarbe | ✅ behoben | `SubTabs(color: takt ? Pult.orange : a.color)`, dieselbe Farbe wie HRV/Strain (`withColor(Pult.orange)`). Hell (Repo-Test) und dunkel (eigener Test, Foto) orange. Ohne Takt-Haut bleibt die Sportfarbe. |
 
 ## Regressionen
-- **Aktivität-Tab:** `WorkoutScreen` steht nicht in `TaktLook` (nur Heute-`_push`, Schlaf-Tab und das Sportart-Blatt setzen sie). Die herausgezogene `_pastFromRow` ist Zeile für Zeile dieselbe Umwandlung wie vorher in `_loadWorkoutData` (verglichen im Diff). `ActivitySummary` und `LogWorkout` ohne Takt-Haut: NavBar, `PosterStatRow`, `SetRow`, `BigButton` bleiben (Tests „ohne Takt-Haut bleibt OpenStrap“). Upstream-Tests rund um Aktivität, Workout-Liste und Nachtragen: 196 grün.
-- **`TaktHeader` (Feature 06/07):** Ohne `center` nimmt der Name jetzt per `Expanded` den freien Platz, vorher stand dort ein leeres `Expanded`; das Bild ist gleich (Fotos HRV, Strain). Mit `center` (Schlaf-Tab) ist der Name auf 40 % der Bildschirmbreite begrenzt; „schlaf“ braucht bei 320 px und Textgröße 1,3 81 px und wird nicht gekürzt. Alle Schlaf-Kopf- und Detailtests in `test/takt/` grün. Kleiner Haken: Die Grenze rechnet mit `MediaQuery.sizeOf(c).width`, nicht mit der Breite der Zeile; in einem schmaleren Elternteil (z. B. Tablet-Spalte) wäre sie zu großzügig.
-- **Heute A9:** Der alte Test „Antippen wählt die Sportart“ ist durch A9/T1/T3 ersetzt; die Sportart-Wahl für offene Erkennungen bleibt unverändert und getestet.
+- **`TaktHeader` (`sub`, Name in `Expanded`):** `sub` nutzt nur die Trainings-Übersicht. Für alle anderen Aufrufer (Schlaf-Tab mit `center`, HRV/Ruhepuls/Schritte/Strain/Erholung über `metric_detail`, Nachtragen) ist der Baum mit `sub == null` identisch zu vorher. Fotos `schlaf_tab` (Name links, Nacht in der Mitte, Profilbild), `hrv`, `strain`, `erholung`, `nachtragen`: Kopf unverändert, nichts gekürzt. Alle Takt-Tests grün.
+- **`TaktValueCard` (Features 06/07):** Verglichen mit der Fassung aus HEAD~1 bei den echten Erholungswörtern („Startklar“, „Stabil“, „Locker angehen“, „Heute ausruhen“), 320/360 px, Textgröße 1,0/1,3/1,5/2,0: Die Zahl ist in jedem Fall gleich groß oder größer als vorher, nie kleiner (z. B. „Locker angehen“ 320/1,0: vorher 77 %, jetzt 100 %; „Startklar“ 320/1,3: 77 % → 100 %). Ohne Wort (HRV, Strain) ist das Bild gleich (Fotos). Bei Textgröße 2,0 mit „Locker angehen“ oder „Heute ausruhen“ läuft die Zeile über und die Zahl verschwindet. **Das war vorher genauso**, also keine Regression, aber ein offener Rand bei sehr großer Schrift.
+- **Aktivität-Tab:** Ohne `TaktLook` unverändert (Reiter in Sportfarbe, Fußnote ohne Hülle, NavBar). Upstream-Tests 140 grün.
+- **Heute:** Die Sperre `_opening` hält, solange die Übersicht offen ist, und während `_load()` nach dem Zurück. In dieser kurzen Ladezeit nach dem Zurück wird ein Tipp auf ein Training verschluckt. Kaum spürbar, nur der Vollständigkeit halber.
+
+## Weitere Beobachtungen (nicht von der Spec verlangt)
+- **Lange Namen werden weiter gekürzt.** Der Name hat jetzt die ganze Breite, wird aber bei 320 px/1,0 bei 10 von 78 Sportarten gekürzt (z. B. „functional training“, „stand-up-paddling“, „kinderbetreuung“), bei 360 px/1,0 bei 3, bei 390 px/1,0 bei keiner; mit Textgröße 1,3 bei 34 / 11 / 5. Bei 320/1,3 steht „allgemei…“. Die Spec verlangt die Ganzlesbarkeit nur für Tag und Uhrzeit.
+- Die Reiter der Übersicht stehen mittig (Foto `training`: „Übersicht“ beginnt bei etwa 80 px), bei HRV und Strain linksbündig. Das kommt aus OpenStrap (`Column` ohne `stretch`) und war schon in Runde 1 so.
+
+## Sicherheit
+Keine neuen Eingaben, Datenwege oder Berechtigungen gegenüber Runde 1. Die Änderungen betreffen nur Layout, eine Farbe und eine Sperrvariable im State.
 
 ## Zusammenfassung der offenen Punkte
-1. ❌ **T4:** Tag und Uhrzeit im Kopf werden bei 360 px schon für Handball, bei 390 px für Sportarten wie Krafttraining, Allgemeines Training, Functional Training, Stand-up-Paddling, Kinderbetreuung auf „8. Nov…“ oder weniger gekürzt.
-2. ⚠ Doppeltipp öffnet zwei Übersichten, keine Ladeanzeige.
-3. ⚠ Privat: Hauptwert in der Wert-Karte schrumpft auf etwa 82 % (`Flexible` + `Spacer` in `TaktValueCard`).
-4. ⚠ Fußnote „12.0 MET“ ohne Streifen-Hülle; kein B5-Test für die Übersicht.
-5. ⚠ Aktiver Reiter in der Sportfarbe statt Takt-Orange.
+1. ❌ **T4:** Bei 320 px und Textgröße 1,3 wird die Uhrzeit unter dem Namen bei jeder Sportart gekürzt („28. Sept. 2026, …“), weil die Spalte dort nur 144 px breit ist. Bei Textgröße 1,0 auf allen Breiten und bei 1,3 ab 360 px ist alles ganz. Die neuen T4-Tests prüfen nur Textgröße 1,0.
+2. Hinweis: Für den Doppeltipp gibt es keinen Test im Repo.
+3. Hinweis: `TaktValueCard` läuft bei Textgröße 2,0 mit langen Erholungswörtern über (schon vor diesem Commit so).
+
+## Runde 3 (2026-11-08, eng gefasst: nur T4)
+
+### Grundlage
+- Stand: HEAD 6c49e65d plus Arbeitskopie. Geändert seit Runde 2: `lib/ui2/activity/summary.dart` (`takt-workout-when` mit `maxLines: 2` statt 1) und ein neuer Test in `test/takt/workout_takt_test.dart` („T4: Tag und Uhrzeit ganz sichtbar bei 320 px und Textgröße 1,3“, mit 28. Sept. 2026, 23:59). `pubspec.yaml` (0.3.1+8) stammt weiter nicht von der Prüfung.
+- `flutter test test/takt/`: **192 Tests, alle grün** (191 aus Runde 2 plus der neue; ohne eigene Prüftests gelaufen).
+- Eigener Wegwerf-Test unter `test/takt/` (danach gelöscht, ebenso die eigenen Fotos in `build/shots/`), mit `loadRealFonts`, `TaktLook`, deutscher Sprache, 24-h-Uhr. Alle 78 Sportarten aus `allActivities` × drei Daten (28. Sept. 2026, 23:59 · 8. Nov. 2026, 16:57 · 28. März 2026, 10:05) × 320/360/390 px × Textgröße 1,0/1,3/1,5/2,0, also 2808 Fälle. Je Fall geprüft: `didExceedMaxLines` des `RenderParagraph` von `takt-workout-when`, Höhe nicht kleiner als die nötige Höhe, keine Exception, Kopf endet über den Reitern, Datum innerhalb des Kopfs, nicht unter Pfeil oder Stift, Name nicht über dem Datum, Stift und Teilen ohne Überlappung. Dazu Fotos mit `TAKT_SHOTS=1` und `shot()` (320/1,3, 320/2,0, 360/1,0, längster Name „Allgemeines Training“, 28. Sept. 23:59), angesehen.
+
+### Ergebnis T4: ❌ (nur noch 320 px bei Textgröße 2,0)
+
+| Breite | 1,0 | 1,3 | 1,5 | 2,0 |
+|---|---|---|---|---|
+| 320 px | ✅ 1 Zeile | ✅ 2 Zeilen | ✅ 2 Zeilen | ❌ September gekürzt (78 von 234), sonst ✅ |
+| 360 px | ✅ 1 Zeile | ✅ 1 Zeile | ✅ 1–2 Zeilen | ✅ 2 Zeilen |
+| 390 px | ✅ 1 Zeile | ✅ 1 Zeile | ✅ 1 Zeile | ✅ 2 Zeilen |
+
+- **Der Befund aus Runde 2 ist behoben:** Bei 320 px und Textgröße 1,3 bricht „28. Sept. 2026, / 23:59“ jetzt bei allen 78 Sportarten in die zweite Zeile um und steht ganz da (Foto). Auch 1,5 ist überall ganz. Der Kopf wächst mit, die Reiter rutschen nach unten, nichts wird überdeckt, Stift und Teilen bleiben rechts frei. Keine Exception, kein Überlauf in irgendeinem der 2808 Fälle.
+- **Neu gefunden: 320 px, Textgröße 2,0, Datum im September.** Die Spalte unter dem Namen ist weiter fest 144 px breit. Bei 2,0 ist „28. Sept.“ 107 px breit, „2026, 23:59“ aber 145 px, also 1 px zu viel für die zweite Zeile. Der Text bräuchte drei Zeilen, `maxLines: 2` kürzt: Zu sehen ist „28. Sept. / 2026, 23:…“ (Foto), die Uhrzeit fehlt. Betroffen sind alle 78 Sportarten, sobald der Monat „Sept.“ heißt; mit „Nov.“ und „März“ passt es in zwei Zeilen. Bis Textgröße 1,9 passt auch September, ab etwa 330 px Breite auch bei 2,0. Auf Englisch („Sep 28, 2026, 23:59“) dasselbe bei 320/2,0.
+- **Reproduktion:** `ActivitySummary` mit `handball()`, aber `start: DateTime(2026, 9, 28, 23, 59)`, in `TaktLook`, Locale `de`, `loadRealFonts`, `physicalSize` 320 × 1600, `devicePixelRatio` 1, `textScaleFactorTestValue = 2.0`; `RenderParagraph` von `ValueKey('takt-workout-when')`: `didExceedMaxLines == true`, Breite 144. Der neue Repo-Test prüft nur Textgröße 1,3 und ist deshalb grün.
+- Nebenbei, nicht T4: Der Name selbst wird bei 320 px schon ab 1,3 gekürzt („allgemei…“, bei 2,0 „allge…“). Die Spec verlangt die Ganzlesbarkeit nur für Tag und Uhrzeit (siehe Runde 2, Weitere Beobachtungen).
+
+### Offener Punkt
+1. ❌ **T4:** 320 px mit Textgröße 2,0 und einem Datum im September: Die Uhrzeit wird abgeschnitten („2026, 23:…“), weil „2026, 23:59“ mit 145 px die 144-px-Spalte um 1 px überschreitet und `maxLines: 2` keine dritte Zeile erlaubt. Alle anderen geprüften Kombinationen sind ganz sichtbar.

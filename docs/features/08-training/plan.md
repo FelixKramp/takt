@@ -11,5 +11,7 @@
 - [x] 08-T7 Unabhängige Prüfung: 1 ❌ (T4 Datum abgeschnitten), Hinweise Doppeltipp, private
       Zahl geschrumpft, MET-Fußnote ohne Streifen, Reiterfarbe
 - [x] 08-T8 Befunde behoben, Tests in `workout_takt_test.dart` (T4 bei 320/360/390 px, Hinweise)
-- [ ] 08-T9 Zweite Prüfung
+- [x] 08-T9 Zweite Prüfung: ❌ T4 bei 320 px/Textgröße 1,3, behoben mit zwei Zeilen
+- [x] 08-T10 Dritte Prüfung: ❌ T4 bei 320 px/2,0/„Sept.“, behoben mit drei Zeilen; der
+      Reproduktionsfall steht als Test in `workout_takt_test.dart` (1,3 und 2,0), 193 Takt-Tests grün
 - [ ] 🙋 Gerätetest: Training auf Heute antippen, Stift, Nachtragen
