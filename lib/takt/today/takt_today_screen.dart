@@ -36,6 +36,7 @@ import 'minute_tick.dart';
 import 'pulse_display.dart';
 import 'visibility.dart';
 import '../sleep/sleep_head.dart' show durHm;
+import '../sleep/sleep_head_loader.dart';
 import '../sleep/sleep_score.dart';
 import '../sleep/sleep_tab_data.dart' show loadTaktSleep;
 import '../stripe/stripe.dart';
@@ -280,11 +281,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         pulse: const PulseDisplay(),
         header: const ProfileAvatar(accent: C.domHome),
         watch: bodyWatchOf(c, _data, todayLabel()),
-        onRing: (k) => _push(switch (k) {
-          HomeRingKind.recovery => const ReadinessDetail(),
-          HomeRingKind.strain => const DayStrainDetail(),
-          HomeRingKind.sleep => const SleepDetail(),
-        }),
+        onRing: (k) => _push(taktRingTarget(k)),
         onCard: (key) => _push(MetricDetail(key)),
         onOpen: _pickSport,
         onTick: _onTick,
@@ -294,6 +291,14 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     );
   }
 }
+
+/// Wohin ein Ring führt. Der Schlafring öffnet den Schlaf-Screen mit dem
+/// Takt-Kopf, wie im Schlaf-Tab (Gerätetest 0.2.0, E1).
+Widget taktRingTarget(HomeRingKind k) => switch (k) {
+      HomeRingKind.recovery => const ReadinessDetail(),
+      HomeRingKind.strain => const DayStrainDetail(),
+      HomeRingKind.sleep => SleepDetail(head: (day) => TaktSleepHeadLoader(day: day)),
+    };
 
 /// Reine Darstellung, dadurch ohne Band und ohne Datenbank testbar.
 class TaktTodayView extends StatelessWidget {

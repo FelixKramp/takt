@@ -1,6 +1,10 @@
 // Feature 03: lädt den Takt-Kopf für die Nacht, die der Schlaf-Screen gerade
 // zeigt, und liest neu, sobald ein Sync, eine Berechnung oder eine Korrektur
 // der Schlafzeiten (C10) die Datenbank ändert.
+//
+// Der Schlaf-Screen ist eine ListView: Was aus dem Bild scrollt, wird
+// abgebaut. Ohne Keep-alive stand nach schnellem Hochscrollen kurz eine
+// leere Fläche da, bis der Kopf neu gelesen war (Gerätetest 0.2.0, E2).
 
 import 'package:flutter/material.dart';
 
@@ -10,17 +14,29 @@ import 'sleep_head.dart';
 import 'sleep_tab_data.dart';
 
 class TaktSleepHeadLoader extends StatefulWidget {
-  const TaktSleepHeadLoader({super.key, this.day});
+  const TaktSleepHeadLoader({super.key, this.day, this.load});
 
   /// Die gezeigte Nacht. Null: die neueste.
   final String? day;
+
+  /// Nur für Tests: liest die Ansicht ohne Datenbank.
+  final Future<TaktSleepView> Function(String? day)? load;
 
   @override
   State<TaktSleepHeadLoader> createState() => _TaktSleepHeadLoaderState();
 }
 
-class _TaktSleepHeadLoaderState extends State<TaktSleepHeadLoader> with RevisionReload {
+class _TaktSleepHeadLoaderState extends State<TaktSleepHeadLoader>
+    with RevisionReload, AutomaticKeepAliveClientMixin {
+  /// Die zuletzt gelesene Ansicht, über Screen-Wechsel hinweg. Ein frisch
+  /// geöffneter Schlaf-Screen zeigt sie sofort und ersetzt sie, sobald neu
+  /// gelesen ist, statt mit einer leeren Fläche anzufangen.
+  static TaktSleepView? _last;
+
   TaktSleepView? _view;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void reload() => _load();
@@ -28,6 +44,8 @@ class _TaktSleepHeadLoaderState extends State<TaktSleepHeadLoader> with Revision
   @override
   void initState() {
     super.initState();
+    final last = _last;
+    if (last != null && (widget.day == null || widget.day == last.day)) _view = last;
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -39,12 +57,18 @@ class _TaktSleepHeadLoaderState extends State<TaktSleepHeadLoader> with Revision
 
   Future<void> _load() async {
     if (!mounted) return;
-    final repo = repoOf(context);
-    if (repo == null) return;
+    final inject = widget.load;
+    final repo = inject == null ? repoOf(context) : null;
+    if (inject == null && repo == null) return;
     final token = beginRead(#taktSleep);
     try {
-      final v = await loadTaktSleep(repo, want: widget.day);
-      if (stillNewest(#taktSleep, token)) setState(() => _view = v);
+      final v = inject != null
+          ? await inject(widget.day)
+          : await loadTaktSleep(repo!, want: widget.day);
+      if (stillNewest(#taktSleep, token) && mounted) {
+        _last = v;
+        setState(() => _view = v);
+      }
     } catch (_) {
       // Bleibt beim letzten Stand. Der Upstream-Teil darunter zeigt seinen
       // eigenen Fehlerzustand.
@@ -53,6 +77,7 @@ class _TaktSleepHeadLoaderState extends State<TaktSleepHeadLoader> with Revision
 
   @override
   Widget build(BuildContext c) {
+    super.build(c);
     final v = _view;
     if (v == null) return const SizedBox(height: 320);
     return TaktSleepHead(view: v);
