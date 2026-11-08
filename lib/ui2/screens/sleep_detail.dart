@@ -1079,7 +1079,15 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
             const SizedBox(width: S.x2),
             Expanded(
               child: Text(
-                mine
+                TaktLook.on(c)
+                    ? (mine
+                        ? SleepText.of(c).windowMine
+                        : fallback
+                            ? SleepText.of(c).windowFallback
+                            : vendor
+                                ? SleepText.of(c).windowVendor
+                                : SleepText.of(c).windowAuto)
+                    : mine
                     ? (l?.sleepDetailWindowMine ?? 'You set this window')
                     : fallback
                         ? (l?.sleepDetailWindowFallback ??
@@ -1089,16 +1097,13 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
                         : (l?.sleepDetailWindowAuto ??
                             'This window was staged from the signals'),
                 style: F.body.copyWith(color: p.ink),
-                // TAKT (F6): einzeilig.
-                maxLines: TaktLook.on(c) ? 1 : null,
-                overflow: TaktLook.on(c) ? TextOverflow.ellipsis : null,
               ),
             ),
           ]),
           if (fallback) ...[
             const SizedBox(height: S.x2),
             Text(
-              l?.sleepDetailWindowFallbackBody ??
+              TaktLook.on(c) ? SleepText.of(c).windowFallbackBody : l?.sleepDetailWindowFallbackBody ??
                   'Staging could not find the edges, so the times are a best '
                       'guess.',
               style: F.cap.copyWith(color: p.ink3),
@@ -1173,7 +1178,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
   /// Stands in for the correction buttons on a night that can no longer be
   /// re-analysed, so it isn't offered a fix that can't land.
   Widget _uncorrectableNote(BuildContext c, AppLocalizations? l) => Text(
-        l?.sleepDetailCorrectionUnavailable ??
+        TaktLook.on(c) ? SleepText.of(c).uncorrectable : l?.sleepDetailCorrectionUnavailable ??
             'This night\u2019s detailed recordings are no longer on the phone, '
                 'so its sleep can\u2019t be corrected now.',
         style: F.cap.copyWith(color: P.of(c).ink3),
@@ -1181,7 +1186,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
 
   /// On the oldest kept night: says why only some corrections are offered.
   Widget _eveningPrunedNote(BuildContext c, AppLocalizations? l) => Text(
-        l?.sleepDetailCorrectionEveningPruned ??
+        TaktLook.on(c) ? SleepText.of(c).eveningPruned : l?.sleepDetailCorrectionEveningPruned ??
             'The evening before this night is no longer on the phone, so only '
                 'a bedtime after midnight, or Not sleep, can be applied.',
         style: F.cap.copyWith(color: P.of(c).ink3),
@@ -1382,6 +1387,13 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       {Map<String, dynamic>? device}) {
     final l = AppLocalizations.of(c);
     final stages = device == null ? d.stages : SleepData.stagesOf(device);
+    if (stages.isEmpty && TaktLook.on(c)) {
+      // TAKT (Randfall): eine Zeile statt Karte.
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: S.x1, vertical: S.x2),
+        child: Text(SleepText.of(c).noStages, style: F.cap.copyWith(color: p.ink2)),
+      );
+    }
     if (stages.isEmpty) {
       return StatusCard(
         l?.sleepDetailNoHypnogramTitle ?? 'No hypnogram for this night',
@@ -1914,6 +1926,12 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
         ],
         shares: true,
         note: r == null ? null : SleepText.of(c).phasesNote,
+      );
+    }
+    if (rows.isEmpty && TaktLook.on(c)) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: S.x1),
+        child: Text(SleepText.of(c).noStages, style: F.cap.copyWith(color: p.ink2)),
       );
     }
     if (rows.isEmpty) {

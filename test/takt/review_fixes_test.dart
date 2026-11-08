@@ -15,6 +15,7 @@ import 'package:openstrap_edge/ui2/screens/sleep_detail.dart';
 import 'package:openstrap_edge/ui2/theme.dart';
 
 import 'support/night_fixture.dart';
+import 'support/shot.dart' show loadRealFonts;
 
 Future<void> pump(WidgetTester t, Widget w, {double h = 5200}) async {
   t.view.physicalSize = Size(390, h);
@@ -28,6 +29,16 @@ Future<void> pump(WidgetTester t, Widget w, {double h = 5200}) async {
     home: Scaffold(body: TaktLook(child: w)),
   ));
   await t.pumpAndSettle();
+}
+
+/// Zahl der gesetzten Zeilen eines Absatzes.
+int lines(RenderParagraph r) {
+  final n = r.text.toPlainText().length;
+  return r
+      .getBoxesForSelection(TextSelection(baseOffset: 0, extentOffset: n))
+      .map((b) => b.top.round())
+      .toSet()
+      .length;
 }
 
 bool dodged(WidgetTester t, Finder f) =>
@@ -45,10 +56,14 @@ List<({int t, double v})> pts(int n, double base) {
 }
 
 void main() {
-  testWidgets('F6: Hinweis zum Zeitraum ist einzeilig', (t) async {
+  // Echte Schriften, damit Zeilenumbrüche wie am Handy fallen.
+  setUpAll(loadRealFonts);
+
+  testWidgets('F6: Hinweis zum Zeitraum ist eine ganze Zeile', (t) async {
     await pump(t, SleepDetail(embedded: true, data: sleepData(), head: (_) => const SizedBox()));
-    final txt = t.widget<Text>(find.textContaining('automatisch'));
-    expect(txt.maxLines, 1);
+    final r = t.renderObject<RenderParagraph>(find.text('Zeitraum automatisch erkannt'));
+    expect(lines(r), 1);
+    expect(r.didExceedMaxLines, isFalse);
   });
 
   testWidgets('F7: jede Phase mit Anteil in Prozent', (t) async {
@@ -160,5 +175,31 @@ void main() {
     await readiness(t);
     expect(find.byType(TaktValueCard), findsOneWidget);
     expect(find.descendant(of: find.byType(TaktValueCard), matching: find.text('–')), findsOneWidget);
+  });
+
+  testWidgets('F6 Runde 2: Hinweise kurz und ganz lesbar, auch in der Fallback-Nacht', (t) async {
+    final n = night()..['sleep_source'] = 'auto_fallback';
+    await pump(t,
+        SleepDetail(embedded: true, data: SleepData(day: '2026-11-08', night: n), head: (_) => const SizedBox()));
+    for (final s in ['Zeitraum aus dem Puls geschätzt', 'Beginn und Ende sind geschätzt.']) {
+      final f = find.text(s);
+      expect(f, findsOneWidget, reason: s);
+      final r = t.renderObject<RenderParagraph>(f);
+      expect(r.didExceedMaxLines, isFalse, reason: s);
+      expect(lines(r), 1, reason: s);
+    }
+  });
+
+  testWidgets('Randfall: Nacht ohne Phasen ist je eine Zeile, keine Karte', (t) async {
+    final n = night()
+      ..remove('hypnogram')
+      ..remove('light_min')
+      ..remove('deep_min')
+      ..remove('rem_min')
+      ..remove('awake_min');
+    await pump(t,
+        SleepDetail(embedded: true, data: SleepData(day: '2026-11-08', night: n), head: (_) => const SizedBox()));
+    expect(find.text('Keine Phasen für diese Nacht'), findsWidgets);
+    expect(find.byType(StatusCard), findsNothing);
   });
 }

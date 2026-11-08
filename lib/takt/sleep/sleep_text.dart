@@ -13,6 +13,15 @@ class SleepText {
   // Feature 06: der Teil unter dem Kopf.
   String get theNight => de ? 'Die Nacht' : 'The night';
   String get phases => de ? 'Phasen' : 'Stages';
+  // F6: kurze Hinweise in der Korrekturkarte, je eine Zeile.
+  String get windowMine => de ? 'Zeitraum von dir gesetzt' : 'You set this window';
+  String get windowFallback => de ? 'Zeitraum aus dem Puls geschätzt' : 'Window guessed from pulse';
+  String get windowVendor => de ? 'Phasen vom Gerät' : 'Staged by your device';
+  String get windowAuto => de ? 'Zeitraum automatisch erkannt' : 'Window detected automatically';
+  String get windowFallbackBody => de ? 'Beginn und Ende sind geschätzt.' : 'Start and end are a guess.';
+  String get uncorrectable => de ? 'Nicht mehr korrigierbar.' : 'Can no longer be corrected.';
+  String get eveningPruned => de ? 'Nur Bettzeit nach Mitternacht oder „Kein Schlaf“.' : 'Only a bedtime after midnight or Not sleep.';
+  String get noStages => de ? 'Keine Phasen für diese Nacht' : 'No stages for this night';
   String get versus => de ? 'Gegen deine Nächte' : 'Against your nights';
   String usual(String lo, String hi, int n) =>
       de ? 'üblich $lo bis $hi, aus $n Nächten' : 'usual $lo to $hi, from $n nights';
