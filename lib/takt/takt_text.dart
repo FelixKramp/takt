@@ -35,6 +35,13 @@ class TaktText {
   String get steps => de ? 'Schritte' : 'Steps';
   String get today => de ? 'heute' : 'today';
   String get noValueYet => de ? 'Noch kein Wert.' : 'No value yet.';
+  String driverName(String key, String fallback) => switch (key) {
+        'hrv' => 'HRV',
+        'rhr' => restingHr,
+        'resp' => de ? 'Atmung' : 'Breathing',
+        'temp' => de ? 'Hauttemperatur' : 'Skin temperature',
+        _ => fallback,
+      };
   String get driverUsual => de ? 'im üblichen Bereich' : 'within your usual range';
   String driverLower(String by) => de
       ? (by.isEmpty ? 'niedriger als üblich' : '$by niedriger als üblich')

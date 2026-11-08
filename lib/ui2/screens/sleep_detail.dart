@@ -522,7 +522,9 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       AppLocalizations.of(c)?.tabSleep ?? 'Sleep',
       back: !widget.embedded,
       center: TaktDayStepper(
-          day: _day ?? nav?.day, days: nav?.days ?? const [], onDay: _goDay),
+          day: _day ?? nav?.latestDay ?? nav?.day,
+          days: nav?.days ?? const [],
+          onDay: _goDay),
       trailing: widget.embedded ? const ProfileAvatar(accent: C.domSleep) : null,
     );
     final list = ListView(
@@ -1087,6 +1089,9 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
                         : (l?.sleepDetailWindowAuto ??
                             'This window was staged from the signals'),
                 style: F.body.copyWith(color: p.ink),
+                // TAKT (F6): einzeilig.
+                maxLines: TaktLook.on(c) ? 1 : null,
+                overflow: TaktLook.on(c) ? TextOverflow.ellipsis : null,
               ),
             ),
           ]),
@@ -1749,8 +1754,11 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
                     maxLines: 1,
                     softWrap: false,
                     overflow: TextOverflow.ellipsis,
-                    style: coloured
+                    // TAKT: Namen in Tinte, die Phasenfarbe trägt die Bahn.
+                    style: coloured && !TaktLook.on(c)
                         ? nameStyle.copyWith(color: ink[s])
+                        : coloured
+                        ? nameStyle.copyWith(color: p.ink2)
                         : F.over.copyWith(color: p.ink2),
                   ),
                 ),
@@ -1904,6 +1912,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
           ])
             if (totals[s] case final v?) (s.label(l), v, ink[s]!, mins(s)),
         ],
+        shares: true,
         note: r == null ? null : SleepText.of(c).phasesNote,
       );
     }
@@ -2061,6 +2070,19 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
     // act on — it says the comparison is coming and when. Dropping the whole
     // card took the count with it.
     if (rows.isEmpty || have < _minNights) {
+      // TAKT (F8): eine Zeile statt Karte.
+      if (TaktLook.on(c)) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: S.x1),
+          child: taktDodge(
+              c,
+              Text(
+                  '${l?.sleepDetailNotEnoughNightsTitle ?? 'Not enough nights to compare'}: '
+                  '${l?.sleepDetailNightsSoFar(have, _minNights) ?? '$have of $_minNights nights so far'}',
+                  style: F.cap.copyWith(color: p.ink2)),
+              line: true),
+        );
+      }
       return StatusCard(
         l?.sleepDetailNotEnoughNightsTitle ?? 'Not enough nights to compare',
         '',

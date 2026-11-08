@@ -236,7 +236,8 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
             final v = shown ? '${metricValue(f.spec.unit, f.value)} $unit'.trim() : '';
             final hasBand = shown && f.usual != null && f.halfBand != null;
             final sentence = !f.used
-                ? t.driverMissing(whyFromNote(f.note) ?? '')
+                ? t.driverMissing(presentationText(
+                    l, needMessageFromNote(f.note) ?? whyFromNote(f.note) ?? ''))
                 : !f.beyondUsualSpread
                     ? t.driverUsual
                     : (f.delta ?? 0) < 0
@@ -246,7 +247,7 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
                             shown ? '${metricValue(f.spec.unit, f.delta!.abs())} $unit'.trim() : '');
             return TaktBandRow(
               index: i,
-              label: uiText(c, f.label),
+              label: t.driverName(f.key, uiText(c, f.label)),
               value: v,
               sentence: sentence,
               mark: hasBand ? f.value : null,
@@ -265,6 +266,7 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
     final p = P.of(c);
     final l = AppLocalizations.of(c);
     final d = _d ?? const ReadinessData();
+    _takt = TaktLook.on(c);
     final v = d.readiness.value;
     final band = readinessBand(v, l);
 
@@ -280,6 +282,11 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
         const Center(child: CircularProgressIndicator()),
       ] else ...[
         if (v == null) ...[
+          // TAKT (H13): Strich in der Wert-Karte, der Grund steht darunter.
+          if (TaktLook.on(c)) ...[
+            const TaktValueCard(value: null),
+            const SizedBox(height: S.x3),
+          ],
           // No `why:`. The pipeline records why readiness abstained on every
           // day it does, and the "What was missing" section directly below
           // shows the same record in more detail. `why:` below reuses the
@@ -456,8 +463,12 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
   /// before the first sync is not drawn as ninety missing days.
   List<double?> _window(ReadinessData d) {
     final first = d.series.indexWhere((v) => v != null);
-    return first <= 0 ? d.series : d.series.sublist(first);
+    final w = first <= 0 ? d.series : d.series.sublist(first);
+    // TAKT (H11): höchstens 30 Tage.
+    return _takt && w.length > 30 ? w.sublist(w.length - 30) : w;
   }
+
+  bool _takt = false;
 
   String _historyTitle(BuildContext c, ReadinessData d) {
     final l = AppLocalizations.of(c);

@@ -923,10 +923,10 @@ class _Cta extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     children: [
       Flexible(
-        child: Text(
+        child: taktDodge(c, Text(
           label,
           style: F.cap.copyWith(color: color, fontWeight: FontWeight.w600),
-        ),
+        ), line: true),
       ),
       if (arrow) ...[
         const SizedBox(width: S.x1),
@@ -1183,13 +1183,13 @@ class StatusCard extends StatelessWidget {
               leading ?? Icon(icon, size: 16, color: p.ink3),
               const SizedBox(width: S.x2),
               Expanded(
-                child: Text(
+                child: taktDodge(c, Text(
                   uiText(c, what),
                   style: F.body.copyWith(
                     color: p.ink2,
                     fontWeight: FontWeight.w600,
                   ),
-                ),
+                ), line: true),
               ),
             ],
           ),
@@ -1199,10 +1199,10 @@ class StatusCard extends StatelessWidget {
           // the call sites that matter.
           if (why.isNotEmpty) ...[
             const SizedBox(height: S.x2),
-            Text(
+            taktDodge(c, Text(
               presentationText(AppLocalizations.of(c), why),
               style: F.cap.copyWith(color: p.ink3, height: 1.5),
-            ),
+            ), line: true),
           ],
           if (fix.isNotEmpty) ...[
             const SizedBox(height: S.x3),

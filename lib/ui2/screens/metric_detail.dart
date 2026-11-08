@@ -1296,13 +1296,13 @@ class _MetricDetailState extends State<MetricDetail> {
         if (!(takt && win == 1))
         Align(
           alignment: Alignment.centerLeft,
-          child: Text(
+          child: taktDodge(context, Text(
             win == 1
                 ? (l?.metricDetailToday ?? 'Today')
                 : (l?.metricDetailDailyAverage(vals.length, win) ??
                     'Daily average · ${vals.length} of $win days'),
             style: F.cap.copyWith(color: p.ink3),
-          ),
+          ), line: true),
         ),
         // On a multi-day window the average is the headline, so the newest
         // reading needs its own line. On Today they are the same number, and
@@ -1416,7 +1416,8 @@ class _MetricDetailState extends State<MetricDetail> {
                   height: 150,
                   yAxis: axis,
                   band: band,
-                  bandColor: p.wash(spec.color),
+                  // TAKT (H2): grauer üblicher Bereich.
+                  bandColor: TaktLook.on(context) ? p.card2 : p.wash(spec.color),
                   xMarks: marks,
                   // The mark's only screen-reader form, and the only thing that can
                   // say what it is. Deliberately flat: a version change is
@@ -1958,6 +1959,38 @@ class _StepGoalGaugeState extends State<_StepGoalGauge> {
         steps == null || widget.goal <= 0 ? null : steps / widget.goal;
     return Surface(
       child: Row(children: [
+        if (TaktLook.on(context))
+          // TAKT (H5): das Tagesziel als Balken.
+          SizedBox(
+            key: const ValueKey('takt-step-goal-bar'),
+            width: 120,
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: R.rPill,
+                    child: SizedBox(
+                      height: 10,
+                      child: Stack(children: [
+                        Positioned.fill(child: ColoredBox(color: p.card2)),
+                        FractionallySizedBox(
+                          widthFactor: (frac ?? 0).clamp(0.0, 1.0),
+                          child: ColoredBox(color: widget.color),
+                        ),
+                      ]),
+                    ),
+                  ),
+                  if (frac != null) ...[
+                    const SizedBox(height: S.x1),
+                    taktDodge(
+                        context,
+                        Text('${(frac * 100).clamp(0, 999).round()}%',
+                            style: F.over.copyWith(color: p.ink))),
+                  ],
+                ]),
+          )
+        else
         SizedBox(
           width: 56,
           height: 56,

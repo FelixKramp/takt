@@ -15,15 +15,22 @@ typedef PhaseRow = (String name, String value, Color color, num? minutes);
 
 /// F7: durchgehender Balken der vier Phasen, darunter je eine Zeile.
 class TaktPhases extends StatelessWidget {
-  const TaktPhases({super.key, required this.rows, this.note});
+  const TaktPhases({super.key, required this.rows, this.note, this.shares = false});
 
   final List<PhaseRow> rows;
   final String? note;
+
+  /// F7: Anteil jeder Phase an der Nacht in Prozent, aus denselben Minuten
+  /// wie der Balken.
+  final bool shares;
 
   @override
   Widget build(BuildContext c) {
     final p = P.of(c);
     final bar = [for (final r in rows) if ((r.$4 ?? 0) > 0) r];
+    final total = bar.fold<num>(0, (a, r) => a + r.$4!);
+    String? share(PhaseRow r) =>
+        !shares || total <= 0 || (r.$4 ?? 0) <= 0 ? null : '${(r.$4! / total * 100).round()} %';
     return Surface(
       key: const ValueKey('takt-phases'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -71,6 +78,18 @@ class TaktPhases extends StatelessWidget {
                   ),
                 ),
               ),
+              if (share(r) case final sh?) ...[
+                const SizedBox(width: S.x2),
+                SizedBox(
+                  width: 44,
+                  child: StripeDodge(
+                    align: 1,
+                    child: Text(sh,
+                        textAlign: TextAlign.right,
+                        style: F.cap.copyWith(color: p.ink3)),
+                  ),
+                ),
+              ],
             ]),
           ),
         if (note != null) ...[

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../ui2/theme.dart';
 import '../pult_tokens.dart';
+import '../sleep/sleep_score.dart' show ScoreBand;
 import '../stripe/stripe.dart';
 
 class TaktBandRow extends StatelessWidget {
@@ -35,7 +36,7 @@ class TaktBandRow extends StatelessWidget {
   @override
   Widget build(BuildContext c) {
     final p = P.of(c);
-    final warn = p.dark ? const Color(0xFFFF9A5C) : const Color(0xFFA63A00);
+    final warn = ScoreBand.okay.ink(p.dark);
     final hasBand = mark != null && bandLo != null && bandHi != null;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: S.x3),
@@ -109,7 +110,7 @@ class _Strip extends StatelessWidget {
                 key: ValueKey('takt-band-dot-$index'),
                 decoration: BoxDecoration(
                   color: outside
-                      ? (p.dark ? const Color(0xFFFF9A5C) : Pult.orange)
+                      ? Pult.orangeFor(p.dark)
                       : p.ink,
                   shape: BoxShape.circle,
                   border: Border.all(color: p.card, width: 2),
