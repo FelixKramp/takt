@@ -229,3 +229,92 @@ unabhängiger Prüfer-Agent (hat nichts gebaut, `plan.md` nicht gelesen)
 ✅ alle drei ❌ aus Runde 1 behoben, alle behobenen Hinweise bestätigt. Neu: ❌ **W3** — Kalorien-
 Erklärung fehlt auf dem Weg über eine offene Erkennung (`_pickSport` ohne `weightKg`). Wichtigster
 Hinweis: Kurve nach einer Anfangslücke reicht bis hinter das Trainingsende (Hinweis 1).
+
+## Runde 3
+geprüft: 2026-11-08/09 · stand: HEAD bf9a7ea9 („09: Kurve beginnt beim Trainingsbeginn, Gewicht auch
+fuer offene Erkennungen, Version 0.3.2“) · Prüfer: dritter unabhängiger Prüfer-Agent (hat nichts
+gebaut, `plan.md` nicht gelesen)
+
+### Grundlage
+- Gelesen: `spec.md` (09), Runden 1 und 2 oben, Diff `git show HEAD`, dazu `_denseMinutes`,
+  `_firstHrAt`, `_detailOf`, `taktWorkoutResult` (`workout_screen.dart`), `getWorkout`/
+  `_minuteHrCurve` (`local_repository_impl.dart`), `TaktHrScrub`, `_openWorkoutOnce`/`_pickSport`.
+- `flutter analyze lib`: **keine Befunde**.
+- `flutter test test/takt`: **216 grün, 3 rot**, alle drei in `today_screen_test.dart` (A8 „Abgeschlossenes
+  Training wird gespeichert“, A8 „Am Ende der Berechnung …“, A9/T1/T3). Ursache ist die Uhrzeit des
+  Laufs (00:04 Uhr), nicht 09: Die Tests legen ein Training 00:05–00:35 *heute* an, das um 00:04 in der
+  Zukunft liegt, `validateManualWindow` lehnt das Speichern ab (`inFuture`), also bleibt die Erkennung
+  offen. Dieselben Wege liefen in meinen eigenen Tests mit echter Datenbank vor Mitternacht grün. Siehe
+  Hinweis 4.
+- Eigener Wegwerf-Test `test/takt/zz_pruef3_test.dart` (danach gelöscht, `git status` sauber), echte
+  Schriften, Deutsch, 24 h, **echte Datenbank** (sqflite ffi, `TaktTodayScreen` wie
+  `today_screen_test.dart`, Profil `weight_kg: 75`, Puls als 1-Hz-Zeilen in `decoded_onehz`: 170 bpm in
+  den ersten 10 Minuten ab der ersten Messung, danach 110). Kurve über den echten Ladeweg:
+  automatisch speichern → `getWorkouts` → `taktWorkoutResult` → `_detailOf` → `ActivitySummary` unter
+  `TaktLook`, linker und rechter Rand angetippt; einmal zusätzlich über Antippen auf Heute.
+- Foto `training_ablesen` neu erzeugt und angesehen: unverändert sauber.
+
+### Die Punkte aus Runde 2
+| ID | Ergebnis | Begründung |
+|---|---|---|
+| W3 Kalorien bei offener Erkennung | ✅ | Echte DB, Profil 75 kg, offene Erkennung (lastRecordAt = Ende + 60 s) antippen → `ActivityPicker` mit „sportart wählen“, `takt-pick-note` 1-mal: „Kalorien sind geschätzt: MET-Wert mal Gewicht, verfeinert mit dem Puls.“ Danach Suche „Handball“ → Wahl → zurück auf Heute, „Handball“ steht dort, Erkennung bleibt offen (W2). Ohne Gewicht im Profil: keine Zeile, kein Fehler. |
+| Kurve ab Trainingsbeginn (Hinweis 1) | ❌ | **Bei minutengenauem Beginn alles richtig, bei Beginn mit Sekunden und Lücke am Anfang ist jede abgelesene Uhrzeit eine Minute zu früh.** Ergebnisse siehe Tabelle unten. Ursache: `lead = hrFrom.difference(r.start).inMinutes` rundet ab, und `t0 = r.start` behält die Sekunden; `hrFrom` ist aber auf die volle Minute gerundet (`_minuteHrCurve`, `t = bucket * 60`). Reproduktion echte DB: Erkennung 00:05:30–00:35:30, Puls ab 00:10:00 → `hrFrom` 00:10:00, `lead` = 4 (4:30), `t0` = 00:05:30. Die erste Messung (Minute 00:10) wird als „00:09 / 170“ abgelesen, die letzte (Minute 00:35) als „00:34 / 110“, ganz rechts „00:35 / –“, obwohl das Band dort gemessen hat. Der Wechsel 170 → 110 (Minute 00:21) steht bei „00:20“. Vor diesem Commit (`t0 = hrFrom`) stimmte die Uhrzeit in diesem Fall, es ist also eine neue Abweichung. Betroffen sind Trainings mit Sekunden im Beginn und mindestens etwa 1,5 Minuten ohne Puls am Anfang: live gestartete Workouts (`workout_controller.dart`: `start = DateTime.now()`) und Erkennungen (`autoDetectWorkouts` liefert Sekunden). Nachgetragene Trainings (Uhr in Minuten) sind nicht betroffen. Abhilfe: `r.start` auf die volle Minute abrunden und daraus `lead` und `t0` rechnen. Der Repo-Test „W4: Kurve beginnt nach dem Trainingsbeginn“ nutzt einen minutengenauen Beginn und findet das nicht. |
+| Screenreader (Hinweis 3) | ✅ | Kurvenknoten „HERZFREQUENZ“ bietet nur noch `increase` und `decrease` an (kein `tap`, `scrollLeft`, `scrollRight`). Wert „Nichts ausgewählt“, hoch → „16:57, 118 bpm“, hoch/runter → wieder 16:57. Tippen mit dem Finger liest weiter ab (Mitte „17:24“). |
+
+Kurve über den echten Ladeweg (Training 30 Min., Achse „Start … 30:00“, 31 Punkte = Beginn bis Ende):
+
+| Fall | links | erste Messung | rechts | Ergebnis |
+|---|---|---|---|---|
+| Beginn 00:05:00, Puls ab 00:10 (Lücke vorn) | 00:05 / – | 00:10 / 170 ✓, Wechsel 110 bei 00:20 ✓ | 00:35 / 110 | ✅ |
+| Beginn 00:05:00, Puls bis 00:25 (Lücke hinten) | 00:05 / 170 | 00:05 ✓, letzte 00:25 ✓ | 00:35 / – | ✅ |
+| Beginn 00:05:00, ohne Lücke | 00:05 / 170 | 00:05 ✓ | 00:35 / 110 | ✅ |
+| Beginn 00:05:00, Lücke vorn und hinten | 00:05 / – | 00:10 ✓, letzte 00:25 ✓ | 00:35 / – | ✅ |
+| Beginn 00:05:00, Messungen bis 00:45 (nach dem Ende) | 00:05 / – | 00:10 ✓ | 00:35 / 110 | ✅ (DB liest nur bis `end_ts`) |
+| über Heute antippen, Lücke vorn | 00:05 / – | 00:10 ✓ | 00:35 / 110 | ✅ |
+| Beginn 00:05:30, ohne Lücke | 00:05 / 170 | 00:05 ✓ | 00:35 / 110 | ✅ |
+| Beginn 00:05:30, Puls ab 00:10 | 00:05 / – | **00:09** / 170 (richtig 00:10) | 00:35 / – (Minute 00:35 hat Puls) | ❌ |
+| Beginn 00:05:30, Puls 00:10–00:25 | 00:05 / – | **00:09** (richtig 00:10), letzte **00:24** (richtig 00:25) | 00:35 / – | ❌ |
+| Beginn 00:05:50, Puls ab 00:06:10 | **00:06** / 170 | 00:06 ✓ | **00:36** / – | Uhrzeiten ✓, siehe Hinweis 1 |
+
+Ohne Absturz (synthetisch, `ActivitySummary` direkt): leere Kurve und eine Minute (mit und ohne
+`hrFrom`) zeigen keine ablesbare Kurve, keine Ausnahme; nur leere Minuten mit Lücke vorn: „–“ an beiden
+Rändern; `hrFrom` vor dem Beginn: Kurve ab `hrFrom`, Zeiten stimmen; Dauer 0 mit Lücke: kein Fehler.
+
+### Regressionen W1–W9 (Stichprobe)
+| ID | Ergebnis | Begründung |
+|---|---|---|
+| W1 | ✅ | Repo-Tests grün (Kopf, schlichte Zeilen, Stift öffnet die Wahl, Erklärung). |
+| W2 | ✅ | Echte DB: Suche „Handball“ → Wahl → zurück auf Heute. Repo-Tests Suche/Gruppe grün. |
+| W3 | ✅ | Siehe oben. |
+| W4 | ❌ | Bei minutengenauem Beginn richtig, bei Beginn mit Sekunden und Anfangslücke eine Minute zu früh (siehe oben). Antippen, Wischen, Loslassen unverändert (Repo-Tests). |
+| W5 | ✅ | Linker Rand bei Lücke vorn „–“ (in der Ablesezeile mit „keine Messung“, Repo-Test), Hinweis vor dem Antippen (Repo-Test, Foto). |
+| W6–W8 | ✅ | Repo-Tests grün; `log_workout.dart` von diesem Commit nicht berührt. |
+| W9 | ✅ | Foto `training_ablesen`: „Pulsabfall nach 1 Min.“, „16 bpm“, Erklärung grau. |
+
+### Hinweise Runde 3
+1. **Beginn mit Sekunden, Puls weniger als eine Minute später, aber in der nächsten Minute** (Beginn
+   00:05:50, Puls ab 00:06:10): `lead` = 0, die Kurve beginnt bei 00:06 statt bei der Minute des Beginns,
+   rechts steht „00:36 / –“ hinter dem Ende 00:35:50. Die Uhrzeiten stimmen. Dieselbe Abhilfe wie beim ❌
+   (Beginn auf die Minute abrunden) behebt auch das.
+2. **Nur leere Minuten werden hinten gekürzt.** Echte Messwerte nach dem Ende blieben stehen (synthetisch:
+   55-Min.-Training mit 70 Werten → Kurve bis 18:11 unter der Achse „55:00“). Über die Datenbank nicht
+   erreichbar, weil `hrSamplesInRange` bei `end_ts` aufhört; nur relevant, falls ein anderer Ladeweg
+   dazukommt.
+3. **`hrFrom` mindestens 24 h nach dem Beginn:** keine Auffüllung, aber `t0 = r.start` (weil `lead > 0`),
+   die Zeiten wären dann um die Lücke verschoben. Über die Datenbank nicht erreichbar, rein theoretisch.
+4. **`today_screen_test.dart` hängt an der Uhrzeit:** Zwischen 00:00 und 00:35 Uhr schlagen A8 (zweimal)
+   und A9/T1/T3 fehl, weil das angelegte Training 00:05–00:35 von heute in der Zukunft liegt. Nicht von 09
+   verursacht, aber jeder Lauf kurz nach Mitternacht wirkt wie eine Regression. Beginn z. B. auf
+   „gestern“ oder relativ zu `now` legen.
+5. **Testlücken:** Kein Repo-Test prüft W3 mit Kalorien-Erklärung über Heute (der Commit fügt keinen
+   hinzu). Der W4-Test zur Anfangslücke nutzt einen minutengenauen Beginn und geht nicht über
+   `_detailOf`; ein Fall mit Sekunden im Beginn fehlt.
+
+### Zusammenfassung Runde 3
+✅ W3 (Kalorien-Erklärung bei offener Erkennung) und Screenreader (nur noch Schritte hoch/runter)
+behoben. Kurve ab Trainingsbeginn: bei minutengenauem Beginn in allen Fällen richtig (Lücke vorn,
+hinten, beides, keine, Messungen nach dem Ende, über Heute), „Start“ und „30:00“ passen zu 31 Punkten,
+nichts stürzt ab. Neu: ❌ **W4** — bei einem Beginn mit Sekunden (live gestartet oder erkannt) und einer
+Lücke am Anfang ist jede abgelesene Uhrzeit eine Minute zu früh, weil `t0 = r.start` die Sekunden
+behält, `lead` abrundet und `hrFrom` auf der vollen Minute liegt. Abhilfe: Beginn auf die Minute
+abrunden.

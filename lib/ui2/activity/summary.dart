@@ -1919,17 +1919,19 @@ class _ActivitySummaryState extends State<ActivitySummary> {
       // Prüfung 09, Runde 2: Beginnt die Messung nach dem Training, wird die
       // Kurve vorn mit leeren Minuten aufgefüllt und hinten um die leeren
       // Minuten nach dem Ende gekürzt, damit „Start“ und Dauer stimmen.
-      final lead = r.hrFrom == null ? 0 : r.hrFrom!.difference(r.start).inMinutes;
-      var hr = lead > 0 && lead < 24 * 60
-          ? <double?>[...List<double?>.filled(lead, null), ...r.hr]
-          : r.hr;
-      final want = r.duration.inMinutes + 1;
-      while (hr.length > want && want > 1 && hr.last == null) {
+      // Die Messminuten liegen auf vollen Minuten, der Beginn kann Sekunden
+      // haben (live gestartet, erkannt): erst abrunden, dann zählen (Runde 3).
+      final s0 = DateTime(r.start.year, r.start.month, r.start.day, r.start.hour, r.start.minute);
+      final lead = r.hrFrom == null ? 0 : r.hrFrom!.difference(s0).inMinutes;
+      final pad = lead > 0 && lead < 24 * 60;
+      var hr = pad ? <double?>[...List<double?>.filled(lead, null), ...r.hr] : r.hr;
+      final want = r.start.add(r.duration).difference(s0).inMinutes + 1;
+      while (pad && hr.length > want && want > 1 && hr.last == null) {
         hr = hr.sublist(0, hr.length - 1);
       }
       return TaktHrScrub(
         hr: hr,
-        t0: lead > 0 ? r.start : (r.hrFrom ?? r.start),
+        t0: pad ? s0 : (r.hrFrom ?? r.start),
         title: l?.activitySummaryHeartRateTitle ?? 'Heart rate',
         height: height,
         xLabels: [l?.activitySummaryStart ?? 'Start', hms(r.duration)],

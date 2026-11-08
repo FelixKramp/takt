@@ -155,6 +155,29 @@ void main() {
       expect(line.d[5], base.hr[0], reason: '17:02 ist die erste Messung');
     });
 
+    testWidgets('W4: Beginn mit Sekunden und späte erste Messung, Uhrzeit stimmt', (t) async {
+      // Runde 3: Erkennung 00:05:30 bis 00:35:30, Puls ab 00:10.
+      final hr = <double?>[for (var i = 0; i < 26; i++) 170.0 - i, ...List.filled(5, null)];
+      final r = ActivityResult(activityByName('handball')!,
+          start: DateTime(2026, 11, 9, 0, 5, 30),
+          duration: const Duration(minutes: 30),
+          hr: hr,
+          hrFrom: DateTime(2026, 11, 9, 0, 10));
+      await pump(t, ActivitySummary(r, weightKg: 75));
+      final box = t.getRect(_key('takt-hr-scrub'));
+      final line = _chart(t, _key('takt-hr-scrub'));
+      expect(line.d.length, 31, reason: '00:05 bis 00:35');
+      expect(line.d[5], 170, reason: '00:10 ist die erste Messung');
+      await t.tapAt(Offset(box.left + box.width * 5 / 30, box.center.dy));
+      await t.pump();
+      expect(_digits(t, 'takt-hr-time'), '00:10');
+      expect(_digits(t, 'takt-hr-bpm'), '170');
+      await t.tapAt(Offset(box.right - 1, box.center.dy));
+      await t.pump();
+      expect(_digits(t, 'takt-hr-time'), '00:35');
+      expect(_digits(t, 'takt-hr-bpm'), '145');
+    });
+
     testWidgets('W4: senkrecht über die Kurve scrollen setzt keine Minute', (t) async {
       await pump(t, ActivitySummary(handball(), weightKg: 75));
       await t.drag(_key('takt-hr-scrub'), const Offset(0, -150));
