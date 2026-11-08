@@ -1,6 +1,6 @@
 ---
 feature: 07-detailscreens
-freigegeben: offen
+freigegeben: 2026-11-08
 ---
 # Spec: Detailscreens von Heute im Takt-Design
 

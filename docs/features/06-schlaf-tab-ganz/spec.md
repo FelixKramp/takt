@@ -1,6 +1,6 @@
 ---
 feature: 06-schlaf-tab-ganz
-freigegeben: offen
+freigegeben: 2026-11-08
 ---
 # Spec: Schlaf-Tab ganz im Takt-Design, Tab-Leiste
 
