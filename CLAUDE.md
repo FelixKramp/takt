@@ -31,7 +31,7 @@ Während des Builds ist die Spec eingefroren: Abweichung → stoppen und Felix f
 |---|---|---|---|
 | 01 | Heute-Screen | build | `docs/features/01-heute-screen/` |
 | 02 | Displaystreifen: Zahlen weichen einem Displayfehler aus | fertig | `docs/features/02-displaystreifen/` |
-| 03 | Schlafscore und Schlaf-Tab im Takt-Design | idee | — |
+| 03 | Schlafscore und Schlaf-Tab im Takt-Design | spec | `docs/features/03-schlafscore/` |
 | 04 | Heute-Screen voller (Kandidat: Batterie statt Erholung) | idee | — |
 | 05 | Aktivität und Gesundheit im Takt-Design | idee | — |
 
