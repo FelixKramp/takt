@@ -1916,9 +1916,20 @@ class _ActivitySummaryState extends State<ActivitySummary> {
     ];
     // TAKT (Feature 09, W4, W5): ablesbare Kurve, Finger auflegen und wischen.
     if (TaktLook.on(context)) {
+      // Prüfung 09, Runde 2: Beginnt die Messung nach dem Training, wird die
+      // Kurve vorn mit leeren Minuten aufgefüllt und hinten um die leeren
+      // Minuten nach dem Ende gekürzt, damit „Start“ und Dauer stimmen.
+      final lead = r.hrFrom == null ? 0 : r.hrFrom!.difference(r.start).inMinutes;
+      var hr = lead > 0 && lead < 24 * 60
+          ? <double?>[...List<double?>.filled(lead, null), ...r.hr]
+          : r.hr;
+      final want = r.duration.inMinutes + 1;
+      while (hr.length > want && want > 1 && hr.last == null) {
+        hr = hr.sublist(0, hr.length - 1);
+      }
       return TaktHrScrub(
-        hr: r.hr,
-        t0: r.hrFrom ?? r.start,
+        hr: hr,
+        t0: lead > 0 ? r.start : (r.hrFrom ?? r.start),
         title: l?.activitySummaryHeartRateTitle ?? 'Heart rate',
         height: height,
         xLabels: [l?.activitySummaryStart ?? 'Start', hms(r.duration)],

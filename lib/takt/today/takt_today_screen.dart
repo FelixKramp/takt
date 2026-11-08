@@ -204,18 +204,18 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     }
     final target = await taktWorkoutTarget(item, (id) => taktWorkoutResult(app, id), weightKg: weight);
     if (!mounted) return;
-    if (target == null) return _pickSport(item);
+    if (target == null) return _pickSport(item, weightKg: weight);
     await _push(target);
   }
 
-  Future<void> _pickSport(ActivityItem item) async {
+  Future<void> _pickSport(ActivityItem item, {double? weightKg}) async {
     final s = item.suggestion;
     var picking = false;
     final recent = await taktRecentSports(context.read<AppState>());
     if (!mounted) return;
     await Navigator.of(context).push(MaterialPageRoute<void>(
       // Feature 09, W3: Die Sportart-Wahl im Takt-Design.
-      builder: (_) => TaktLook(child: ActivityPicker(recent: recent, onPick: (pc, activity) async {
+      builder: (_) => TaktLook(child: ActivityPicker(recent: recent, weightKg: weightKg, onPick: (pc, activity) async {
         if (picking) return;
         picking = true;
         try {

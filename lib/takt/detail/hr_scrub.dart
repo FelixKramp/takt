@@ -120,6 +120,9 @@ class _TaktHrScrubState extends State<TaktHrScrub> {
             void set(Offset o) => setState(() =>
                 _held = _index(box.maxWidth <= 0 ? 0 : (o.dx / box.maxWidth).clamp(0.0, 1.0)));
             return GestureDetector(
+              // Der Screenreader nutzt die Schritte des Schiebereglers oben,
+              // nicht Tippen und Wischen.
+              excludeFromSemantics: true,
               behavior: HitTestBehavior.opaque,
               onTapUp: (e) => set(e.localPosition),
               onHorizontalDragStart: (e) => set(e.localPosition),

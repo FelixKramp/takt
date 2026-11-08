@@ -144,3 +144,88 @@ pruefer: unabhängiger Prüfer-Agent (hat nichts davon gebaut, plan.md nicht gel
    Drittel unter dem Strich.
 4. Hinweise 1 bis 3 (Überlauf bei Textgröße 2,0, Wischen gegen Scrollen, Doppeltipp auf den Stift)
    sind die wichtigsten der übrigen Punkte.
+
+## Runde 2
+geprüft: 2026-11-08 · stand: HEAD f18c8880 („09: Pruefbefunde behoben …“) · Prüfer: zweiter
+unabhängiger Prüfer-Agent (hat nichts gebaut, `plan.md` nicht gelesen)
+
+### Grundlage
+- Gelesen: `spec.md` (09), Runde 1 oben, `CLAUDE.md`, Spec 08, Diff `git show HEAD`.
+- `flutter test test/takt`: **219 Tests, alle grün**. `flutter analyze lib test/takt`: nur das
+  bekannte `info` in `workout_takt_test.dart:159` (Feature 08).
+- Fotos `sportart`, `training_ablesen`, `nachtragen_puls` neu erzeugt und angesehen: sauber, keine
+  Abschnitte, Ablesezeile richtig ausgerichtet.
+- Eigene Wegwerf-Tests unter `test/takt/` (danach gelöscht, `git status` sauber), echte Schriften,
+  Deutsch, 24 h:
+  - **Echte Datenbank** (sqflite ffi, `TaktTodayScreen` wie `today_screen_test.dart`, Profil mit
+    75 kg): Erkennung 00:05–00:35, Puls in `decoded_onehz` erst ab 00:10 (170 bis 00:20, danach 110),
+    automatisch gespeichert; direkt über `taktWorkoutResult` → `_detailOf` und über Antippen auf Heute.
+    Dann Stift als Doppeltipp (40 ms), Suche „Handball“, Wahl, zurück auf Heute; `taktRecentSports`
+    vor und nach der Wahl. Zweiter Fall: offene Erkennung antippen (W3).
+  - Widgets: senkrecht, senkrecht mit Zittern, waagrecht mit ±4 px Zittern, schräg 20° und 45°,
+    Tippen, Screenreader-Aktionen (increase/decrease/tap/scrollLeft/scrollRight), jeweils in
+    scrollender Übersicht (Höhe 700) und im Nachtragen; Überlauf 320/360 px × Textgröße 1,0/1,3/2,0
+    × hell/dunkel; Streifen-Durchlauf 0,05–0,95 in 0,01-Schritten über Übersicht, Nachtragen und
+    Sportart-Wahl bei 320/390 px und Textgröße 1,0/2,0 plus Suche nach Zahlen ohne Hülle;
+    hängende Abfrage (`Completer` ohne Antwort), Schließen währenddessen; Gründe Zukunft,
+    Überschneidung, Ende vor Beginn, englische Sprache; alles ohne `TaktLook`.
+
+### Die drei ❌ aus Runde 1
+| ID | Ergebnis | Begründung |
+|---|---|---|
+| W4 Uhrzeit | ✅ | Echte DB: `taktWorkoutResult` liefert `hrFrom` = 00:10, 31 Punkte. In der Übersicht: ganz links „00:10“/170, Index 9 „00:19“/170, Index 10 „00:20“/110, Index 12 „00:22“/110 (Runde 1: 00:05 und 00:17). Siehe Hinweis 1 zum rechten Rand. |
+| W1 Kalorien über den Stift | ✅ | Echte DB mit Gewicht im Profil: Stift → `takt-pick-note` da. Repo-Test geht jetzt über den Stift. |
+| B5 Gruppenzahlen | ✅ | Alle Zahlen der Sportart-Wahl in einer Hülle (0 ohne Hülle). Durchlauf 320/390 px, Textgröße 1,0 und 2,0: 2730 Ziffern geprüft, 0 Treffer unter dem Streifen. |
+
+### Behobene Hinweise aus Runde 1
+| Punkt | Ergebnis | Begründung |
+|---|---|---|
+| Senkrecht scrollen über der Kurve | ✅ | Übersicht: Zug 150 px auf der Kurve scrollt die Seite um 130 px, Hinweis „Kurve antippen oder wischen“ bleibt, keine Minute gesetzt; auch langsam mit ±2 px Zittern. Nachtragen: Seite scrollt, „Beginn hier“/„Ende hier“ erscheinen nicht. |
+| Waagrecht wischen, Tippen | ✅ | Waagrecht mit ±4 px Zittern: Minute folgt, Seite scrollt nicht (0 px). Schräg 20° und 45°: liest ab, Seite scrollt nicht. Tippen Mitte „17:24“/122, rechter Rand „17:51“. Nachtragen: Wischen setzt Minute, Knöpfe erscheinen. |
+| Screenreader-Schritte | ✅ | Knoten „HERZFREQUENZ“, Wert „Nichts ausgewählt“, Schritt hoch → „16:57, 118 bpm“, nochmal → 16:58, runter → 16:57, am Anfang bleibt es bei 16:57. Siehe Hinweis 3. |
+| Überlauf 320/360 px, Textgröße 2,0 | ✅ | Kein Überlauf in Übersicht (normale Minute und „keine Messung“, hell und dunkel, auch 1,0/1,3), Nachtragen (mit Knöpfen und Grund) und Sportart-Wahl. Bei 320 px/2,0 wird die Pulsziffer auf etwa 88 % verkleinert, lesbar. Alle Zahlen weiter in Hüllen, Streifen-Durchlauf 0 Treffer (Übersicht 22022, Nachtragen ~11000 Ziffern). |
+| Doppeltipp auf den Stift | ✅ | Echte DB, zwei Tipps im Abstand von 40 ms: eine Liste; nach der Wahl zurück auf Heute, dort „Handball“. |
+| Deutsche Fehlergründe | ✅ | „Das Ende muss nach dem Beginn liegen.“ (Ende hier vor Beginn, Speichern aus), „Dieser Zeitraum liegt noch in der Zukunft.“, „Das überschneidet sich mit einem gespeicherten Training.“. Englische Sprache behält „That window hasn't happened yet.“. |
+| Timeout bei hängender Abfrage | ✅ | Nach 9 s noch leer, nach 11 s die graue Zeile aus W8, Speichern aktiv. Schließen während des Wartens: keine Ausnahme. |
+| „Other“ nicht unter Zuletzt | ✅ | Echte DB: nach automatischem Speichern `taktRecentSports` → `[]`, Liste zeigt „Häufig“ statt „Zuletzt“; nach Wahl von Handball → `[Handball]`. |
+| Doc-Kommentar `taktWorkoutResult` | ✅ | Steht wieder über der richtigen Funktion. |
+
+### Regressionen W1–W9, Randfälle, Feature 08
+| ID | Ergebnis | Begründung |
+|---|---|---|
+| W1 | ✅ | Siehe oben, Foto `sportart`. |
+| W2 | ✅ | Repo-Tests Suche/Gruppe; echte DB: Wahl über den Stift landet auf Heute. |
+| W3 | ❌ | Takt-Kopf, Suche, „Häufig“, Gruppen: erfüllt. **Die Kalorien-Erklärung fehlt aber**, obwohl W3 „dieselbe Sportart-Wahl“ verlangt und W1 die graue Zeile dazuzählt. `_pickSport` in `takt_today_screen.dart` baut `ActivityPicker(recent: recent, onPick: …)` ohne `weightKg`, obwohl `_open` das Gewicht direkt davor lädt (`weight`) und nur an `taktWorkoutTarget` gibt. Reproduktion: echte DB, Profil `weight_kg: 75`, offene Erkennung (lastRecordAt = Ende + 60 s) antippen → `takt-pick-note` 0-mal; über den Stift derselben Sitzung 1-mal. War in Runde 1 schon so und wurde dort übersehen (gleiche Art Befund wie W1 in Runde 1). |
+| W4 | ✅ | Siehe oben. Hinweis 1. |
+| W5 | ✅ | Hinweistext frisch offen, „–“/„keine Messung“, Screenreader „Nichts ausgewählt“. |
+| W6 | ✅ | Repo-Tests (Abfrage −30/+30 Min., hinterlegter Zeitraum, Karte zieht mit), Foto `nachtragen_puls`. Mittelung pro Minute jetzt mit Repo-Test. |
+| W7 | ✅ | Knöpfe erst nach Ablesen, setzen nur eine Zeit (Repo-Test, eigener Wisch-Test). |
+| W8 | ✅ | Graue Zeile ohne Daten und jetzt auch nach Timeout. |
+| W9 | ✅ | Foto `training_ablesen`: „Pulsabfall nach 1 Min.“, „16 bpm“, Erklärung grau. |
+| Randfälle ungültig, > 12 h | ✅ | Repo-Tests grün, Grund jetzt deutsch. |
+| Ohne Takt-Haut | ✅ | Übersicht ohne `takt-hr-scrub`, ohne Hinweis, ohne „Pulsabfall“; Liste mit `NavBar`; Nachtragen ohne Pulskarte und ohne Abfrage (0 Aufrufe). |
+| Feature 08 | ✅ | Repo-Tests T1–T11 grün; echte DB T1/T3 (Antippen → Übersicht, Stift → Sportart → Heute). Fotos: Kopf, orange Kurve, Zeilen in Punktziffern, Zonen und Fußnote unverändert. |
+| Gefühl am Gerät | ⚪ | Wischen gegen Scrollen mit echtem Finger nur am Handy beurteilbar; im Test ist die Trennung jetzt sauber. |
+
+### Hinweise Runde 2
+1. **Rechter Rand der Kurve nach einer Anfangslücke liegt hinter dem Trainingsende.** `_denseMinutes`
+   füllt hinten auf Trainingslänge auf, gezählt ab der ersten Messung. Echte DB (00:05–00:35, Puls ab
+   00:10): ganz rechts steht „00:40“ mit „–“, die Minuten 00:35 bis 00:40 lassen sich ablesen, obwohl
+   das Training um 00:35 endet. Die Achse sagt links „Start“, dort ist es aber 00:10, und die
+   fehlenden Minuten 00:05–00:09 sind gar nicht auf der Kurve (W5 würde dort „keine Messung“ zeigen).
+   Die abgelesenen Uhrzeiten selbst stimmen. Vorn statt hinten auffüllen (Index 0 = Beginn) würde
+   beides beheben.
+2. **W3 ohne Gewicht** (siehe ❌): `weight` aus `_open` an `_pickSport` durchreichen.
+3. **Screenreader-Nebenwirkung des `GestureDetector`:** Der Kurvenknoten bietet zusätzlich `tap`,
+   `scrollLeft` und `scrollRight` an. `scrollLeft` und `scrollRight` springen beide auf dieselbe
+   feste Minute (17:24 → 17:36), egal in welche Richtung. `increase`/`decrease` funktionieren
+   richtig. Mit `excludeFromSemantics: true` am `GestureDetector` wären nur die Slider-Aktionen übrig.
+4. **Zeitgrenze über `Motion.tick * 10`:** inhaltlich eine Ladezeitgrenze, keine Animation; ein
+   eigener Wert in `theme.dart` wäre klarer. Funktioniert wie beschrieben.
+5. Testlücke: Kein Repo-Test prüft W3 mit Kalorien-Erklärung, und der W4-Test mit `hrFrom` setzt das
+   Feld von Hand statt über `_detailOf`.
+
+### Zusammenfassung Runde 2
+✅ alle drei ❌ aus Runde 1 behoben, alle behobenen Hinweise bestätigt. Neu: ❌ **W3** — Kalorien-
+Erklärung fehlt auf dem Weg über eine offene Erkennung (`_pickSport` ohne `weightKg`). Wichtigster
+Hinweis: Kurve nach einer Anfangslücke reicht bis hinter das Trainingsende (Hinweis 1).

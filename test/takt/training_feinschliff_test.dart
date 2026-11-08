@@ -136,12 +136,23 @@ void main() {
   group('Prüfung 09', () {
     testWidgets('W4: Kurve beginnt nach dem Trainingsbeginn, die Uhrzeit stimmt trotzdem',
         (t) async {
-      final r = handball().copyWith(hrFrom: DateTime(2026, 11, 8, 17, 2));
+      // Wie `_denseMinutes` es liefert: ab der ersten Messung (17:02), hinten
+      // mit leeren Minuten auf Trainingslänge aufgefüllt.
+      final base = handball();
+      final r = base.copyWith(
+          hrFrom: DateTime(2026, 11, 8, 17, 2),
+          hr: [...base.hr.take(51), null, null, null, null, null]);
       await pump(t, ActivitySummary(r, weightKg: 75));
       final box = t.getRect(_key('takt-hr-scrub'));
       await t.tapAt(Offset(box.left + 1, box.center.dy));
       await t.pump();
-      expect(_digits(t, 'takt-hr-time'), '17:02');
+      expect(_digits(t, 'takt-hr-time'), '16:57', reason: 'links ist der Trainingsbeginn');
+      expect(_digits(t, 'takt-hr-bpm'), '–');
+      await t.tapAt(Offset(box.right - 1, box.center.dy));
+      await t.pump();
+      expect(_digits(t, 'takt-hr-time'), '17:52', reason: 'rechts das Ende, nicht später');
+      final line = _chart(t, _key('takt-hr-scrub'));
+      expect(line.d[5], base.hr[0], reason: '17:02 ist die erste Messung');
     });
 
     testWidgets('W4: senkrecht über die Kurve scrollen setzt keine Minute', (t) async {
