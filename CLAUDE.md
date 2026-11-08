@@ -35,6 +35,7 @@ Während des Builds ist die Spec eingefroren: Abweichung → stoppen und Felix f
 | 04 | Batterie statt Erholung, Wochenverlauf Belastung gegen Batterie | spec | `docs/features/04-batterie/` |
 | 05 | Aktivität und Gesundheit im Takt-Design | idee | — |
 | 06 | Schlaf-Tab ganz im Takt-Design, Tab-Leiste | spec | `docs/features/06-schlaf-tab-ganz/` |
+| 07 | Detailscreens von Heute (HRV, Ruhepuls, Schritte, Strain, Erholung) | spec | `docs/features/07-detailscreens/` |
 
 ## Konventionen
 - Neuer Code liegt unter `lib/takt/`, Upstream-Dateien nur punktuell ändern, damit `git merge upstream/main` sauber bleibt.
