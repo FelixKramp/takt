@@ -45,6 +45,19 @@ class TaktText {
   String get noPulseRecorded => de
       ? 'Für diese Zeit hat das Band keinen Puls aufgezeichnet.'
       : 'The band recorded no heart rate for this time.';
+  /// Feature 09: die Gründe aus `validateManualWindow` auf Deutsch.
+  String windowError(String kind, String fallback) => !de
+      ? fallback
+      : switch (kind) {
+          'endNotAfterStart' => 'Das Ende muss nach dem Beginn liegen.',
+          'tooShort' => 'Ein Training dauert mindestens eine Minute.',
+          'tooLong' => 'Das sind mehr als 24 Stunden. Stimmt das Datum?',
+          'inFuture' => 'Dieser Zeitraum liegt noch in der Zukunft.',
+          'overlapsExisting' => 'Das überschneidet sich mit einem gespeicherten Training.',
+          'scoreNotRecomputable' =>
+            'Der Puls zu diesem Training ist nicht mehr gespeichert. Neue Zeiten würden Strain und Kalorien löschen.',
+          _ => fallback,
+        };
   String get hrDrop => de ? 'Pulsabfall nach 1 Min.' : 'HR drop after 1 min';
   String get hrDropWhy => de
       ? 'So weit ist dein Puls in der ersten Minute nach dem Training gefallen. '

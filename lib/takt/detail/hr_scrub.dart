@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 
 import '../../data/journal_fields.dart' show formatMinuteOfDay;
 import '../../ui2/charts.dart' show AxisSpec, LineChart;
-import '../../ui2/grammar.dart' show ChartFrame, Scrubber;
+import '../../ui2/grammar.dart' show ChartFrame;
+import '../../l10n/app_localizations.dart';
 import '../../ui2/theme.dart';
 import '../pult_tokens.dart';
 import '../stripe/stripe.dart';
@@ -91,18 +92,42 @@ class _TaktHrScrubState extends State<TaktHrScrub> {
       ),
     ]);
     if (_n >= 2) {
-      plot = Scrubber(
-        key: const ValueKey('takt-hr-scrub'),
-        value: sel,
-        step: 1 / (_n - 1),
+      // Prüfung 09: Nur waagrechtes Wischen und Antippen lesen ab. Ein
+      // senkrechter Wisch scrollt die Seite, ohne eine Minute zu setzen, und
+      // ein schräger Wisch scrollt nicht mit. OpenStraps `Scrubber` hört auf
+      // jeden Fingerkontakt und kann das nicht trennen.
+      String describe(int i) {
+        final bpm = widget.hr[i];
+        return '${_clock(_at(i))}, ${bpm == null ? t.noReading : '${bpm.round()} bpm'}';
+      }
+
+      final up = ((held ?? -1) + 1).clamp(0, _n - 1);
+      final down = ((held ?? _n) - 1).clamp(0, _n - 1);
+      final inner = plot;
+      plot = Semantics(
         label: widget.title,
-        describe: (v) {
-          final i = _index(v);
-          final bpm = widget.hr[i];
-          return '${_clock(_at(i))}, ${bpm == null ? t.noReading : '${bpm.round()} bpm'}';
-        },
-        onChanged: (v) => setState(() => _held = _index(v)),
-        child: plot,
+        slider: true,
+        value: held == null
+            ? (AppLocalizations.of(c)?.scrubberNothingSelected ?? 'Nothing selected')
+            : describe(held),
+        increasedValue: describe(up),
+        decreasedValue: describe(down),
+        onIncrease: () => setState(() => _held = up),
+        onDecrease: () => setState(() => _held = down),
+        child: LayoutBuilder(
+          key: const ValueKey('takt-hr-scrub'),
+          builder: (_, box) {
+            void set(Offset o) => setState(() =>
+                _held = _index(box.maxWidth <= 0 ? 0 : (o.dx / box.maxWidth).clamp(0.0, 1.0)));
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapUp: (e) => set(e.localPosition),
+              onHorizontalDragStart: (e) => set(e.localPosition),
+              onHorizontalDragUpdate: (e) => set(e.localPosition),
+              child: inner,
+            );
+          },
+        ),
       );
     }
 
@@ -117,33 +142,47 @@ class _TaktHrScrubState extends State<TaktHrScrub> {
                 child: Text(t.scrubHint, style: F.cap.copyWith(color: p.ink3)),
               ),
             )
+          // Prüfung 09: Bei großer Schrift und schmalem Handy werden beide
+          // Seiten kleiner gerechnet statt abgeschnitten.
           : Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                StripeDodge(
-                  child: KeyedSubtree(
-                    key: const ValueKey('takt-hr-time'),
-                    child: Text(_clock(_at(held)), style: Pult.digits(22, p.ink)),
+                Flexible(
+                  child: StripeDodge(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: KeyedSubtree(
+                        key: const ValueKey('takt-hr-time'),
+                        child: Text(_clock(_at(held)), style: Pult.digits(22, p.ink)),
+                      ),
+                    ),
                   ),
                 ),
-                const Spacer(),
-                StripeDodge(
-                  align: 1,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      KeyedSubtree(
-                        key: const ValueKey('takt-hr-bpm'),
-                        child: Text(bpm == null ? '–' : '${bpm.round()}',
-                            style: Pult.digits(22, p.ink)),
+                const SizedBox(width: S.x3),
+                Flexible(
+                  child: StripeDodge(
+                    align: 1,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          KeyedSubtree(
+                            key: const ValueKey('takt-hr-bpm'),
+                            child: Text(bpm == null ? '–' : '${bpm.round()}',
+                                style: Pult.digits(22, p.ink)),
+                          ),
+                          const SizedBox(width: S.x1),
+                          Text(bpm == null ? t.noReading : 'bpm',
+                              style: F.cap.copyWith(color: p.ink2)),
+                        ],
                       ),
-                      const SizedBox(width: S.x1),
-                      Text(bpm == null ? t.noReading : 'bpm',
-                          style: F.cap.copyWith(color: p.ink2)),
-                    ],
+                    ),
                   ),
                 ),
               ],

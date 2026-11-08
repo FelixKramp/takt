@@ -1582,6 +1582,17 @@ List<double?> _denseMinutes(Object? hr, [Duration? session]) {
   return out;
 }
 
+/// TAKT (Feature 09, Prüfung W4): Zeitpunkt der ersten Messung, mit der
+/// [_denseMinutes] seine Kurve beginnt. Null ohne Messung.
+DateTime? _firstHrAt(Object? hr) {
+  for (final e in (hr as List? ?? const [])) {
+    if (e is Map && e['t'] is num && e['v'] is num) {
+      return DateTime.fromMillisecondsSinceEpoch((e['t'] as num).toInt() * 1000);
+    }
+  }
+  return null;
+}
+
 /// Zone 5 of a persisted `zone_bands` list — the row carrying the set's own
 /// `source` stamp and, as its `hi`, the ceiling the whole set is a percentage
 /// of. Null for a session that banked no split, and then the footnote says the
@@ -1630,6 +1641,8 @@ Future<ActivityResult> _detailOf(AppState app, _PastWorkout w) async {
     final rebinned = usedBundleSplit && b['zone_min_rebinned'] != false;
     out = out.copyWith(
       hr: _denseMinutes(b['hr'], w.duration),
+      // TAKT (Feature 09): wann die Kurve beginnt, für die abgelesene Uhrzeit.
+      hrFrom: _firstHrAt(b['hr']),
       // The session's own mean, computed over its heart-rate stream.
       avgHr: (b['avg_hr'] as num?)?.round(),
       maxHr: (b['max_hr'] as num?)?.round(),
@@ -1844,9 +1857,6 @@ _PastWorkout? _pastFromRow(Map r) {
   );
 }
 
-/// TAKT (Feature 08, T1): die Übersicht eines gespeicherten Trainings, wie
-/// sie der Aktivität-Tab öffnet. Null, wenn es das Training im letzten Monat
-/// nicht gibt.
 /// TAKT (Feature 09, W1): die zuletzt gemachten Sportarten für die
 /// Sportart-Wahl, neueste zuerst, höchstens sechs. Gleiche Regel wie die
 /// Kacheln oben im Aktivität-Tab: nur Trainings vom Band. Leer, wenn nichts
@@ -1861,7 +1871,9 @@ Future<List<Activity>> taktRecentSports(AppState? app) async {
     for (final r in rows) {
       if (r is! Map) continue;
       final w = _pastFromRow(r);
-      if (w == null || w.importedFrom != null) continue;
+      // Auch automatisch gespeicherte Erkennungen ohne Sportart („Other“)
+      // gehören nicht in die Liste: Sie sind keine Wahl.
+      if (w == null || w.importedFrom != null || w.activity.name == 'Other') continue;
       if (!recent.any((x) => x.name == w.activity.name)) recent.add(w.activity);
       if (recent.length == 6) break;
     }
@@ -1871,6 +1883,9 @@ Future<List<Activity>> taktRecentSports(AppState? app) async {
   }
 }
 
+/// TAKT (Feature 08, T1): die Übersicht eines gespeicherten Trainings, wie
+/// sie der Aktivität-Tab öffnet. Null, wenn es das Training im letzten Monat
+/// nicht gibt.
 Future<ActivityResult?> taktWorkoutResult(AppState app, String id) async {
   final repo = app.repo;
   if (repo == null) return null;

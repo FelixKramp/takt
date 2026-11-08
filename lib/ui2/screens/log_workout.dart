@@ -231,7 +231,10 @@ class _LogWorkoutState extends State<LogWorkout> {
           (a, b) async => [
                 for (final r in await LocalDb.hrSamplesInRange(a, b))
                   ((r['rec_ts'] as num).toInt(), (r['hr'] as num).toInt()),
-              ])(fromSec, toSec);
+              ])(fromSec, toSec)
+          // Kommt nie eine Antwort, steht nach zehn Sekunden die graue Zeile
+          // statt einer leeren Karte.
+          .timeout(Motion.tick * 10);
     } catch (_) {
       rows = const [];
     }
@@ -625,7 +628,7 @@ class _LogWorkoutState extends State<LogWorkout> {
                 if (bad != null || _failed != null) ...[
                   StatusCard(
                       l?.logWorkoutWindowInvalidTitle ?? 'That window will not save',
-                      bad?.message ?? _failed!,
+                      bad == null ? _failed! : t.windowError(bad.name, bad.message),
                       icon: LucideIcons.triangleAlert),
                   const SizedBox(height: S.x4),
                 ] else if (_wrote != null) ...[

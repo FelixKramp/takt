@@ -430,7 +430,9 @@ class _TaktPickRow extends StatelessWidget {
           ),
           if (count != null) ...[
             const SizedBox(width: S.x2),
-            Text('$count', style: F.cap.copyWith(color: p.ink3)),
+            // Prüfung 09: auch die Anzahl weicht dem Displaystreifen aus.
+            StripeDodge(
+                align: 1, child: Text('$count', style: F.cap.copyWith(color: p.ink3))),
           ],
           if (count != null) ...[
             const SizedBox(width: S.x1),

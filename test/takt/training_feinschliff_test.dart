@@ -133,6 +133,72 @@ void main() {
     });
   });
 
+  group('Prüfung 09', () {
+    testWidgets('W4: Kurve beginnt nach dem Trainingsbeginn, die Uhrzeit stimmt trotzdem',
+        (t) async {
+      final r = handball().copyWith(hrFrom: DateTime(2026, 11, 8, 17, 2));
+      await pump(t, ActivitySummary(r, weightKg: 75));
+      final box = t.getRect(_key('takt-hr-scrub'));
+      await t.tapAt(Offset(box.left + 1, box.center.dy));
+      await t.pump();
+      expect(_digits(t, 'takt-hr-time'), '17:02');
+    });
+
+    testWidgets('W4: senkrecht über die Kurve scrollen setzt keine Minute', (t) async {
+      await pump(t, ActivitySummary(handball(), weightKg: 75));
+      await t.drag(_key('takt-hr-scrub'), const Offset(0, -150));
+      await t.pumpAndSettle();
+      expect(find.text('Kurve antippen oder wischen'), findsOneWidget);
+    });
+
+    testWidgets('W4: waagrecht wischen liest ab', (t) async {
+      await pump(t, ActivitySummary(handball(), weightKg: 75));
+      final box = t.getRect(_key('takt-hr-scrub'));
+      await t.dragFrom(Offset(box.left + 5, box.center.dy), Offset(box.width - 6, 0));
+      await t.pump();
+      expect(_digits(t, 'takt-hr-time'), '17:51');
+    });
+
+    for (final width in [320.0, 360.0]) {
+      testWidgets('W5: Ablesezeile ohne Überlauf bei ${width.round()} px und Textgröße 2,0',
+          (t) async {
+        t.platformDispatcher.textScaleFactorTestValue = 2.0;
+        addTearDown(t.platformDispatcher.clearTextScaleFactorTestValue);
+        final r = handball();
+        await pump(t, ActivitySummary(r.copyWith(hr: [null, ...r.hr.skip(1)]), weightKg: 75));
+        t.view.physicalSize = Size(width, 2400);
+        await t.pumpAndSettle();
+        final box = t.getRect(_key('takt-hr-scrub'));
+        await t.tapAt(Offset(box.left + 1, box.center.dy));
+        await t.pump();
+        expect(find.text('keine Messung'), findsOneWidget);
+        expect(t.takeException(), isNull);
+      });
+    }
+
+    testWidgets('W1: über den Stift steht die Kalorien-Erklärung', (t) async {
+      await pump(t, ActivitySummary(handball(), weightKg: 75));
+      await t.tap(_key('takt-workout-edit'));
+      await t.pumpAndSettle();
+      expect(_key('takt-pick-note'), findsOneWidget);
+    });
+
+    testWidgets('W1: Doppeltipp auf den Stift öffnet nur eine Liste', (t) async {
+      await pump(t, ActivitySummary(handball(), weightKg: 75));
+      await t.tap(_key('takt-workout-edit'));
+      await t.tap(_key('takt-workout-edit'), warnIfMissed: false);
+      await t.pumpAndSettle();
+      expect(find.byType(ActivityPicker), findsOneWidget);
+    });
+
+    testWidgets('B5: Gruppenzahlen weichen dem Displaystreifen aus', (t) async {
+      await pump(t, ActivityPicker(onPick: (_, _) {}));
+      final n = find.descendant(of: _key('takt-pick-group-0'), matching: find.text('12'));
+      expect(n, findsOneWidget);
+      expect(find.ancestor(of: n, matching: find.byType(StripeDodge)), findsWidgets);
+    });
+  });
+
   group('Puls beim Nachtragen', () {
     final now = DateTime(2026, 11, 8, 20);
     final start = DateTime(2026, 11, 8, 18);
@@ -208,6 +274,34 @@ void main() {
           findsOneWidget);
       expect(find.descendant(of: _key('takt-log-row-4'), matching: find.text('40')),
           findsOneWidget);
+    });
+
+    testWidgets('Randfall: „Ende hier“ vor dem Beginn nennt den Grund auf Deutsch', (t) async {
+      await pump(
+          t,
+          LogWorkout(spans: const [], now: now, start: start, end: end, hrSamples: samples));
+      final box = t.getRect(_key('takt-hr-scrub'));
+      await t.tapAt(Offset(box.left + 1, box.center.dy));
+      await t.pump();
+      await t.tap(_key('takt-hr-set-end'));
+      await t.pumpAndSettle();
+      expect(find.text('Das Ende muss nach dem Beginn liegen.'), findsOneWidget);
+      expect(t.widget<Pressable>(_key('takt-log-save')).onTap, isNull);
+    });
+
+    testWidgets('Mittelung pro Minute', (t) async {
+      await pump(
+          t,
+          LogWorkout(
+              spans: const [],
+              now: now,
+              start: start,
+              end: end,
+              hrSamples: (a, b) async => [(a + 10, 100), (a + 40, 120), (a + 70, 90)]));
+      final line = _chart(t, _key('takt-log-hr'));
+      expect(line.d[0], 110);
+      expect(line.d[1], 90);
+      expect(line.d[2], isNull);
     });
 
     testWidgets('W8: ohne Aufzeichnung eine graue Zeile statt der Kurve, Speichern geht', (t) async {

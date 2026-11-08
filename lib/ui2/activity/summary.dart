@@ -267,6 +267,11 @@ class ActivityResult {
   /// recorded nothing. A compacted curve under an axis labelled `Start …
   /// duration` draws a dropout as though it had been measured.
   final List<double?> hr;
+
+  /// TAKT (Feature 09, Prüfung W4): wann [hr] Index 0 gemessen wurde. Die
+  /// Kurve aus dem Verlauf beginnt mit der ersten Messung, nicht mit [start].
+  /// Null heißt: bei [start].
+  final DateTime? hrFrom;
   final List<double> zoneMinutes; // five, Z1..Z5
 
   /// WHICH anchors [zoneMinutes] was binned against — `karvonen` · `observed` ·
@@ -351,6 +356,7 @@ class ActivityResult {
     this.calories,
     this.strain,
     this.hr = const [],
+    this.hrFrom,
     this.zoneMinutes = const [],
     this.zoneSource,
     this.zoneMaxHr,
@@ -386,6 +392,7 @@ class ActivityResult {
     int? hrr60,
     double? vo2max,
     List<double?>? hr,
+    DateTime? hrFrom,
     List<double>? zoneMinutes,
     String? zoneSource,
     num? zoneMaxHr,
@@ -415,6 +422,7 @@ class ActivityResult {
         calories: calories,
         strain: strain,
         hr: hr ?? this.hr,
+        hrFrom: hrFrom ?? this.hrFrom,
         zoneMinutes: zoneMinutes ?? this.zoneMinutes,
         zoneSource: zoneSource ?? this.zoneSource,
         zoneMaxHr: zoneMaxHr ?? this.zoneMaxHr,
@@ -1008,7 +1016,21 @@ class _ActivitySummaryState extends State<ActivitySummary> {
   /// type and cannot be salvaged for the new one, so this does not try to
   /// patch [r] in place — it hands back to whatever list pushed this screen,
   /// which re-reads on the revision bump below.
+  /// TAKT (Feature 09, Prüfung): Vor dem Öffnen wird jetzt geladen, ein
+  /// Doppeltipp auf den Stift darf in der Zeit keine zweite Liste öffnen.
+  bool _changingType = false;
+
   Future<void> _changeType(BuildContext c) async {
+    if (_changingType) return;
+    _changingType = true;
+    try {
+      await _changeTypeOnce(c);
+    } finally {
+      _changingType = false;
+    }
+  }
+
+  Future<void> _changeTypeOnce(BuildContext c) async {
     final id = r.sessionId;
     if (id == null) return;
     // Only true once a pick actually landed — pressing back out of the picker
@@ -1026,7 +1048,7 @@ class _ActivitySummaryState extends State<ActivitySummary> {
     final recent = takt ? await taktRecentSports(appOf(c)) : const <Activity>[];
     if (!c.mounted) return;
     await Navigator.of(c).push(MaterialPageRoute(
-      builder: (_) => _maybeTakt(takt, ActivityPicker(recent: recent, onPick: (pc, newActivity) async {
+      builder: (_) => _maybeTakt(takt, ActivityPicker(recent: recent, weightKg: widget.weightKg, onPick: (pc, newActivity) async {
         if (busy || picked) return;
         busy = true;
         // The stored key everywhere else uses — `startWorkout(type:
@@ -1896,7 +1918,7 @@ class _ActivitySummaryState extends State<ActivitySummary> {
     if (TaktLook.on(context)) {
       return TaktHrScrub(
         hr: r.hr,
-        t0: r.start,
+        t0: r.hrFrom ?? r.start,
         title: l?.activitySummaryHeartRateTitle ?? 'Heart rate',
         height: height,
         xLabels: [l?.activitySummaryStart ?? 'Start', hms(r.duration)],
