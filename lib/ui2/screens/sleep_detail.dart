@@ -1436,7 +1436,8 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
         ),
         if (_shape(c, d) case final shape?) ...[
           const SizedBox(height: S.x2),
-          Text(shape, style: F.over.copyWith(color: p.ink3, height: 1.5)),
+          taktDodge(c, Text(shape, style: F.over.copyWith(color: p.ink3, height: 1.5)),
+              line: true),
         ],
       ]),
     );

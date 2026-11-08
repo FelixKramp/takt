@@ -277,6 +277,11 @@ class Surface extends StatelessWidget {
   }
 }
 
+/// TAKT (Feature 06, F13): im Takt-Teilbaum weicht die Zahl dem
+/// Displaystreifen aus, außerhalb bleibt der Text, wie er ist.
+Widget taktDodge(BuildContext c, Widget child, {bool line = false, double align = 0}) =>
+    TaktLook.on(c) ? StripeDodge(line: line, align: align, child: child) : child;
+
 /// Full-width section. Whitespace separates concepts, not borders.
 class Section extends StatelessWidget {
   final bool wrapTitle;
@@ -2586,12 +2591,16 @@ class ChartFrame extends StatelessWidget {
                                           0.0,
                                           (height - lineH).clamp(0.0, height),
                                         ),
-                                child: Text(
-                                  labels[i],
-                                  style: tick,
-                                  textAlign: TextAlign.right,
-                                  maxLines: 1,
-                                  softWrap: false,
+                                child: taktDodge(
+                                  c,
+                                  Text(
+                                    labels[i],
+                                    style: tick,
+                                    textAlign: TextAlign.right,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                  ),
+                                  align: 1,
                                 ),
                               ),
                           ],
@@ -2643,16 +2652,24 @@ class ChartFrame extends StatelessWidget {
                   children: [
                     for (var i = 0; i < xLabels.length; i++)
                       Expanded(
-                        child: Text(
-                          xLabels[i],
-                          style: tick,
-                          textAlign: i == 0
-                              ? TextAlign.start
+                        child: taktDodge(
+                          c,
+                          Text(
+                            xLabels[i],
+                            style: tick,
+                            textAlign: i == 0
+                                ? TextAlign.start
+                                : i == xLabels.length - 1
+                                ? TextAlign.end
+                                : TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          align: i == 0
+                              ? 0
                               : i == xLabels.length - 1
-                              ? TextAlign.end
-                              : TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                              ? 1
+                              : .5,
                         ),
                       ),
                   ],
@@ -2691,7 +2708,8 @@ class ChartFrame extends StatelessWidget {
                           // width and no more: a key like "Breathing (br/min)" is wider
                           // than a 390 pt card at 2× text and overflowed the item
                           // rather than wrapping inside it.
-                          Flexible(child: Text(label, style: tick)),
+                          Flexible(
+                              child: taktDodge(c, Text(label, style: tick), line: true)),
                         ],
                       ),
                     if (band != null && a != null)

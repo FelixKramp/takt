@@ -10,6 +10,7 @@ import '../l10n/app_localizations.dart';
 import '../ui2/grammar.dart' show Pressable;
 import '../ui2/screens/metric_detail.dart' show chooseDay;
 import '../ui2/theme.dart';
+import 'stripe/stripe.dart';
 
 /// „Nacht auf So, 8. Nov.“ für den Tag, an dem die Nacht endet (yyyy-MM-dd).
 String nightLabel(String day, bool de) {
@@ -114,12 +115,15 @@ class TaktDayStepper extends StatelessWidget {
                   if (picked != null && picked != shown) onDay(picked);
                 },
           semanticLabel: nightLabel(shown, de),
-          child: Text(
-            nightLabel(shown, de),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: F.cap.copyWith(color: p.ink2),
+          child: StripeDodge(
+            line: true,
+            child: Text(
+              nightLabel(shown, de),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: F.cap.copyWith(color: p.ink2),
+            ),
           ),
         ),
       ),
