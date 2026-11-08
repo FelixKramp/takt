@@ -14,6 +14,8 @@ import 'package:openstrap_edge/takt/today/takt_today_screen.dart';
 import 'package:openstrap_edge/takt/today/visibility.dart';
 import 'package:openstrap_edge/theme/theme_controller.dart';
 import 'package:openstrap_edge/ui2/activity/picker.dart' show ActivityPicker;
+import 'package:openstrap_edge/ui2/activity/summary.dart' show ActivitySummary;
+import 'package:openstrap_edge/takt/look.dart' show TaktLook;
 import 'package:openstrap_edge/ui2/ui2.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
@@ -169,10 +171,18 @@ void main() {
     await close(t);
   });
 
-  testWidgets('A9: Antippen wählt die Sportart, auch Handball', (t) async {
+  // Feature 08 (T1, T3) löst A9 hier ab: Ein gespeichertes Training öffnet
+  // seine Übersicht, die Sportart ändert der Stift dort.
+  testWidgets('A9/T1/T3: Antippen öffnet die Übersicht, der Stift wählt die Sportart',
+      (t) async {
     await seed(t);
     await open(t, at(start + 1800 + 1900));
     await t.tap(find.textContaining('erkannt,'));
+    await settle(t, 30);
+    expect(find.byType(ActivityPicker), findsNothing, reason: 'nicht zurückgefallen');
+    expect(find.byType(ActivitySummary), findsOneWidget);
+    expect(find.byType(TaktLook), findsWidgets);
+    await t.tap(find.byKey(const ValueKey('takt-workout-edit')));
     await settle(t, 10);
     expect(find.byType(ActivityPicker), findsOneWidget);
     await t.enterText(find.byType(TextField), 'Handball');

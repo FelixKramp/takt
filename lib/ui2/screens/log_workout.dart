@@ -48,6 +48,12 @@ import '../activity/catalogue.dart';
 import '../profile/profile.dart' show SetRow, settingsGroup;
 import '../ui2.dart';
 import 'home_screen.dart' show monthShortName, repoOf, weekdayShortName;
+// TAKT (Feature 08): Nachtragen in der Takt-Haut.
+import '../../takt/look.dart' show TaktLook;
+import '../../takt/header.dart' show TaktHeader;
+import '../../takt/pult_tokens.dart' show Pult;
+import '../../takt/stripe/stripe.dart' show StripeDodge;
+import '../../takt/takt_text.dart' show TaktText;
 
 /// One detected bout, as this screen needs it. Built straight off a
 /// `workout_suggestions` row.
@@ -269,13 +275,19 @@ class _LogWorkoutState extends State<LogWorkout> {
   }
 
   Future<void> _pickActivity() async {
+    // TAKT (Feature 08, T10): Die Liste ist eine eigene Route über der
+    // Takt-Haut, deshalb bekommt sie sie hier mit.
+    final takt = TaktLook.peek(context);
     final picked = await showModalBottomSheet<Activity>(
       context: context,
       isScrollControlled: true,
       sheetAnimationStyle: sheetMotion(context),
       backgroundColor: P.of(context).card,
-      shape: const RoundedRectangleBorder(borderRadius: R.rXl),
-      builder: (_) => const _TypeSheet(),
+      shape: RoundedRectangleBorder(
+          borderRadius: takt
+              ? const BorderRadius.vertical(top: Radius.circular(8))
+              : R.rXl),
+      builder: (_) => takt ? const TaktLook(child: _TypeSheet()) : const _TypeSheet(),
     );
     if (picked != null) setState(() => _activity = picked);
   }
@@ -398,6 +410,7 @@ class _LogWorkoutState extends State<LogWorkout> {
     final mins = _end.difference(_start).inMinutes;
     final retime = widget.sessionId != null;
     final title = widget.title ?? (l?.logWorkoutDefaultTitle ?? 'Log a past workout');
+    if (TaktLook.on(c)) return _taktBuild(c, p, bad, mins, retime);
     return Scaffold(
       backgroundColor: p.bg,
       body: SafeArea(
@@ -485,6 +498,168 @@ class _LogWorkoutState extends State<LogWorkout> {
       ),
     );
   }
+
+  /// TAKT (Feature 08, T8, T9): Kopf, schlichte Zeilen, Hinweis als Zeile,
+  /// flacher oranger Knopf. Dieselben Handlungen wie der Zweig darunter.
+  Widget _taktBuild(BuildContext c, P p, ManualWindowError? bad, int mins, bool retime) {
+    final l = AppLocalizations.of(c);
+    final t = TaktText.of(c);
+    final head = widget.title ?? (retime ? t.retimeHead : t.logWorkoutHead);
+    final label = _saving
+        ? (l?.logWorkoutSaving ?? 'Saving…')
+        : widget.suggestion != null
+            ? (l?.activitySaveConfirm ?? 'Save and confirm')
+            : retime
+                ? (l?.logWorkoutSaveNewTimes ?? 'Save the new times')
+                : (l?.logWorkoutLogIt ?? 'Log it');
+    final canSave = bad == null && !_saving;
+    String clock(DateTime d) => formatMinuteOfDay(d.hour * 60 + d.minute);
+    return Scaffold(
+      backgroundColor: p.bg,
+      body: SafeArea(
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: S.x4),
+            child: TaktHeader(head, back: true),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(S.x4, S.x2, S.x4, S.x10),
+              children: [
+                Surface(
+                  child: Column(children: [
+                    if (!retime)
+                      _TaktLogRow(0, l?.logWorkoutActivityLabel ?? 'Activity',
+                          _activity.displayName(c),
+                          onTap: _pickActivity, first: true),
+                    _TaktLogRow(1, l?.logWorkoutDateLabel ?? 'Date',
+                        dayLabel(_start, now: widget.now, l: l),
+                        onTap: _pickDate, first: retime),
+                    _TaktLogRow(2, l?.logWorkoutStartedLabel ?? 'Started', clock(_start),
+                        digits: true, onTap: () => _pickTime(isStart: true)),
+                    _TaktLogRow(3, l?.logWorkoutEndedLabel ?? 'Ended', clock(_end),
+                        digits: true,
+                        sub: _end.day != _start.day
+                            ? (l?.logWorkoutNextMorningSub ?? 'the next morning')
+                            : null,
+                        onTap: () => _pickTime(isStart: false)),
+                    _TaktLogRow(4, l?.logWorkoutLengthLabel ?? 'Length',
+                        mins > 0 ? '$mins' : '–',
+                        unit: mins > 0 ? 'min' : null,
+                        digits: true),
+                  ]),
+                ),
+                const SizedBox(height: S.x4),
+                if (bad != null || _failed != null) ...[
+                  StatusCard(
+                      l?.logWorkoutWindowInvalidTitle ?? 'That window will not save',
+                      bad?.message ?? _failed!,
+                      icon: LucideIcons.triangleAlert),
+                  const SizedBox(height: S.x4),
+                ] else if (_wrote != null) ...[
+                  StatusCard(
+                      retime
+                          ? (l?.logWorkoutTimesUpdatedTitle ?? 'Times updated')
+                          : (l?.logWorkoutLoggedTitle ?? 'Workout logged'),
+                      _wrote!,
+                      icon: LucideIcons.circleCheck),
+                  const SizedBox(height: S.x4),
+                ] else ...[
+                  StripeDodge(
+                    line: true,
+                    child: Text(
+                      l?.logWorkoutScoredBody ??
+                          'Strain and calories come from your heart rate within these times, the same way the day is scored. Nothing is guessed from duration.',
+                      key: const ValueKey('takt-log-note'),
+                      style: F.cap.copyWith(color: p.ink2, height: 1.4),
+                    ),
+                  ),
+                  const SizedBox(height: S.x4),
+                ],
+                Pressable(
+                  key: const ValueKey('takt-log-save'),
+                  onTap: canSave ? _save : null,
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: S.tap),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(S.x2),
+                    decoration: BoxDecoration(
+                        color: canSave ? Pult.orange : Pult.orange.withValues(alpha: .35),
+                        borderRadius: R.rSm),
+                    child: Text(label,
+                        textAlign: TextAlign.center,
+                        style: F.body.copyWith(color: C.n900, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// TAKT (Feature 08, T8): eine Zeile des Nachtragens. Name links, Wert
+/// rechts, Uhrzeiten und Dauer in Punktziffern, ohne Symbolkästchen.
+class _TaktLogRow extends StatelessWidget {
+  const _TaktLogRow(this.index, this.label, this.value,
+      {this.onTap, this.digits = false, this.sub, this.unit, this.first = false});
+
+  final int index;
+  final String label, value;
+  final String? sub, unit;
+  final bool digits, first;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext c) {
+    final p = P.of(c);
+    final v = digits
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(value, style: Pult.digits(22, p.ink)),
+              if (unit != null) ...[
+                const SizedBox(width: S.x1),
+                Text(unit!, style: F.cap.copyWith(color: p.ink2)),
+              ],
+            ],
+          )
+        : Text(value, style: F.body.copyWith(color: p.ink, fontWeight: FontWeight.w600));
+    return Pressable(
+      key: ValueKey('takt-log-row-$index'),
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: S.tap),
+        padding: const EdgeInsets.symmetric(vertical: S.x2),
+        decoration: BoxDecoration(
+            border: first ? null : Border(top: BorderSide(color: p.line))),
+        child: Row(children: [
+          Expanded(
+            child: StripeDodge(
+              line: true,
+              child: Text(label, style: F.body.copyWith(color: p.ink2)),
+            ),
+          ),
+          const SizedBox(width: S.x2),
+          StripeDodge(
+            align: 1,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              v,
+              if (sub != null) Text(sub!, style: F.cap.copyWith(color: p.ink3)),
+            ]),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: S.x1),
+            Icon(LucideIcons.chevronRight, size: 16, color: p.ink3),
+          ],
+        ]),
+      ),
+    );
+  }
 }
 
 /// The activity list, searchable. The picker proper (`ActivityPicker`) starts a
@@ -547,6 +722,23 @@ class _TypeSheetState extends State<_TypeSheet> {
                       itemCount: items.length,
                       itemBuilder: (_, i) {
                         final a = items[i];
+                        // TAKT (Feature 08, T10): schlichte Zeile ohne Kästchen.
+                        if (TaktLook.on(c)) {
+                          return Pressable(
+                            key: ValueKey('takt-type-row-$i'),
+                            onTap: () => Navigator.of(c).pop(a),
+                            child: Container(
+                              constraints: const BoxConstraints(minHeight: S.tap),
+                              alignment: Alignment.centerLeft,
+                              decoration: BoxDecoration(
+                                  border: i == 0
+                                      ? null
+                                      : Border(top: BorderSide(color: p.line))),
+                              child: Text(a.displayName(c),
+                                  style: F.body.copyWith(color: p.ink)),
+                            ),
+                          );
+                        }
                         return SetRow(
                           a.icon,
                           a.color,

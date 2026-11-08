@@ -36,6 +36,7 @@ Während des Builds ist die Spec eingefroren: Abweichung → stoppen und Felix f
 | 05 | Aktivität und Gesundheit im Takt-Design | idee | — |
 | 06 | Schlaf-Tab ganz im Takt-Design, Tab-Leiste | build | `docs/features/06-schlaf-tab-ganz/` |
 | 07 | Detailscreens von Heute (HRV, Ruhepuls, Schritte, Strain, Erholung) | build | `docs/features/07-detailscreens/` |
+| 08 | Training von Heute und Workout nachtragen im Takt-Design | build | `docs/features/08-training/` |
 
 ## Konventionen
 - Neuer Code liegt unter `lib/takt/`, Upstream-Dateien nur punktuell ändern, damit `git merge upstream/main` sauber bleibt.

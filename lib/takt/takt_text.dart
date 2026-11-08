@@ -25,6 +25,9 @@ class TaktText {
       ? 'Heute noch nichts erkannt. War da ein Training?'
       : 'Nothing detected yet today. Did you train?';
   String get logWorkout => de ? 'Workout nachtragen' : 'Log a workout';
+  // Feature 08, T8: Kopf des Nachtragens, klein geschrieben wie alle Köpfe.
+  String get logWorkoutHead => de ? 'training nachtragen' : 'log a workout';
+  String get retimeHead => de ? 'zeiten ändern' : 'change the times';
   String discard(String name) => de ? '$name verwerfen' : 'Discard $name';
   String showAll(int n) => de ? '$n weitere anzeigen' : 'Show $n more';
   String get allToday => de ? 'Aktivitäten heute' : "Today's activities";

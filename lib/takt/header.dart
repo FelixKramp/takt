@@ -57,13 +57,26 @@ class TaktHeader extends StatelessWidget {
           ),
           const SizedBox(width: S.x1),
         ],
-        Text(name.toLowerCase(), style: F.t2.copyWith(color: p.ink)),
-        const SizedBox(width: S.x2),
-        Expanded(child: center ?? const SizedBox.shrink()),
+        // Feature 08: Lange Namen („training nachtragen“, lange Sportarten)
+        // kürzen statt überlaufen. Ohne Mitte nimmt der Name den freien
+        // Platz, mit Mitte höchstens zwei Fünftel der Breite.
+        if (center == null)
+          Expanded(child: _name(p))
+        else
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(c).width * .4),
+            child: _name(p),
+          ),
+        if (center != null) ...[const SizedBox(width: S.x2), Expanded(child: center!)],
         if (trailing != null) ...[const SizedBox(width: S.x2), trailing!],
       ]),
     );
   }
+}
+
+extension on TaktHeader {
+  Widget _name(P p) => Text(name.toLowerCase(),
+      maxLines: 1, overflow: TextOverflow.ellipsis, style: F.t2.copyWith(color: p.ink));
 }
 
 class TaktHeaderArrow extends StatelessWidget {

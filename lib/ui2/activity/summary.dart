@@ -53,6 +53,12 @@ import 'picker.dart';
 // not a layering mistake.
 import 'poster.dart' show PosterStatRow, posterStatIcon, splitStatUnit;
 import 'share.dart';
+// TAKT (Feature 08): Übersicht eines Trainings in der Takt-Haut.
+import '../../takt/detail/value_card.dart' show TaktValueCard;
+import '../../takt/header.dart' show TaktHeader;
+import '../../takt/look.dart' show TaktLook;
+import '../../takt/pult_tokens.dart' show Pult;
+import '../../takt/stripe/stripe.dart' show StripeDodge;
 
 /// The defining visual object of an activity. Everything else supports it.
 ///
@@ -691,6 +697,7 @@ class SessionStats extends StatelessWidget {
     // Solved against the page, not raw pigment: the poster paints its rings on
     // one dark card it controls, and this one lands on both themes.
     final accent = p.on(r.activity.color);
+    if (TaktLook.on(c)) return _taktStats(c, p);
     final rows = <Widget>[];
     for (final s in sessionStats(r, unitsOf(c))) {
       if (rows.isNotEmpty) rows.add(Divider(color: p.line, height: S.x5));
@@ -704,6 +711,49 @@ class SessionStats extends StatelessWidget {
           accent: accent,
         ),
       );
+    }
+    return Surface(child: Column(children: rows));
+  }
+
+  /// TAKT (Feature 08, T6): Name links, Wert in Punktziffern rechts, ohne
+  /// runde Symbole.
+  Widget _taktStats(BuildContext c, P p) {
+    final rows = <Widget>[];
+    var i = 0;
+    for (final s in sessionStats(r, unitsOf(c))) {
+      // Nur die führende Zahl in Punktziffern: „16 bpm in 60 s“ wird „16“ und
+      // „bpm in 60 s“.
+      final m = RegExp(r'^([0-9][0-9.,:]*)\s+(\S.*)$').firstMatch(s.$2);
+      final (value, unit) = m == null ? splitStatUnit(s.$2) : (m.group(1)!, m.group(2));
+      rows.add(Container(
+        key: ValueKey('takt-stat-${i++}'),
+        constraints: const BoxConstraints(minHeight: 48),
+        decoration: BoxDecoration(
+            border: rows.isEmpty ? null : Border(top: BorderSide(color: p.line))),
+        padding: const EdgeInsets.symmetric(vertical: S.x2),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Expanded(
+            child: taktDodge(c, Text(uiText(c, s.$1), style: F.body.copyWith(color: p.ink2)),
+                line: true),
+          ),
+          const SizedBox(width: S.x2),
+          StripeDodge(
+            align: 1,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(value, style: Pult.digits(22, p.ink)),
+                if (unit != null) ...[
+                  const SizedBox(width: S.x1),
+                  Text(uiText(c, unit), style: F.cap.copyWith(color: p.ink2)),
+                ],
+              ],
+            ),
+          ),
+        ]),
+      ));
     }
     return Surface(child: Column(children: rows));
   }
@@ -1063,11 +1113,18 @@ class _ActivitySummaryState extends State<ActivitySummary> {
         r.geo.length >= 2;
     final l = AppLocalizations.of(c);
     final iconCount = 1 + (canChangeType ? 1 : 0);
+    final takt = TaktLook.on(c);
     return Scaffold(
       backgroundColor: p.bg,
       body: SafeArea(
         child: Column(
           children: [
+            if (takt)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: S.x4),
+                child: _taktHead(c, p, canChangeType),
+              )
+            else
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: S.x4),
               child: NavBar(
@@ -1162,6 +1219,44 @@ class _ActivitySummaryState extends State<ActivitySummary> {
     );
   }
 
+  /// TAKT (Feature 08, T4): Zurück, Name klein, Tag und Uhrzeit, Stift und
+  /// Teilen. Dieselben Aktionen wie die NavBar darüber.
+  Widget _taktHead(BuildContext c, P p, bool canChangeType) {
+    final l = AppLocalizations.of(c);
+    return TaktHeader(
+      a.displayName(c),
+      back: true,
+      center: Center(
+        child: StripeDodge(
+          line: true,
+          child: Text('${displayDate(c, r.start)}, ${formatClockOf(r.start)}',
+              key: const ValueKey('takt-workout-when'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: F.cap.copyWith(color: p.ink2)),
+        ),
+      ),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (canChangeType)
+          Pressable(
+            key: const ValueKey('takt-workout-edit'),
+            semanticLabel: l?.activitySummaryChangeType ?? 'Change activity type',
+            onTap: () => _changeType(c),
+            child: SizedBox(
+                width: 40, height: 44, child: Icon(LucideIcons.pencil, size: 18, color: p.ink)),
+          ),
+        Pressable(
+          key: const ValueKey('takt-workout-share'),
+          semanticLabel: l?.activitySummaryShareThis(a.displayName(c).toLowerCase()) ??
+              'Share this ${a.name.toLowerCase()}',
+          onTap: () => Navigator.of(c).push(MaterialPageRoute(builder: (_) => ShareSheet(r))),
+          child: SizedBox(
+              width: 40, height: 44, child: Icon(LucideIcons.share2, size: 18, color: p.ink)),
+        ),
+      ]),
+    );
+  }
+
   // ─────────────────── OVERVIEW ───────────────────
   List<Widget> _overview(BuildContext c, P p) {
     final hero = _hero();
@@ -1179,6 +1274,16 @@ class _ActivitySummaryState extends State<ActivitySummary> {
         ),
         const SizedBox(height: S.x5),
       ],
+      // TAKT (Feature 08, T4): der Hauptwert in der Wert-Karte.
+      if (TaktLook.on(c)) ...[
+        TaktValueCard(
+          value: hero.$1,
+          unit: hero.$2,
+          when: hero.$3,
+          word: r.private ? (l?.activitySummaryPrivate ?? 'Private') : null,
+          wordColor: p.ink2,
+        ),
+      ] else ...[
       // ONE flexible child. A `Flexible` hero next to a `Spacer` split the row
       // by flex, so the headline got half the width whatever it said, and a
       // 1,500 m swim printed '1,…' at 2x text. The privacy pill keeps its
@@ -1211,6 +1316,7 @@ class _ActivitySummaryState extends State<ActivitySummary> {
       ]),
       const SizedBox(height: S.x1),
       Text(hero.$3, style: F.cap.copyWith(color: p.ink2)),
+      ],
       const SizedBox(height: S.x5),
       ..._definingObject(c, p),
       const SizedBox(height: S.x5),
@@ -1768,7 +1874,8 @@ class _ActivitySummaryState extends State<ActivitySummary> {
       series: r.hr,
       child: CustomPaint(
           size: Size.infinite,
-          painter: LineChart(r.hr, p.on(C.red),
+          painter: LineChart(
+              r.hr, TaktLook.on(context) ? Pult.orangeFor(p.dark) : p.on(C.red),
               axis: axis, t: animate(context, 1))),
     );
   }

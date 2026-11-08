@@ -7,6 +7,8 @@ import 'package:openstrap_edge/takt/look.dart';
 import 'package:openstrap_edge/takt/sleep/sleep_head.dart';
 import 'package:openstrap_edge/models/metric.dart';
 import 'package:openstrap_edge/ui2/activity/day_strain.dart';
+import 'package:openstrap_edge/ui2/activity/summary.dart';
+import 'package:openstrap_edge/ui2/screens/log_workout.dart';
 import 'package:openstrap_edge/ui2/screens/driver_breakdown.dart';
 import 'package:openstrap_edge/ui2/screens/metric_detail.dart';
 import 'package:openstrap_edge/ui2/screens/readiness_detail.dart';
@@ -16,6 +18,7 @@ import 'package:openstrap_edge/ui2/theme.dart';
 import 'sleep_head_test.dart' show view;
 import 'support/night_fixture.dart';
 import 'support/shot.dart';
+import 'support/workout_fixture.dart';
 
 Widget app(Widget home) => MaterialApp(
       theme: buildTheme(Brightness.light),
@@ -99,5 +102,12 @@ void main() {
           }),
         ),
         'erholung');
+  });
+
+  testWidgets('Training und Nachtragen (Feature 08)', (t) async {
+    t.platformDispatcher.alwaysUse24HourFormatTestValue = true;
+    addTearDown(t.platformDispatcher.clearAlwaysUse24HourTestValue);
+    await detail(t, ActivitySummary(handball(), weightKg: 75), 'training');
+    await detail(t, LogWorkout(spans: const [], now: DateTime(2026, 11, 8, 18, 30)), 'nachtragen');
   });
 }

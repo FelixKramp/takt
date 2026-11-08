@@ -1813,6 +1813,53 @@ List<MorningEffect> morningEffectsFrom(Map<String, dynamic> insights) {
   return out;
 }
 
+
+/// Eine Zeile aus `getWorkouts` als vergangenes Training. Null ohne Start.
+_PastWorkout? _pastFromRow(Map r) {
+  final ts = (r['start_ts'] as num?)?.toInt();
+  if (ts == null) return null;
+  // An unknown type keeps its own name: a scored import is saved
+  // under the store's sport (`surfing`), which the catalogue may lack.
+  final a = activityByName(r['type'] as String?) ??
+      Activity(importedWorkoutTitle(r['type']), LucideIcons.activity,
+          C.purple, Track.duration, 5.0);
+  return _PastWorkout(
+    (r['id'] as String?) ?? '',
+    a,
+    DateTime.fromMillisecondsSinceEpoch(ts * 1000),
+    // duration_min is minutes; Motion.tick × 60 × n keeps the one
+    // Duration literal in theme.dart.
+    Motion.tick * 60 * ((r['duration_min'] as num?)?.toInt() ?? 0),
+    strain: (r['strain'] as num?)?.toDouble(),
+    calories: (r['calories'] as num?)?.round(),
+    // The session's mean over its own HR stream, computed by the repo
+    // — not the last sample anybody happened to see.
+    avgHr: (r['avg_hr'] as num?)?.round(),
+    maxHr: (r['max_hr'] as num?)?.toInt(),
+    hrr60: (r['hrr60'] as num?)?.round(),
+    vo2max: (r['vo2max_estimate'] as num?)?.toDouble(),
+    steps: (r['steps'] as num?)?.toInt(),
+    zoneMinutes: _decodeZoneMinutes(r['zone_min']),
+    private: r['private'] == true,
+  );
+}
+
+/// TAKT (Feature 08, T1): die Übersicht eines gespeicherten Trainings, wie
+/// sie der Aktivität-Tab öffnet. Null, wenn es das Training im letzten Monat
+/// nicht gibt.
+Future<ActivityResult?> taktWorkoutResult(AppState app, String id) async {
+  final repo = app.repo;
+  if (repo == null) return null;
+  final rows = (await repo.getWorkouts(range: 'month'))['workouts'];
+  if (rows is! List) return null;
+  for (final r in rows) {
+    if (r is! Map || '${r['id']}' != id) continue;
+    final w = _pastFromRow(r);
+    return w == null ? null : _detailOf(app, w);
+  }
+  return null;
+}
+
 class _PastWorkout {
   final String id;
   final Activity activity;
@@ -2063,32 +2110,9 @@ Future<_WorkoutData> _loadWorkoutData(AppState app) async {
       if (rows is List) {
         for (final r in rows) {
           if (r is! Map) continue;
-          final ts = (r['start_ts'] as num?)?.toInt();
-          if (ts == null) continue;
-          // An unknown type keeps its own name: a scored import is saved
-          // under the store's sport (`surfing`), which the catalogue may lack.
-          final a = activityByName(r['type'] as String?) ??
-              Activity(importedWorkoutTitle(r['type']), LucideIcons.activity,
-                  C.purple, Track.duration, 5.0);
-          past.add(_PastWorkout(
-            (r['id'] as String?) ?? '',
-            a,
-            DateTime.fromMillisecondsSinceEpoch(ts * 1000),
-            // duration_min is minutes; Motion.tick × 60 × n keeps the one
-            // Duration literal in theme.dart.
-            Motion.tick * 60 * ((r['duration_min'] as num?)?.toInt() ?? 0),
-            strain: (r['strain'] as num?)?.toDouble(),
-            calories: (r['calories'] as num?)?.round(),
-            // The session's mean over its own HR stream, computed by the repo
-            // — not the last sample anybody happened to see.
-            avgHr: (r['avg_hr'] as num?)?.round(),
-            maxHr: (r['max_hr'] as num?)?.toInt(),
-            hrr60: (r['hrr60'] as num?)?.round(),
-            vo2max: (r['vo2max_estimate'] as num?)?.toDouble(),
-            steps: (r['steps'] as num?)?.toInt(),
-            zoneMinutes: _decodeZoneMinutes(r['zone_min']),
-            private: r['private'] == true,
-          ));
+          // TAKT (Feature 08): dieselbe Umwandlung wie für Heute.
+          final w = _pastFromRow(r);
+          if (w != null) past.add(w);
         }
       }
     }

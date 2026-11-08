@@ -16,9 +16,11 @@ import '../../state/app_state.dart';
 import '../../ui2/activity/catalogue.dart';
 import '../../ui2/activity/day_strain.dart' show DayStrainDetail;
 import '../../ui2/activity/picker.dart' show ActivityPicker;
+import '../../ui2/activity/summary.dart' show ActivityResult, ActivitySummary;
 import '../../ui2/profile/profile.dart' show ProfileAvatar;
 import '../../ui2/screens/home_screen.dart';
 import '../../ui2/screens/log_workout.dart' show LogWorkout, bumpInsights;
+import '../../ui2/screens/workout_screen.dart' show taktWorkoutResult;
 import '../../ui2/screens/metric_detail.dart';
 import '../../ui2/screens/readiness_detail.dart';
 import '../../ui2/screens/sleep_detail.dart';
@@ -178,6 +180,21 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     return DateTime.fromMillisecondsSinceEpoch(at.toInt());
   }
 
+  /// Feature 08, T1: Übersicht des Trainings, sonst die Sportart-Wahl (T2).
+  Future<void> _openWorkout(ActivityItem item) async {
+    final app = context.read<AppState>();
+    double? weight;
+    try {
+      weight = ((await app.repo?.getProfile())?['weight_kg'] as num?)?.toDouble();
+    } catch (_) {
+      // Ohne Gewicht fehlt nur der Kaloriensatz.
+    }
+    final target = await taktWorkoutTarget(item, (id) => taktWorkoutResult(app, id), weightKg: weight);
+    if (!mounted) return;
+    if (target == null) return _pickSport(item);
+    await _push(target);
+  }
+
   Future<void> _pickSport(ActivityItem item) async {
     final s = item.suggestion;
     var picking = false;
@@ -317,7 +334,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         watch: bodyWatchOf(c, _data, todayLabel()),
         onRing: (k) => _push(taktRingTarget(k)),
         onCard: (key) => _push(MetricDetail(key)),
-        onOpen: _pickSport,
+        onOpen: _openWorkout,
         onTick: _onTick,
         onDiscard: _discard,
         onLog: () => _push(const LogWorkout()),
@@ -537,5 +554,23 @@ class _Card extends StatelessWidget {
         ]),
       ),
     );
+  }
+}
+
+/// Feature 08, T1 und T2: Was das Antippen eines Trainings öffnet. Ein
+/// gespeichertes Training öffnet seine Übersicht. Eine nicht gespeicherte
+/// Erkennung oder ein Training, das sich nicht laden lässt, ergibt null, dann
+/// bleibt es bei der Sportart-Wahl.
+Future<Widget?> taktWorkoutTarget(
+  ActivityItem item,
+  Future<ActivityResult?> Function(String id) load, {
+  double? weightKg,
+}) async {
+  if (item.suggestion != null) return null;
+  try {
+    final r = await load(item.id);
+    return r == null ? null : ActivitySummary(r, weightKg: weightKg);
+  } catch (_) {
+    return null;
   }
 }
