@@ -829,7 +829,7 @@ class _MetricDetailState extends State<MetricDetail> {
           color: color),
       if (note != null) ...[
         const SizedBox(height: S.x2),
-        Text(note, style: F.over.copyWith(color: p.ink3)),
+        taktDodge(c, Text(note, style: F.over.copyWith(color: p.ink3)), line: true),
       ],
     ]);
   }
@@ -1308,12 +1308,12 @@ class _MetricDetailState extends State<MetricDetail> {
           const SizedBox(height: S.x2),
           Align(
             alignment: Alignment.centerLeft,
-            child: Text(
+            child: taktDodge(context, Text(
                 (l?.metricDetailLatestReading(
                             _fmt(spec, latest), unitBeside(spec.unit), asOf) ??
                         'Latest ${_fmt(spec, latest)} ${unitBeside(spec.unit)} · $asOf')
                     .replaceAll('  ', ' '),
-                style: F.cap.copyWith(color: p.ink3)),
+                style: F.cap.copyWith(color: p.ink3)), line: true),
           ),
         ],
         if (band != null) ...[
@@ -1753,7 +1753,7 @@ class _MetricDetailState extends State<MetricDetail> {
                   p, _fmt(spec, hi), l?.metricDetailHighest ?? 'Highest')),
         ]),
         const SizedBox(height: S.x4),
-        Text(
+        taktDodge(c, Text(
           rank == null
               ? (l?.metricDetailFromDaysCount(win.length) ??
                   'From ${win.length} of your own days.')
@@ -1773,7 +1773,7 @@ class _MetricDetailState extends State<MetricDetail> {
                           'Your reading from ${axisDay(latestTs)} is higher '
                               'than $share% of your own days — $band.'))),
           style: F.cap.copyWith(color: p.ink3, height: 1.5),
-        ),
+        ), line: true),
       ]),
     );
   }
@@ -1967,8 +1967,8 @@ class _StepGoalGaugeState extends State<_StepGoalGauge> {
             // No steps recorded yet is absent, not zero — the track alone
             // says that; a percentage here would fabricate a reading.
             if (frac != null)
-              Text('${(frac * 100).clamp(0, 999).round()}%',
-                  style: F.over.copyWith(color: p.ink)),
+              taktDodge(context, Text('${(frac * 100).clamp(0, 999).round()}%',
+                  style: F.over.copyWith(color: p.ink))),
               ],
             ),
           ),
@@ -2008,7 +2008,7 @@ class _StepGoalGaugeState extends State<_StepGoalGauge> {
                             Icon(LucideIcons.pencil, size: 12, color: p.ink3),
                           ],
                         ),
-                        Text(
+                        taktDodge(context, Text(
                           AppLocalizations.of(
                                 context,
                               )?.metricDetailStepsGoalValue(
@@ -2017,7 +2017,7 @@ class _StepGoalGaugeState extends State<_StepGoalGauge> {
                               ) ??
                               '${thousands(widget.goal)} steps',
                           style: F.body.copyWith(color: p.ink),
-                        ),
+                        )),
                       ],
                     ),
                   ),

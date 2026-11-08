@@ -318,14 +318,14 @@ class Section extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Flexible(
-                child: Text(
+                child: taktDodge(c, Text(
                   title,
                   style: F.head.copyWith(color: p.ink),
                   maxLines: wrapTitle ? null : 2,
                   overflow: wrapTitle
                       ? TextOverflow.visible
                       : TextOverflow.ellipsis,
-                ),
+                ), line: true),
               ),
               if (action != null)
                 Flexible(
@@ -2124,13 +2124,13 @@ class _SubTabsState extends State<SubTabs> {
                           : const Color(0x00000000),
                   borderRadius: R.rPill,
                 ),
-                child: Text(
+                child: taktDodge(c, Text(
                   items[i],
                   style: F.cap.copyWith(
                     color: on ? p.on(color) : p.ink3,
                     fontWeight: on ? FontWeight.w600 : FontWeight.w500,
                   ),
-                ),
+                ), align: .5),
                       ),
                       ),
                     );
@@ -2454,10 +2454,10 @@ class ChartFrame extends StatelessWidget {
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
     );
-    final measure = Text(
+    final measure = taktDodge(c, Text(
       uiText(c, unit),
       style: F.over.copyWith(color: p.ink3),
-    );
+    ), align: 1);
     if (!stacked) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -2727,7 +2727,7 @@ class ChartFrame extends StatelessWidget {
                           ),
                           const SizedBox(width: S.x1),
                           Flexible(
-                            child: Text(
+                            child: taktDodge(c, Text(
                               usualRangeText(
                                 AppLocalizations.of(c),
                                 presentationText(
@@ -2737,7 +2737,7 @@ class ChartFrame extends StatelessWidget {
                                 '',
                               ),
                               style: tick,
-                            ),
+                            ), line: true),
                           ),
                         ],
                       ),
@@ -2750,7 +2750,7 @@ class ChartFrame extends StatelessWidget {
             ExcludeSemantics(
               child: Padding(
                 padding: const EdgeInsets.only(top: S.x2),
-                child: Text(footnote!, style: F.cap.copyWith(color: p.ink3)),
+                child: taktDodge(c, Text(footnote!, style: F.cap.copyWith(color: p.ink3)), line: true),
               ),
             ),
         ],

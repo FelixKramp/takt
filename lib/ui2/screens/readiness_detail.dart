@@ -403,14 +403,14 @@ class _ReadinessDetailState extends State<ReadinessDetail> {
             color: p.card2,
             child: Row(children: [
               Expanded(
-                child: Text(
+                child: taktDodge(c, Text(
                   l?.readinessDetailInputsFooter(
                           d.inputsUsed, d.breakdown.length) ??
                       '${d.inputsUsed}/${d.breakdown.length} inputs. Each one is '
                           'ranked against your own history — a parallel view of the '
                           'same inputs, not slices of the number above.',
                   style: F.cap.copyWith(color: p.ink3, height: 1.5),
-                ),
+                ), line: true),
               ),
             ]),
           ),

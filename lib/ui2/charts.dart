@@ -38,6 +38,7 @@
 //    the drawn envelope is pixel-identical to the full series and every spike
 //    survives. Naive stride decimation would drop them.
 
+import 'grammar.dart' show taktDodge;
 import '../l10n/app_localizations.dart';
 import '../l10n/decimal_text.dart';
 import '../state/locale_controller.dart';
@@ -998,8 +999,8 @@ class ZoneRows extends StatelessWidget {
             padding: EdgeInsets.only(top: i == 0 ? 0 : (compact ? S.x1 : S.x3)),
             child: MergeSemantics(
               child: compact ? Row(children: [
-                Text(l?.activityLiveZoneLabel(i + 1) ?? 'Zone ${i + 1}',
-                    style: F.cap.copyWith(color: p.ink2)),
+                taktDodge(c, Text(l?.activityLiveZoneLabel(i + 1) ?? 'Zone ${i + 1}',
+                    style: F.cap.copyWith(color: p.ink2))),
                 const SizedBox(width: S.x2),
                 Expanded(child: _bar(p, ink[i], top, minutes[i])),
                 const SizedBox(width: S.x2),
@@ -1015,7 +1016,7 @@ class ZoneRows extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: Text.rich(
+                        child: taktDodge(c, Text.rich(
                           TextSpan(children: [
                             TextSpan(
                                 text: l?.activityLiveZoneLabel(i + 1) ??
@@ -1027,15 +1028,15 @@ class ZoneRows extends StatelessWidget {
                                   text: '  $r',
                                   style: F.cap.copyWith(color: p.ink3)),
                           ]),
-                        ),
+                        ), line: true),
                       ),
                       const SizedBox(width: S.x2),
-                      Text(
+                      taktDodge(c, Text(
                         l?.zoneRowsMinutes(_round(minutes[i])) ??
                             '${_round(minutes[i])} min',
                         style: F.cap.copyWith(
                             color: p.ink, fontWeight: FontWeight.w600),
-                      ),
+                      ), align: 1),
                     ],
                   ),
                   const SizedBox(height: S.x1),
@@ -1046,7 +1047,7 @@ class ZoneRows extends StatelessWidget {
           ),
         if (footnote != null) ...[
           const SizedBox(height: S.x3),
-          Text(footnote!, style: F.cap.copyWith(color: p.ink3)),
+          taktDodge(c, Text(footnote!, style: F.cap.copyWith(color: p.ink3)), line: true),
         ],
       ],
     );

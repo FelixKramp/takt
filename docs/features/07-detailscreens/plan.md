@@ -4,5 +4,5 @@
 - [x] **U2** (Zeiträume bleiben wie bisher: Heute, 7 Tage, 30 Tage, 6 Monate, Jahr) HRV, Ruhepuls, Schritte: Wert-Karte, Orange, ohne Live-Puls, Ziffern, Link (H2–H5)
 - [x] **U3** Strain: Wert-Karte, Kurve mit Aktivitäten, Zonen, Tage blättern (H6–H8)
 - [x] **U4** (H11: die Balken der 30 Tage tragen schon die Farben der Stufen) Erholung: Wert und Stufe, Bausteine als Vergleichszeilen, Verlauf (H9–H11)
-- [ ] **U5** Streifen über alle Detailscreens (H12)
+- [x] **U5** Streifen über alle Detailscreens (H12)
 - [ ] **U6** Unabhängige Prüfung (mit 06)

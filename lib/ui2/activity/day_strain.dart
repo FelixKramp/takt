@@ -458,7 +458,7 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
     return Surface(
       elevation: 0,
       color: p.card2,
-      child: Text(
+      child: taktDodge(context, Text(
         [
           l?.dayStrainInputsBase ??
               'How hard your heart worked while awake, by minutes in each heart-rate zone, on a 0–21 scale.',
@@ -479,7 +479,7 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
                   'so a night the band missed moves the whole day.',
         ].join(' '),
         style: F.cap.copyWith(color: p.ink3, height: 1.5),
-      ),
+      ), line: true),
     );
   }
 }

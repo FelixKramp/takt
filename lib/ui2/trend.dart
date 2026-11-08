@@ -10,6 +10,7 @@
 // history there is no range, nothing is shaded and the verdict is not drawn;
 // the caller says so in one short line ([usualNeedsDaysText]).
 
+import 'grammar.dart' show taktDodge;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -205,7 +206,8 @@ class ReadingVerdict extends StatelessWidget {
           style: F.cap.copyWith(color: ink, fontWeight: FontWeight.w600),
         ),
         if (detail.isNotEmpty)
-          Text('· $detail', style: F.cap.copyWith(color: p.ink3)),
+          taktDodge(c, Text('· $detail', style: F.cap.copyWith(color: p.ink3)),
+              line: true),
       ],
     );
   }
