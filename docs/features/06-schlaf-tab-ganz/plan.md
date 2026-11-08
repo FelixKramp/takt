@@ -7,7 +7,7 @@
 - [x] **T5** Korrektur-Knöpfe flach unter dem Hypnogramm (F6)
 - [x] **T6** Gegen deine Nächte, Auffällig (F8, F9)
 - [x] **T7** Signale in der Nacht mit großen Ziffern (F10)
-- [ ] **T8** Kein doppelter Schlafplan, Links-Karte (F11, F12)
+- [x] **T8** Kein doppelter Schlafplan, Links-Karte (F11, F12)
 - [ ] **T9** Streifen über den ganzen Tab, flüssiges Scrollen (F13, F14)
 - [ ] **T10** Unabhängige Prüfung
 

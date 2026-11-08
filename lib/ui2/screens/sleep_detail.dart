@@ -1,3 +1,5 @@
+import '../profile/alarm.dart' show AlarmScreen;
+import 'circadian_detail.dart' show CircadianDetail;
 import '../../takt/sleep/sleep_score.dart' show ScoreBand;
 import '../../takt/pult_tokens.dart';
 import '../../takt/sleep/night_parts.dart';
@@ -529,16 +531,32 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       children: [
         header,
         const SizedBox(height: S.x2),
+        // F11: kein Schlafplan-Fuß, F12: die Links stehen in der Karte.
         ...body,
-        if (widget.embedded) ...[
-          if (!_failed && (_d?.isLatestNight ?? _day == null))
-            ...widget.todayFooter,
-          ...widget.footer,
-        ],
       ],
     );
     if (widget.embedded) return RefreshIndicator(onRefresh: _load, child: list);
     return Scaffold(backgroundColor: p.bg, body: SafeArea(child: list));
+  }
+
+  /// TAKT (F12): Wecker, Körperuhr, Nickerchen und alle Messwerte in einer
+  /// Karte. Ersetzt den Fuß des Tabs, den Nickerchen-Knopf und „Detailwerte“.
+  Widget _taktLinks(BuildContext c, String? day) {
+    final t = SleepText.of(c);
+    return KeyedSubtree(
+      key: const ValueKey('takt-sleep-links'),
+      child: TaktLinksCard(links: [
+        (LucideIcons.alarmClock, t.alarm, t.alarmSub,
+            () => go(c, const AlarmScreen())),
+        (LucideIcons.sunMoon, t.bodyClock, t.bodyClockSub,
+            () => go(c, const CircadianDetail())),
+        if (day != null)
+          (LucideIcons.coffee, t.naps, t.napsSub,
+              () => go(c, NapsScreen(day: day))),
+        (LucideIcons.cpu, t.allReadings, t.allReadingsSub,
+            () => go(c, Investigate('sleep', day: day))),
+      ]),
+    );
   }
 
   /// Die alte Blätterzeile, im Takt-Teilbaum durch die Kopfzeile ersetzt.
@@ -883,7 +901,8 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
 
       // ── 2b · WHOSE WINDOW IS THIS ──
       ...?_windowCard(c, p, d, n),
-      ..._napsButton(c, l, d.day),
+      // TAKT (F12): Nickerchen steht in der Link-Karte am Ende.
+      if (!TaktLook.on(c)) ..._napsButton(c, l, d.day),
 
       // ── 3 · WHAT IT WAS MADE OF ──
       Section(l?.sleepDetailStagesSection ?? 'Stages', _stages(c, p, n)),
@@ -928,8 +947,11 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       // meant stepping back to Tuesday and then tapping Nerd stats landed
       // on last night — the same numbers every time, whichever day you
       // came from.
-      investigateRow(
-          c, () => go(c, Investigate('sleep', day: _day ?? d.day))),
+      if (TaktLook.on(c))
+        _taktLinks(c, _day ?? d.day)
+      else
+        investigateRow(
+            c, () => go(c, Investigate('sleep', day: _day ?? d.day))),
     ]);
   }
 

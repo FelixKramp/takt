@@ -20,6 +20,15 @@ class SleepText {
   String get sleepingHr => de ? 'Schlafpuls' : 'Sleeping HR';
   String get lowestHr => de ? 'Tiefster Puls' : 'Lowest HR';
   String get breathsPerMin => de ? 'Atemzüge/Min' : 'Breaths/min';
+  String get alarm => de ? 'Wecker' : 'Alarm';
+  String get alarmSub => de ? 'Vibriert am Handgelenk' : 'Buzzes on your wrist';
+  String get bodyClock => de ? 'Körperuhr' : 'Body clock';
+  String get bodyClockSub =>
+      de ? 'Natürliche Bettzeit, Wochenendverschiebung' : 'Natural bedtime, weekend shift';
+  String get naps => de ? 'Nickerchen' : 'Naps';
+  String get napsSub => de ? 'Schlaf am Tag' : 'Sleep during the day';
+  String get allReadings => de ? 'Alle Messwerte' : 'All readings';
+  String get allReadingsSub => de ? 'Genaue Zahlen zu dieser Nacht' : 'Exact figures for this night';
   String get nothingStoodOut => de ? 'Nichts aufgefallen.' : 'Nothing stood out.';
   String get phasesNote => de
       ? 'Phasen schätzt das Band aus Puls und Bewegung, deshalb stehen dort Spannen.'
@@ -47,7 +56,6 @@ class SleepText {
   String get base => de ? 'Grundbedarf' : 'Baseline';
   String get strain => de ? 'Belastung' : 'Strain';
   String get debt => de ? 'Schlafschuld' : 'Sleep debt';
-  String get naps => de ? 'Nickerchen' : 'Naps';
   String get partsTomorrow => de
       ? 'Woraus sich der Bedarf zusammensetzt, zeigt Takt ab der nächsten Nacht.'
       : 'Takt shows what makes up your need from the next night on.';
