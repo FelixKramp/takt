@@ -1,3 +1,7 @@
+import '../../takt/pult_tokens.dart';
+import '../../takt/sleep/night_parts.dart';
+import '../../takt/sleep/sleep_text.dart';
+import '../../takt/stripe/stripe.dart';
 import '../../takt/header.dart';
 import '../../takt/look.dart';
 import '../../l10n/display_text.dart';
@@ -1358,12 +1362,18 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
     // One lane per stage, tall enough for its own name at any text size.
     final scaler = MediaQuery.textScalerOf(c);
     final lane = math.max(33.0, scaler.scale(F.over.fontSize!) * F.over.height! + 8);
-    final totals = _stageTotals(device ?? n, device: device != null);
+    // TAKT (F3): ohne Summen neben den Bahnen, die stehen in den Phasen.
+    final takt = TaktLook.on(c);
+    final totals = takt
+        ? const <SleepStage, String>{}
+        : _stageTotals(device ?? n, device: device != null);
     return Surface(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         ChartFrame(
-          title: l?.sleepDetailThroughTheNight ?? 'Through the night',
-          unit: l?.sleepDetailUnitStage ?? 'stage',
+          title: takt
+              ? SleepText.of(c).theNight
+              : (l?.sleepDetailThroughTheNight ?? 'Through the night'),
+          unit: takt ? '' : (l?.sleepDetailUnitStage ?? 'stage'),
           height: lane * 4,
           xLabels: [
             clockOfTs(t0),
@@ -1541,7 +1551,8 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
                       ? const SizedBox.expand()
                       : CustomPaint(
                           size: Size.infinite,
-                          painter: Hypnogram(st, p, t: animate(c, 1))),
+                          painter: Hypnogram(st, p,
+                              t: animate(c, 1), takt: TaktLook.on(c))),
                 ),
             ]),
             if (_scrub != null)
@@ -1609,10 +1620,20 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
         elevation: 0,
         child: Column(children: [
           Row(children: [
-            Text(clockOfTs(t),
-                style: F.body.copyWith(color: p.ink, fontWeight: FontWeight.w600)),
+            if (TaktLook.on(c))
+              // TAKT (F4): Uhrzeit in Punktziffern, Phase als Text.
+              StripeDodge(
+                child: Text(clockOfTs(t),
+                    key: const ValueKey('takt-scrub-clock'),
+                    style: Pult.digits(20, p.ink)),
+              )
+            else
+              Text(clockOfTs(t),
+                  style: F.body.copyWith(color: p.ink, fontWeight: FontWeight.w600)),
             const Spacer(),
-            if (stage != null)
+            if (stage != null && TaktLook.on(c))
+              Text(_stageName(c, stage), style: F.cap.copyWith(color: p.ink2))
+            else if (stage != null)
               Pill(_stageName(c, stage), Hypnogram.pigment[stage] ?? C.blue)
             else if (stages.isNotEmpty)
               // Not a stage, so not a Pill: this instant has no colour because
@@ -1656,7 +1677,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
   Widget _labelledHypnogram(BuildContext c, P p, List<SleepStage?> stages,
       Map<String, dynamic> n, double lane, Map<SleepStage, String> totals) {
     final l = AppLocalizations.of(c);
-    final ink = Hypnogram.cols(p);
+    final ink = Hypnogram.cols(p, takt: TaktLook.on(c));
     final scaler = MediaQuery.textScalerOf(c);
     final dir = Directionality.of(c);
     final nameStyle = F.over.copyWith(fontWeight: FontWeight.w600);
@@ -1821,7 +1842,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
     final r = n['sleep_source'] == 'vendor_staged' ? null : _ranges(n);
     // The same figures, and the same colours, as the lanes on the chart.
     final totals = _stageTotals(n);
-    final ink = Hypnogram.cols(P.of(c));
+    final ink = Hypnogram.cols(P.of(c), takt: TaktLook.on(c));
     final rows = <(String, String, Color)>[
       for (final s in const [
         SleepStage.deep,
@@ -1831,6 +1852,30 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       ])
         if (totals[s] case final v?) (s.label(l), v, ink[s]!),
     ];
+    if (rows.isNotEmpty && TaktLook.on(c)) {
+      // TAKT (F7): ein Balken über die Minuten der Nacht, darunter die Zeilen
+      // mit Spanne oder Wert. Anteile in Prozent stehen bewusst nicht da: Die
+      // Phasen sind Schätzungen mit Spanne, ein Prozentwert täte genauer.
+      num? mins(SleepStage s) => n[switch (s) {
+            SleepStage.deep => 'deep_min',
+            SleepStage.rem => 'rem_min',
+            SleepStage.light => 'light_min',
+            SleepStage.awake => 'awake_min',
+          }] as num?;
+
+      return TaktPhases(
+        rows: [
+          for (final s in const [
+            SleepStage.deep,
+            SleepStage.rem,
+            SleepStage.light,
+            SleepStage.awake,
+          ])
+            if (totals[s] case final v?) (s.label(l), v, ink[s]!, mins(s)),
+        ],
+        note: r == null ? null : SleepText.of(c).phasesNote,
+      );
+    }
     if (rows.isEmpty) {
       return StatusCard(
         l?.sleepDetailNoStageSplitTitle ?? 'No stage split for this night',

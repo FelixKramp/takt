@@ -9,6 +9,13 @@ class SleepText {
       SleepText(Localizations.localeOf(c).languageCode == 'de');
 
   String get of100 => de ? 'von 100' : 'of 100';
+
+  // Feature 06: der Teil unter dem Kopf.
+  String get theNight => de ? 'Die Nacht' : 'The night';
+  String get phases => de ? 'Phasen' : 'Stages';
+  String get phasesNote => de
+      ? 'Phasen schätzt das Band aus Puls und Bewegung, deshalb stehen dort Spannen.'
+      : 'The band estimates stages from pulse and movement, so they are ranges.';
   String slept(String hm) => de ? '$hm Std geschlafen' : '$hm h asleep';
   String window(String from, String to) => de ? '$from bis $to' : '$from to $to';
   String get durationPart => de ? 'Dauer zu Bedarf' : 'Duration vs need';

@@ -771,7 +771,10 @@ class Hypnogram extends CustomPainter {
   /// goes through the same solver every label does.
   final P p;
 
-  Hypnogram(this.stages, this.p, {this.t = 1});
+  /// TAKT (Feature 06, F3): Takt-Farben statt OpenStrap-Rampe.
+  final bool takt;
+
+  Hypnogram(this.stages, this.p, {this.t = 1, this.takt = false});
 
   static const pigment = <SleepStage, Color>{
     SleepStage.awake: C.orange,
@@ -791,10 +794,22 @@ class Hypnogram extends CustomPainter {
   /// The lane colours as drawn. Each keeps its hue and is pushed lighter or
   /// darker until it hits its step on the ramp, so the four lanes differ by
   /// lightness as well as hue and by lane position on top of that.
-  static Map<SleepStage, Color> cols(P p) => {
+  static Map<SleepStage, Color> cols(P p, {bool takt = false}) => takt
+      ? taktCols(p)
+      : {
         for (final s in SleepStage.values)
           s: _shade(p, pigment[s]!,
               (p.dark ? _darkTheme : _lightTheme)[s.index]),
+        };
+
+  /// TAKT (Feature 06, F3): Tief in Tinte, REM und Leicht als Abstufungen
+  /// zur Karte hin, Wach in Takt-Orange. In beiden Themen von dunkel (Tief)
+  /// nach hell (Leicht) gestuft, relativ zur Karte.
+  static Map<SleepStage, Color> taktCols(P p) => {
+        SleepStage.deep: p.ink,
+        SleepStage.rem: Color.lerp(p.ink, p.card, .35)!,
+        SleepStage.light: Color.lerp(p.ink, p.card, .55)!,
+        SleepStage.awake: p.dark ? const Color(0xFFFF9A5C) : const Color(0xFFF0560A),
       };
 
   static double _worst(P p, Color c) => [p.bg, p.card, p.card2]
@@ -879,7 +894,7 @@ class Hypnogram extends CustomPainter {
     final v = columns(stages, (s.width / 2).floor());
     final lane = s.height / 4, w = s.width / v.length;
     final n = (v.length * t.clamp(0, 1)).round().clamp(1, v.length);
-    final ink = cols(p);
+    final ink = cols(p, takt: takt);
 
     // Drawn as RUNS, not columns. One rect per column left a 0.8 pt gap between
     // every pair of neighbours, so a solid two-hour stretch of light sleep came
@@ -919,7 +934,7 @@ class Hypnogram extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant Hypnogram o) =>
-      o.t != t || o.stages != stages || o.p.dark != p.dark;
+      o.t != t || o.stages != stages || o.p.dark != p.dark || o.takt != takt;
 }
 
 /// Time in heart-rate zones as five labelled rows: the zone, its bpm range,
