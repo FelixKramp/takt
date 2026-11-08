@@ -909,7 +909,10 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
             unusual),
 
       // ── 6 · THE SIGNALS UNDERNEATH ──
-      Section(l?.sleepDetailOvernightSection ?? 'Overnight signals',
+      Section(
+          TaktLook.on(c)
+              ? SleepText.of(c).signals
+              : (l?.sleepDetailOvernightSection ?? 'Overnight signals'),
           _overnight(c, p, d)),
 
       // ── 7 · ONE TAKEAWAY ──
@@ -2231,7 +2234,18 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
     // column truncates "14.2 br/min" to "14.2 br/…" at 390 pt. The nocturnal
     // dip was the fourth and is the one number here that is a ratio of two
     // others rather than a reading of its own.
-    final summary = <(String, String, Color)>[
+    // TAKT (F10): drei große Ziffern, Einheit im Label.
+    final takt = TaktLook.on(c);
+    final st = SleepText.of(c);
+    final summary = takt
+        ? <(String, String, Color)>[
+            if (noc is Map && noc['sleeping_hr_avg'] != null)
+              (st.sleepingHr, displayFixed(noc['sleeping_hr_avg'] as num, 0), p.ink),
+            if (noc is Map && noc['sleeping_hr_min'] != null)
+              (st.lowestHr, displayFixed(noc['sleeping_hr_min'] as num, 0), p.ink),
+            if (respV != null) (st.breathsPerMin, displayFixed(respV, 1), p.ink),
+          ]
+        : <(String, String, Color)>[
       if (noc is Map && noc['sleeping_hr_avg'] != null)
         (loc?.sleepDetailSleepingHr ?? 'SLEEPING HR',
             sleepReadingText(loc, noc['sleeping_hr_avg'] as num, 0, 'bpm'),
@@ -2243,7 +2257,7 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
       if (respV != null)
         (loc?.sleepDetailBreathingCaps ?? 'BREATHING',
             sleepReadingText(loc, respV, 1, 'br/min'), C.teal),
-    ];
+          ];
 
     if (all.isEmpty) {
       return summary.isEmpty

@@ -16,6 +16,10 @@ class SleepText {
   String get versus => de ? 'Gegen deine Nächte' : 'Against your nights';
   String usual(String lo, String hi, int n) =>
       de ? 'üblich $lo bis $hi, aus $n Nächten' : 'usual $lo to $hi, from $n nights';
+  String get signals => de ? 'Signale in der Nacht' : 'Signals overnight';
+  String get sleepingHr => de ? 'Schlafpuls' : 'Sleeping HR';
+  String get lowestHr => de ? 'Tiefster Puls' : 'Lowest HR';
+  String get breathsPerMin => de ? 'Atemzüge/Min' : 'Breaths/min';
   String get nothingStoodOut => de ? 'Nichts aufgefallen.' : 'Nothing stood out.';
   String get phasesNote => de
       ? 'Phasen schätzt das Band aus Puls und Bewegung, deshalb stehen dort Spannen.'
