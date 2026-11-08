@@ -1,6 +1,6 @@
 ---
 feature: 03-schlafscore
-freigegeben: offen
+freigegeben: 2026-11-08
 ---
 # Spec: Schlafscore und Schlaf-Tab
 
