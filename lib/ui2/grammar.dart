@@ -29,6 +29,9 @@
 //     and the golden sweep measures every Pressable in every case rather than
 //     the five tabs of the shell.
 
+import '../takt/look.dart';
+import '../takt/pult_tokens.dart';
+import '../takt/stripe/stripe.dart';
 import '../l10n/display_text.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/decimal_text.dart' show parseTypedNumber;
@@ -243,17 +246,31 @@ class Surface extends StatelessWidget {
   @override
   Widget build(BuildContext c) {
     final p = P.of(c);
+    // TAKT (Feature 06): im Takt-Teilbaum eine Takt-Karte mit Rand und
+    // schwerer Unterkante statt Schatten.
+    final takt = TaktLook.on(c);
     return Pressable(
       onTap: onTap,
       semanticLabel: semanticLabel,
       child: Container(
         width: double.infinity,
         padding: pad,
-        decoration: BoxDecoration(
-          color: color ?? p.card,
-          borderRadius: R.rLg,
-          boxShadow: p.el(elevation),
-        ),
+        decoration: takt
+            ? BoxDecoration(
+                color: color ?? p.card,
+                borderRadius: R.rSm,
+                border: Border(
+                  top: BorderSide(color: p.line),
+                  left: BorderSide(color: p.line),
+                  right: BorderSide(color: p.line),
+                  bottom: BorderSide(color: p.line, width: 3),
+                ),
+              )
+            : BoxDecoration(
+                color: color ?? p.card,
+                borderRadius: R.rLg,
+                boxShadow: p.el(elevation),
+              ),
         child: child,
       ),
     );
@@ -1482,6 +1499,32 @@ class InlineMetrics extends StatelessWidget {
   @override
   Widget build(BuildContext c) {
     final p = P.of(c);
+    // TAKT (Feature 06, F10): große Punktziffern in Tinte, Label darunter,
+    // jede Zahl im Displaystreifen-Schutz.
+    if (TaktLook.on(c)) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final e in items)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  StripeDodge(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(e.$2, style: Pult.digits(24, p.ink), maxLines: 1),
+                    ),
+                  ),
+                  const SizedBox(height: S.x1),
+                  Text(e.$1, style: F.cap.copyWith(color: p.ink2)),
+                ],
+              ),
+            ),
+        ],
+      );
+    }
     return Row(
       children: [
         for (final e in items)

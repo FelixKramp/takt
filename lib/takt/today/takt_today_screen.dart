@@ -24,6 +24,7 @@ import '../../ui2/screens/readiness_detail.dart';
 import '../../ui2/screens/sleep_detail.dart';
 import '../../ui2/ui2.dart';
 import '../brand.dart';
+import '../look.dart';
 import '../pult_tokens.dart';
 import '../takt_text.dart';
 import '../update_check.dart';
@@ -266,8 +267,10 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     }
   }
 
+  /// Alles, was Heute öffnet, steht in der Takt-Haut (Feature 06/07).
   Future<void> _push(Widget w) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => w));
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => TaktLook(child: w)));
     if (mounted) await _load();
   }
 

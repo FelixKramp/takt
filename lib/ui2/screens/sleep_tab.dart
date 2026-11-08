@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../takt/look.dart';
 import '../../takt/sleep/sleep_head_loader.dart';
 import '../profile/alarm.dart';
 import '../ui2.dart';
@@ -24,7 +25,8 @@ class SleepTab extends StatelessWidget {
   @override
   Widget build(BuildContext c) {
     final l = AppLocalizations.of(c);
-    return SleepDetail(
+    // TAKT (Feature 06): der ganze Tab in der Takt-Haut.
+    return TaktLook(child: SleepDetail(
       embedded: true,
       // TAKT (Feature 03): Score-Kopf statt „Total sleep“.
       head: (day) => TaktSleepHeadLoader(day: day),
@@ -58,6 +60,6 @@ class SleepTab extends StatelessWidget {
           ]),
         ),
       ],
-    );
+    ));
   }
 }

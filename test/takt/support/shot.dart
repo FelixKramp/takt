@@ -1,7 +1,6 @@
 // Bildschirmfotos aus Widget-Tests, mit den echten Schriften. Nur mit
 // TAKT_SHOTS=1, sonst tut `shot` nichts. Ablage: build/shots/<name>.png
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -45,7 +44,7 @@ Future<void> shot(WidgetTester t, Finder f, String name) async {
   if (!shotsOn) return;
   var ro = t.renderObject(f);
   while (ro is! RenderRepaintBoundary) {
-    ro = ro.parent! as RenderObject;
+    ro = ro.parent!;
   }
   final boundary = ro;
   await t.runAsync(() async {

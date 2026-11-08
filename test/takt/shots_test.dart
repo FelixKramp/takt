@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
+import 'package:openstrap_edge/takt/look.dart';
 import 'package:openstrap_edge/takt/sleep/sleep_head.dart';
 import 'package:openstrap_edge/ui2/screens/sleep_detail.dart';
 import 'package:openstrap_edge/ui2/theme.dart';
@@ -29,11 +30,11 @@ void main() {
     addTearDown(t.view.reset);
     addTearDown(t.platformDispatcher.clearAlwaysUse24HourTestValue);
     await t.pumpWidget(app(Scaffold(
-      body: SleepDetail(
+      body: TaktLook(child: SleepDetail(
         embedded: true,
         data: sleepData(),
         head: (_) => TaktSleepHead(view: view),
-      ),
+      )),
     )));
     await t.pumpAndSettle();
     await shot(t, find.byType(SleepDetail), 'schlaf_tab');

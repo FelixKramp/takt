@@ -1,6 +1,6 @@
 # Plan: Schlaf-Tab ganz im Takt-Design (06)
 
-- [ ] **T1** TaktLook und Takt-Haut für Surface, StatusCard, InlineMetrics (Grundlage F3–F12)
+- [x] **T1** TaktLook und Takt-Haut für Surface, StatusCard, InlineMetrics (Grundlage F3–F12)
 - [ ] **T2** Tab-Leiste flach, aktiver Tab fett und farbig, Schlaf in Score-Farbe (F2)
 - [ ] **T3** Kopfzeile „schlaf“ mit Blätterpfeilen und Profilbild, gepusht mit Zurück-Pfeil (F1, F15)
 - [ ] **T4** Hypnogramm-Farben, Zeitpunkt-Anzeige, Geräteauswahl, Phasen-Balken (F3, F4, F5, F7)
