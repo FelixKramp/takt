@@ -71,6 +71,24 @@ void main() {
           [batteryLeft(78, 10.74), batteryLeft(78, 10.74), null, batteryLeft(78, 10.74)]);
     });
 
+    test('B2′: überall der höchste Strain des Tages', () {
+      expect(peakStrain(9.38, [10.74, 9.38]), 10.74);
+      expect(peakStrain(null, [null]), isNull);
+      final today = DateTime(2026, 11, 9);
+      final y = DateTime(2026, 11, 8);
+      final week = batteryWeek(
+        recovery: [(t: sec(DateTime(2026, 11, 8, 7)), v: 50)],
+        strain: [(t: sec(DateTime(2026, 11, 8, 7)), v: 12)],
+        today: today,
+        todayMorning: 78,
+        todayStrain: 9.38,
+        peaks: {y: 18, today: 10.74},
+      );
+      expect(week[5].strain, 18);
+      expect(week[5].over, isTrue, reason: 'der Höchststand zog unter 20 %');
+      expect(week[6].left, batteryLeft(78, 10.74));
+    });
+
     test('B1: heute ohne frische Erholung bleibt leer, auch wenn der Verlauf einen Wert hat', () {
       final today = DateTime(2026, 11, 9);
       final week = batteryWeek(
@@ -136,6 +154,18 @@ void main() {
       expect(find.text('Belastung noch nicht berechnet'), findsOneWidget);
     });
 
+    testWidgets('B2′: Ring rechnet mit dem höchsten Strain heute', (t) async {
+      await pump(
+          t,
+          TaktTodayView(
+              data: HomeData(readiness: m(78), strain: m(9.38)),
+              pulse: livePulse,
+              strainPeak: 10.74));
+      final first = find.byType(DialRing).first;
+      expect(find.descendant(of: first, matching: find.text('${batteryLeft(78, 10.74)}')),
+          findsOneWidget);
+    });
+
     testWidgets('D4: der Ring öffnet die Batterie', (t) async {
       expect(taktRingTarget(HomeRingKind.recovery), isA<BatteryDetail>());
     });
@@ -154,7 +184,9 @@ void main() {
       await pump(t, BatteryDetail(data: data()));
       expect(find.text('batterie'), findsOneWidget);
       final card = find.byType(TaktValueCard);
-      expect(find.descendant(of: card, matching: find.text('${batteryLeft(78, 11)}')),
+      // Höchster Strain aus Tageswert und Kurve (B2′).
+      final d0 = data();
+      expect(find.descendant(of: card, matching: find.text('${batteryLeft(78, peakStrain(d0.strain, d0.strainCurve))}')),
           findsOneWidget);
       expect(find.descendant(of: card, matching: find.text('von 78 % am Morgen')), findsOneWidget);
       final line = t
@@ -178,8 +210,27 @@ void main() {
       expect(find.text('Noch keine Nacht.'), findsOneWidget);
     });
 
+    testWidgets('B2′: „Stand jetzt“, Wertkarte und Kurvenende stimmen überein', (t) async {
+      await pump(
+          t,
+          BatteryDetail(
+              data: BatteryDetailData(
+                  morning: 78, strain: 9.38, strainCurve: const [5, 10.74, 9.38], now: now)));
+      final want = '${batteryLeft(78, 10.74)}';
+      expect(find.descendant(of: find.byType(TaktValueCard), matching: find.text(want)),
+          findsOneWidget);
+      expect(find.descendant(of: _key('takt-battery-rule'), matching: find.text(want)),
+          findsOneWidget);
+      final line = t
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((c) => c.painter)
+          .whereType<LineChart>()
+          .single;
+      expect(line.d.last, double.parse(want));
+    });
+
     testWidgets('Randfall: ohne Strain der Hinweis im Detail', (t) async {
-      await pump(t, BatteryDetail(data: data(strain: null)));
+      await pump(t, BatteryDetail(data: BatteryDetailData(morning: 78, now: now)));
       expect(find.text('Belastung noch nicht berechnet'), findsOneWidget);
     });
   });

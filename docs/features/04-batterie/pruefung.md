@@ -146,3 +146,93 @@ Felix entscheiden, zwei Wege:
 | 01/A20 Kalibrierung | ✅ | „6/14“ und „6 von 14 Nächten“ wie vorher, grau, kein erfundener Wert. |
 | 01/A24 Große Schrift | ✅ | 320 px, Schrift 2,0, ohne Überlauf. |
 | 07/H9 Erholungs-Screen erreichbar | ✅ | Über „So entsteht die Ladung“, mit echter DB geöffnet. Alle bestehenden Tests von 07 grün. |
+
+## Runde 2
+Geprüft am 2026-11-09 um 17:35 Uhr von einem neuen, unabhängigen Prüfer-Agenten, Stand `67d525d` (HEAD).
+Nichts repariert.
+
+### Kurzfassung
+B1 ist behoben, auch mit echter Datenbank und bei `night_in_progress`. H2, H4, H5 und H11 sind
+erledigt. **B2 ist nur halb behoben:** Die Kurve im Detail steigt nicht mehr, der Ring, „Stand jetzt“
+und die heutige Säule laden aber weiter auf, wenn der Strain am Abend sinkt. Seit dem Fix endet die
+Kurve deshalb an einem solchen Tag systematisch unter der Zahl, die direkt darüber steht (H1 wird
+schlimmer, nicht besser). Regressionen keine.
+
+### Was gelaufen ist
+- `flutter test test/takt`: **240 Tests grün** (17:37 Uhr, außerhalb des Fensters 00:00–00:35;
+  238 aus Runde 1 plus die zwei neuen für B1 und B2).
+- `flutter analyze lib test/takt`: unverändert 1 Info in `test/takt/workout_takt_test.dart:159`,
+  nicht von diesem Feature.
+- Eigener Wegwerf-Test `test/takt/zz_pruefung04r2_db_test.dart` (wieder gelöscht, die Test-DB
+  `zz_pruefung04r2.db` löscht er selbst): echter Heute-Tab mit sqflite ffi, `metric_series` mit
+  sieben Tagen `readiness` (heute 50, sonst 70) und `strain` 10, dazu je Fall eine `day_result`-Zeile
+  für heute und ein Datenrand in `decoded_onehz`. Dann Ring → Batterie → „So entsteht die Ladung“.
+
+### Befunde aus Runde 1
+
+| ID | Ergebnis | Befund |
+|---|---|---|
+| B1 Woche heute vs. Ring | ✅ | **Leeres Payload `'{}'`:** Ring „–“, Woche heute „–“ (gestern 47), Wochenkarte erscheint. **`night_in_progress`** (Wach-Zeitpunkt vor 10 min, Datenrand am Wach-Zeitpunkt, `scalars.readiness` 2, `metric_series` heute 50; `getToday` meldet `night_in_progress`): Ring „–“, Woche heute „–“. Detail in beiden Fällen „–“ ohne Rechnung und ohne Kurve. `batteryWeek` nimmt für heute nur noch `todayMorning`. |
+| B2 Kurve steigt | ❌ (teilweise) | Die Kurve ist jetzt eine Ratsche über den höchsten Strain und steigt nicht mehr. Ring, „Stand jetzt“ und die heutige Säule rechnen aber weiter mit `HomeData.strain`, und das ist laut Upstream (`strainCurveFromSeries`: „`curve.last` is the headline“) der *letzte* Kurvenwert. Siehe B2′ unten. |
+| H2 Kurve nur von heute | ✅ | `BatteryDetailData.load` zeichnet die Kurve nur, wenn `DayStrainData.day` heute ist. Am normalen Tag mit echter DB erscheint die Kurve weiter (siehe unten). |
+| H4 Grund auf Deutsch | ✅ | Detail mit echter DB, leeres Payload: „Es gibt keine bewertete Nacht, aus der sich das ablesen lässt.“, kein englischer Text. Bei `night_in_progress`: „Die Erholung wird nach dem Aufwachen bewertet.“ Die Zeile unter den Ringen auf Heute (Feature 01) wurde nicht angefasst und nicht erneut geprüft. |
+| H5 Woche in eigenem `try` | ✅ | HRV/Ruhepuls und Woche laden jetzt in zwei getrennten `try`-Blöcken mit demselben `stillNewest`-Token. Ein Fehler in einem nimmt den anderen nicht mehr mit. Per Code geprüft, nicht mit einem werfenden Repo. |
+| H11 Doku | ✅ | `CLAUDE.md` nennt die Batterie nicht mehr unter „Nicht im MVP“. 01 und 07 haben je einen Eintrag unter „Änderungen“. Die alten Texte (01/A20 „Erholungsring“, 01-Nicht-Ziel „Die Batterie … (Feature 2)“, 07/H9 „Erholungsring antippen“) stehen wörtlich noch da, sind über die Änderungseinträge aber gedeckt. |
+
+### Normaler Tag mit echter DB
+Wach 07:00, Datenrand vor 10 min, `recovery_state` `final`, `activity_state` `ready`,
+`scalars.readiness` 78, `scalars.strain` 9,38, `series.strain_curve` minütlich von 07:00 auf 10,74
+steigend und bis jetzt auf 9,38 fallend (das Beispiel aus `load_trimp.dart`).
+
+- Ring: „55“, „von 78 %“ · Wochenkarte erscheint, heute „55“ · Detail-Wertkarte „55 %“,
+  Rechnung 78 / 9,4 / **Stand jetzt 55** · Kurve vorhanden, beginnt bei 78, steigt nirgends,
+  **endet bei 49** · „So entsteht die Ladung“ öffnet `ReadinessDetail`. Keine Exception.
+
+### Befunde ❌
+
+#### B2′ – Ring und „Stand jetzt“ laden weiter auf, die Kurve endet jetzt woanders (D4, Nicht-Ziel)
+Der Fix hat nur die Kurve gezähmt. Alles andere rechnet mit dem aktuellen Strain, und der sinkt an
+einem ruhigen Abend (Upstream: absichtlich nicht monoton).
+
+**Reproduktion (echte DB, oben):** Am Nachmittag beim Strain-Höchststand 10,74 hätte der Ring 49
+gezeigt, jetzt bei 9,38 zeigt er 55. Der Ring ist also über den Abend um 6 Punkte voller geworden,
+dasselbe gilt für „Stand jetzt“ und die heutige Säule. Im Detail steht „Stand jetzt 55“ über einer
+Kurve, die bei 49 endet und nie über 49 zurückkommt.
+
+Damit gilt weiter, was Runde 1 bei B2 beschrieben hat: Die Batterie lädt sich tagsüber sichtbar
+auf (Nicht-Ziel „Aufladen während des Tages“), nur jetzt im Ring statt in der Kurve. Dazu kommt ein
+neuer Widerspruch auf demselben Screen. Runde 1 hatte genau das als Folge der Ratsche angekündigt
+und die Wahl Felix überlassen. In `spec.md` steht unter „Änderungen“ kein Eintrag dazu. Konsequent
+wäre eins von beiden:
+- Ratsche überall: Ring, „Stand jetzt“, heutige Säule und die Säulen der Vortage rechnen mit dem
+  höchsten Strain des Tages (für Vortage steht der nicht in `metric_series`, nur in der Kurve).
+- Keine Ratsche: Spec-Satz „Strain kann am Abend sinken, die Batterie steigt dann leicht“, und die
+  Kurve folgt wieder dem Strain.
+Beides ist Felix' Entscheidung. Upstream warnt übrigens vor der Ratsche, weil das laufende Maximum
+an ruhigen Tagen nach oben driftet (bei Exponent 1,5 im unteren Bereich kaum sichtbar).
+
+### Hinweise (kein ❌)
+- **H1 (verschärft)** – Vorher liefen Kurvenende und „Stand jetzt“ nur auseinander, solange der
+  Strain ein Zwischenwert aus `wake_day_features` war. Jetzt laufen sie an jedem Tag auseinander,
+  an dem der Strain abends sinkt, auch mit fertigem Bundle. Gehört zu B2′.
+- **H12 – D7 kann einen Tag übersehen, den die Kurve unter 20 % zeigt.** Die Säulen der Vortage
+  nehmen den Strain am Tagesende. Hat der Höchststand die Batterie unter 20 % gezogen und ein ruhiger
+  Abend sie wieder über 20 % gebracht, ist der Tag in der Woche nicht rot, obwohl die Kurve
+  desselben Tages unter 20 % lag. Folgt aus B2′, nur theoretisch nachgerechnet.
+- **H13 – Vorläufige Ladung in der Woche nicht grau.** Bei `provisional` zeigt der Ring den Wert
+  grau, die heutige Säule zeigt denselben Wert in normaler Farbe. Gehört zu H3 aus Runde 1, nur
+  per Code.
+- H3, H6–H10 aus Runde 1 sind unverändert offen und waren nicht Teil des Fixes.
+
+### Regressionen (Stichproben)
+
+| Bezug | Ergebnis | Befund |
+|---|---|---|
+| D1, D2 | ✅ | Bestehende Tests grün. Mit echter DB 78 → 55 bei Strain 9,38, Formel unverändert. |
+| D3 | ✅ | Ring „Batterie“, Stand, „von 78 %“ mit echter DB. |
+| D4 | ✅ Mechanik / ❌ B2′ | Kurve erscheint am normalen Tag, Rechnung und Weg zur Erholung funktionieren. |
+| D5 | ✅ | „–“ und Grund, jetzt auch im Detail auf Deutsch. |
+| D6 | ✅ | Wochenkarte erscheint, sieben Säulen, Vortage aus dem Verlauf (70 bei Strain 10 → 47), heute aus den frischen Werten. |
+| D7 | ✅ | Bestehender Test grün. Siehe H12. |
+| D8 | ✅ | Bestehender Streifen-Test grün. Am Layout hat der Fix nichts geändert. |
+| 01/A1–A3, 07/H9 | ✅ | Alle Tests in `test/takt` grün, Ring → Batterie → Erholung mit echter DB. |

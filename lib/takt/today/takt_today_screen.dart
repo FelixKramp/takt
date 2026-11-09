@@ -14,7 +14,7 @@ import '../../models/activity_suggestion.dart';
 import '../../models/metric.dart';
 import '../../state/app_state.dart';
 import '../../ui2/activity/catalogue.dart';
-import '../../ui2/activity/day_strain.dart' show DayStrainDetail;
+import '../../ui2/activity/day_strain.dart' show DayStrainData, DayStrainDetail;
 import '../../ui2/activity/picker.dart' show ActivityPicker;
 import '../../ui2/activity/summary.dart' show ActivityResult, ActivitySummary;
 import '../../ui2/profile/profile.dart' show ProfileAvatar;
@@ -282,6 +282,14 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   /// Schlafscore, damit `_load` nicht länger braucht (G2).
   List<ChartPoint> _weekRecovery = const [], _weekStrain = const [];
 
+  /// Höchster Strain je Tag der Woche, aus den Tageskurven (B2′).
+  Map<DateTime, double> _peaks = const {};
+
+  static DateTime _today0() {
+    final n = DateTime.now();
+    return DateTime(n.year, n.month, n.day);
+  }
+
   Future<void> _loadLastValues() async {
     final repo = repoOf(context);
     if (repo == null) return;
@@ -308,10 +316,25 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     try {
       final recovery = pointsOf(await repo.getChart('recovery'));
       final strain = pointsOf(await repo.getChart('strain'));
+      final peaks = <DateTime, double>{};
+      final t0 = _today0();
+      for (var i = 0; i < 7; i++) {
+        final d = DateTime(t0.year, t0.month, t0.day - i);
+        try {
+          final s = await DayStrainData.load(repo, forDay: DateFormat('yyyy-MM-dd').format(d));
+          final sd = s.day;
+          // Nur die Kurve genau dieses Tages; der Strain-Screen fällt sonst
+          // auf den letzten fertigen Tag zurück.
+          if (sd == null || sd.year != d.year || sd.month != d.month || sd.day != d.day) continue;
+          final p = peakStrain(null, s.curve);
+          if (p != null) peaks[d] = p;
+        } catch (_) {}
+      }
       if (stillNewest(#taktLastValues, token)) {
         setState(() {
           _weekRecovery = recovery;
           _weekStrain = strain;
+          _peaks = peaks;
         });
       }
     } catch (_) {
@@ -360,6 +383,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         sleepScore: _sleepScore,
         hrvLast: _hrvLast,
         rhrLast: _rhrLast,
+        strainPeak: _peaks[_today0()],
         week: _weekRecovery.isEmpty && _weekStrain.isEmpty
             ? null
             : batteryWeek(
@@ -371,6 +395,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
                     ? null
                     : _data.readiness.value?.toDouble(),
                 todayStrain: _data.strain.value?.toDouble(),
+                peaks: _peaks,
               ),
         items: _items,
         lastData: lastDataAtOf(c),
@@ -422,7 +447,11 @@ class TaktTodayView extends StatelessWidget {
     this.hrvLast,
     this.rhrLast,
     this.week,
+    this.strainPeak,
   });
+
+  /// Feature 04, B2′: der höchste Strain heute, für den Batterie-Ring.
+  final double? strainPeak;
 
   final HomeData data;
 
@@ -464,7 +493,7 @@ class TaktTodayView extends StatelessWidget {
     final rings = [
       for (final k in HomeRingKind.values)
         if (k == HomeRingKind.recovery)
-          batteryRing(data, l, t)
+          batteryRing(data, l, t, strainPeak: strainPeak)
         else if (k == HomeRingKind.strain && data.strain.value != null)
           RingView(
             kind: k,

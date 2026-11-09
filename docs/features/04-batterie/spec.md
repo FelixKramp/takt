@@ -66,3 +66,4 @@ Aus vorhandenen Werten berechnet (Erholung, Strain, Strain-Verlauf), nichts Neue
 ## Änderungen
 2026-11-09 · D2 · Felix: sanftere Kurve statt linear. Linear wäre fast jeder Handballtag unter 20 % gefallen (Strain 16 bei 78 % ergäbe 19 %), und D7 hätte nichts mehr ausgesagt.
 2026-11-09 · D6 · Bau: sieben Batterie-Säulen statt zwei Linien. Zwei Linien mit verschiedenen Skalen (0 bis 100 % und 0 bis 21) lassen sich nicht gegeneinander lesen. In der Säule sieht man Ladung, Rest und Verbrauch direkt.
+2026-11-09 · D2, D4, D7 · Prüfung: Die Strain-Kurve von OpenStrap sinkt an ruhigen Abenden wieder. Weil Aufladen ein Nicht-Ziel ist, rechnen Ring, Detail, Kurve und Wochensäulen mit dem höchsten Strain des Tages bis dahin.

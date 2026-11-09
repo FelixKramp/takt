@@ -19,6 +19,17 @@ int batteryLeft(double morning, double? strain) {
   return (morning.clamp(0.0, 100.0) * (1 - math.pow(s, 1.5))).round();
 }
 
+/// Der höchste Strain eines Tages aus Tageswert und Kurve. Die Batterie
+/// rechnet überall damit: Ein ruhiger Abend senkt den Strain wieder, aufladen
+/// während des Tages ist aber ein Nicht-Ziel (Prüfung 04, B2 und B2′).
+double? peakStrain(double? day, Iterable<double?> curve) {
+  double? m = day;
+  for (final v in curve) {
+    if (v != null && (m == null || v > m)) m = v;
+  }
+  return m;
+}
+
 /// D4: der Stand pro Minute aus der Strain-Kurve des Tages. Die Kurve ist
 /// nicht monoton, ein ruhiger Abend zieht Strain wieder ab. Aufladen während
 /// des Tages ist ein Nicht-Ziel, deshalb zählt der höchste Strain bis dahin
@@ -58,6 +69,7 @@ List<BatteryDay> batteryWeek({
   required DateTime today,
   double? todayMorning,
   double? todayStrain,
+  Map<DateTime, double> peaks = const {},
 }) {
   final t0 = DateTime(today.year, today.month, today.day);
   double? on(List<ChartPoint> pts, DateTime d) {
@@ -76,15 +88,15 @@ List<BatteryDay> batteryWeek({
             ? BatteryDay(
                 day: d,
                 morning: todayMorning,
-                strain: todayStrain)
-            : BatteryDay(day: d, morning: on(recovery, d), strain: on(strain, d));
+                strain: peakStrain(todayStrain, [peaks[d]]))
+            : BatteryDay(day: d, morning: on(recovery, d), strain: peakStrain(on(strain, d), [peaks[d]]));
       }(),
   ];
 }
 
 /// D3, D5: der erste Ring. Ohne Erholung oder während der Nacht ist es
 /// OpenStraps Erholungsring mit neuem Namen, sonst der Stand der Batterie.
-RingView batteryRing(HomeData d, AppLocalizations? l, TaktText t) {
+RingView batteryRing(HomeData d, AppLocalizations? l, TaktText t, {double? strainPeak}) {
   final base = ringViewOf(HomeRingKind.recovery, d, l);
   final v = d.readiness.value?.toDouble();
   if (v == null || d.recoveryState == 'night_in_progress') {
@@ -102,7 +114,7 @@ RingView batteryRing(HomeData d, AppLocalizations? l, TaktText t) {
       why: base.why,
     );
   }
-  final strain = d.strain.value?.toDouble();
+  final strain = peakStrain(d.strain.value?.toDouble(), [strainPeak]);
   final left = batteryLeft(v, strain);
   return RingView(
     kind: HomeRingKind.recovery,

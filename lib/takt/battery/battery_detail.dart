@@ -109,7 +109,8 @@ class _BatteryDetailState extends State<BatteryDetail> {
     final t = TaktText.of(c);
     final d = _data;
     final morning = d?.morning;
-    final left = morning == null ? null : batteryLeft(morning, d!.strain);
+    final strain = d == null ? null : peakStrain(d.strain, d.strainCurve);
+    final left = morning == null ? null : batteryLeft(morning, strain);
     return Scaffold(
       backgroundColor: p.bg,
       body: SafeArea(
@@ -130,7 +131,7 @@ class _BatteryDetailState extends State<BatteryDetail> {
                         when: morning == null ? null : t.batteryMorning(morning.round()),
                         why: d.why == null ? t.noValueYet : uiText(c, d.why!),
                       ),
-                      if (morning != null && d.strain == null) ...[
+                      if (morning != null && strain == null) ...[
                         const SizedBox(height: S.x3),
                         StripeDodge(
                           line: true,
@@ -148,7 +149,7 @@ class _BatteryDetailState extends State<BatteryDetail> {
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             _Row(t.batteryMorningRow, '${morning.round()}', '%', first: true),
                             _Row(t.batteryStrainRow,
-                                d.strain == null ? '–' : displayFixed(d.strain!, 1), ''),
+                                strain == null ? '–' : displayFixed(strain, 1), ''),
                             _Row(t.batteryNowRow, '$left', '%'),
                             const SizedBox(height: S.x3),
                             StripeDodge(
