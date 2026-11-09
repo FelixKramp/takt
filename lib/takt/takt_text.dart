@@ -28,6 +28,32 @@ class TaktText {
   // Feature 08, T8: Kopf des Nachtragens, klein geschrieben wie alle Köpfe.
   String get logWorkoutHead => de ? 'training nachtragen' : 'log a workout';
   String get retimeHead => de ? 'zeiten ändern' : 'change the times';
+  // Feature 04: Batterie.
+  String get battery => de ? 'Batterie' : 'Battery';
+  String get batteryHead => de ? 'batterie' : 'battery';
+  String batteryOf(int pct) => de ? 'von $pct %' : 'of $pct%';
+  String batteryMorning(int pct) => de ? 'von $pct % am Morgen' : 'of $pct% this morning';
+  String get strainPending => de ? 'Belastung noch nicht berechnet' : 'Strain not scored yet';
+  String get batteryToday => de ? 'Verlauf heute' : 'Today';
+  String get batteryMorningRow => de ? 'Ladung am Morgen' : 'Charge this morning';
+  String get batteryStrainRow => de ? 'Belastung bisher' : 'Strain so far';
+  String get batteryNowRow => de ? 'Stand jetzt' : 'Left now';
+  String get batteryRule => de
+      ? 'Die Batterie startet mit deiner Erholung. Belastung zieht ab: wenig Belastung wenig, '
+          'viel Belastung überproportional. Stand = Ladung × (1 − (Strain ÷ 21)^1,5).'
+      : 'The battery starts at your recovery. Strain drains it: a little strain a little, '
+          'a lot of strain disproportionately more. Left = charge × (1 − (strain ÷ 21)^1.5).';
+  String get batteryWhy => de ? 'So entsteht die Ladung' : 'Where the charge comes from';
+  String get batteryWeek => de ? 'Woche' : 'Week';
+  String get batteryWeekHelp => de
+      ? 'Hell die Ladung am Morgen, voll der Rest am Abend.'
+      : 'Light is the morning charge, solid what was left in the evening.';
+  String batteryOver(String days) =>
+      de ? 'Mehr belastet als erholt: $days' : 'Strained more than recovered: $days';
+  String weekdayShort(DateTime d) => (de
+      ? const ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+      : const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])[d.weekday - 1];
+
   // Feature 09.
   String get pickSportHead => de ? 'sportart wählen' : 'choose a sport';
   String get recentSports => de ? 'Zuletzt' : 'Recent';

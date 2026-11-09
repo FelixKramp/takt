@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
 import 'package:openstrap_edge/takt/look.dart';
+import 'package:openstrap_edge/takt/battery/battery.dart';
+import 'package:openstrap_edge/takt/battery/battery_detail.dart';
+import 'package:openstrap_edge/takt/battery/battery_week.dart';
 import 'package:openstrap_edge/takt/sleep/sleep_head.dart';
 import 'package:openstrap_edge/models/metric.dart';
 import 'package:openstrap_edge/ui2/activity/day_strain.dart';
@@ -141,5 +144,39 @@ void main() {
     await t.tapAt(Offset(box2.left + box2.width * 35 / 119, box2.center.dy));
     await t.pump();
     await shot(t, find.byType(Scaffold).first, 'nachtragen_puls');
+  });
+
+  testWidgets('Batterie (Feature 04)', (t) async {
+    await detail(
+        t,
+        BatteryDetail(
+          data: BatteryDetailData(
+            morning: 78,
+            strain: 11.4,
+            strainCurve: [
+              for (var i = 0; i < 1440; i++)
+                i < 7 * 60 ? null : (i > 18 * 60 ? null : (i < 17 * 60 ? (i - 420) / 160 : 3.75 + (i - 1020) / 8.6))
+            ],
+          ),
+        ),
+        'batterie');
+    final today = DateTime(2026, 11, 9);
+    await detail(
+        t,
+        Scaffold(body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: TaktBatteryWeek(
+            today: today,
+            days: [
+              for (var i = 0; i < 7; i++)
+                BatteryDay(
+                  day: DateTime(2026, 11, 3 + i),
+                  morning: i == 2 ? null : <double>[80, 70, 0, 55, 66, 74, 78][i],
+                  strain: <double>[6, 16, 0, 18, 9, 12, 11.4][i],
+                ),
+            ],
+          ),
+        )),
+        'batterie_woche');
   });
 }

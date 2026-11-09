@@ -32,12 +32,13 @@ Während des Builds ist die Spec eingefroren: Abweichung → stoppen und Felix f
 | 01 | Heute-Screen | build | `docs/features/01-heute-screen/` |
 | 02 | Displaystreifen: Zahlen weichen einem Displayfehler aus | fertig | `docs/features/02-displaystreifen/` |
 | 03 | Schlafscore und Schlaf-Tab im Takt-Design | build | `docs/features/03-schlafscore/` |
-| 04 | Batterie statt Erholung, Wochenverlauf Belastung gegen Batterie | spec | `docs/features/04-batterie/` |
+| 04 | Batterie statt Erholung, Wochenverlauf Belastung gegen Batterie | build | `docs/features/04-batterie/` |
 | 05 | Aktivität und Gesundheit im Takt-Design | idee | — |
 | 06 | Schlaf-Tab ganz im Takt-Design, Tab-Leiste | build | `docs/features/06-schlaf-tab-ganz/` |
 | 07 | Detailscreens von Heute (HRV, Ruhepuls, Schritte, Strain, Erholung) | build | `docs/features/07-detailscreens/` |
 | 08 | Training von Heute und Workout nachtragen im Takt-Design | build | `docs/features/08-training/` |
 | 09 | Feinschliff Training: Sportart-Wahl, Pulskurve ablesen, Puls beim Nachtragen, Pulsabfall erklärt | build | `docs/features/09-training-feinschliff/` |
+| 10 | Körperalter: geschätztes Alter aus Schlaf, Ruhepuls, Schritten, Bewegung, Kraft | spec | `docs/features/10-koerperalter/` |
 
 ## Konventionen
 - Neuer Code liegt unter `lib/takt/`, Upstream-Dateien nur punktuell ändern, damit `git merge upstream/main` sauber bleibt.

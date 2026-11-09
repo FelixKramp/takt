@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
 import 'package:openstrap_edge/models/metric.dart';
+import 'package:openstrap_edge/takt/battery/battery.dart';
 import 'package:openstrap_edge/takt/sleep/sleep_score.dart';
 import 'package:openstrap_edge/takt/takt_text.dart';
 import 'package:openstrap_edge/takt/today/activity_items.dart';
@@ -68,7 +69,9 @@ void main() {
   testWidgets('A2: Drei Ringe zeigen ihre Werte', (t) async {
     await pump(t, TaktTodayView(data: full, pulse: livePulse));
     expect(find.byType(DialRing), findsNWidgets(3));
-    expect(find.text('62'), findsOneWidget);
+    // Feature 04, D3: Der erste Ring ist die Batterie, 62 % am Morgen.
+    expect(find.text('${batteryLeft(62, 13.8)}'), findsOneWidget);
+    expect(find.text('von 62 %'), findsOneWidget);
     expect(find.text(ringViewOf(HomeRingKind.sleep, full, null).value), findsOneWidget);
   });
 

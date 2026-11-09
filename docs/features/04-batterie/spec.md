@@ -1,6 +1,6 @@
 ---
 feature: 04-batterie
-freigegeben: offen
+freigegeben: 2026-11-09 (Felix: „Ja, sanftere Kurve“, vorher „dann kannst du die Battery auch schon umsetzen“)
 ---
 # Spec: Batterie statt Erholung
 
@@ -18,8 +18,10 @@ der Erholung lag.
   Batterie startet beim Aufwachen mit dem Erholungswert (0 bis 100 %).
 - **D2** – Verbrauch über den Tag
   Ausgangslage: Seit dem Aufwachen ist Belastung (Strain) angefallen · Handlung: Heute-Tab ansehen ·
-  Ergebnis: Stand = Ladung am Morgen × (1 − Strain / 21), auf ganze Prozent gerundet. Bei Strain 0
-  bleibt sie voll, bei Strain 21 ist sie leer. Die Rechnung steht in der Detailansicht.
+  Ergebnis: Stand = Ladung am Morgen × (1 − (Strain / 21)^1,5), auf ganze Prozent gerundet. Bei
+  Strain 0 bleibt sie voll, bei Strain 21 ist sie leer. Kleine Belastung zieht wenig ab, hohe
+  überproportional mehr: Bei 78 % am Morgen bleiben nach Strain 6 noch 66 %, nach 14 noch 36 %,
+  nach 16 noch 26 %. Die Rechnung steht in der Detailansicht.
 - **D3** – Ring
   Ausgangslage: Batterie berechnet · Handlung: Heute-Tab öffnen · Ergebnis: Der erste Ring heißt
   „Batterie“ statt „Erholung“, zeigt den aktuellen Stand in Prozent und darunter die Ladung vom
@@ -35,8 +37,10 @@ der Erholung lag.
 ### Wochenverlauf
 - **D6** – Belastung gegen Batterie
   Ausgangslage: Mehrere Tage berechnet · Handlung: Heute-Tab nach unten scrollen · Ergebnis: Unter
-  den Karten zeigt ein Diagramm die letzten sieben Tage. Eine Linie zeigt die Ladung am Morgen
-  (0 bis 100 %), eine zweite die Belastung des Tages (0 bis 21), heute markiert.
+  den Karten zeigt eine Karte die letzten sieben Tage als sieben Batterie-Säulen. Die helle Säule
+  ist die Ladung am Morgen, der volle Teil darin, was am Abend übrig war. Was dazwischen fehlt,
+  hat die Belastung verbraucht. Über jeder Säule steht der Rest in Prozent, darunter der Wochentag,
+  heute hervorgehoben. Tage ohne Erholung bleiben leer mit „–“.
 - **D7** – Zu viel gemacht
   Ausgangslage: An einem Tag hat die Belastung die Batterie unter 20 % gezogen · Handlung:
   Diagramm ansehen · Ergebnis: Dieser Tag ist hervorgehoben, mit dem Satz „Mehr belastet als
@@ -58,3 +62,7 @@ der Erholung lag.
 
 ## Daten
 Aus vorhandenen Werten berechnet (Erholung, Strain, Strain-Verlauf), nichts Neues gespeichert.
+
+## Änderungen
+2026-11-09 · D2 · Felix: sanftere Kurve statt linear. Linear wäre fast jeder Handballtag unter 20 % gefallen (Strain 16 bei 78 % ergäbe 19 %), und D7 hätte nichts mehr ausgesagt.
+2026-11-09 · D6 · Bau: sieben Batterie-Säulen statt zwei Linien. Zwei Linien mit verschiedenen Skalen (0 bis 100 % und 0 bis 21) lassen sich nicht gegeneinander lesen. In der Säule sieht man Ladung, Rest und Verbrauch direkt.

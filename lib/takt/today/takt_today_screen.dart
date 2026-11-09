@@ -22,7 +22,6 @@ import '../../ui2/screens/home_screen.dart';
 import '../../ui2/screens/log_workout.dart' show LogWorkout, bumpInsights;
 import '../../ui2/screens/workout_screen.dart' show taktRecentSports, taktWorkoutResult;
 import '../../ui2/screens/metric_detail.dart';
-import '../../ui2/screens/readiness_detail.dart';
 import '../../ui2/screens/sleep_detail.dart';
 import '../../ui2/ui2.dart';
 import '../brand.dart';
@@ -34,6 +33,9 @@ import 'activity_items.dart';
 import 'activity_list.dart';
 import 'auto_confirm.dart';
 import 'dial_ring.dart';
+import '../battery/battery.dart';
+import '../battery/battery_detail.dart';
+import '../battery/battery_week.dart';
 import 'freshness.dart';
 import 'minute_tick.dart';
 import 'pulse_display.dart';
@@ -278,6 +280,8 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   /// Letzte gespeicherte HRV und letzter Ruhepuls aus dem Verlauf, dieselbe
   /// Quelle wie die Detailansicht. Eigenständig und nicht abgewartet wie der
   /// Schlafscore, damit `_load` nicht länger braucht (G2).
+  List<ChartPoint> _weekRecovery = const [], _weekStrain = const [];
+
   Future<void> _loadLastValues() async {
     final repo = repoOf(context);
     if (repo == null) return;
@@ -290,10 +294,15 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
 
       final hrv = last(await repo.getChart('hrv'));
       final rhr = last(await repo.getChart('resting_hr'));
+      // Feature 04, D6: die Woche der Batterie aus den beiden Verläufen.
+      final recovery = pointsOf(await repo.getChart('recovery'));
+      final strain = pointsOf(await repo.getChart('strain'));
       if (stillNewest(#taktLastValues, token)) {
         setState(() {
           _hrvLast = hrv;
           _rhrLast = rhr;
+          _weekRecovery = recovery;
+          _weekStrain = strain;
         });
       }
     } catch (_) {
@@ -342,6 +351,15 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         sleepScore: _sleepScore,
         hrvLast: _hrvLast,
         rhrLast: _rhrLast,
+        week: _weekRecovery.isEmpty && _weekStrain.isEmpty
+            ? null
+            : batteryWeek(
+                recovery: _weekRecovery,
+                strain: _weekStrain,
+                today: DateTime.now(),
+                todayMorning: _data.readiness.value?.toDouble(),
+                todayStrain: _data.strain.value?.toDouble(),
+              ),
         items: _items,
         lastData: lastDataAtOf(c),
         syncing: syncing || derivingOf(c),
@@ -362,7 +380,8 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
 /// Wohin ein Ring führt. Der Schlafring öffnet den Schlaf-Screen mit dem
 /// Takt-Kopf, wie im Schlaf-Tab (Gerätetest 0.2.0, E1).
 Widget taktRingTarget(HomeRingKind k) => switch (k) {
-      HomeRingKind.recovery => const ReadinessDetail(),
+      // Feature 04, D4: Der erste Ring ist die Batterie.
+      HomeRingKind.recovery => const BatteryDetail(),
       HomeRingKind.strain => const DayStrainDetail(),
       HomeRingKind.sleep => SleepDetail(head: (day) => TaktSleepHeadLoader(day: day)),
     };
@@ -390,9 +409,14 @@ class TaktTodayView extends StatelessWidget {
     this.sleepScore,
     this.hrvLast,
     this.rhrLast,
+    this.week,
   });
 
   final HomeData data;
+
+  /// Feature 04, D6: die letzten sieben Tage der Batterie. Null oder ohne
+  /// einen Tag mit Ladung: keine Wochenkarte.
+  final List<BatteryDay>? week;
 
   /// Letzter gespeicherter Wert aus dem Verlauf (wie in der Detailansicht).
   /// Gilt nur, wenn die heutige Nacht noch keinen Wert hat, und trägt dann
@@ -427,7 +451,9 @@ class TaktTodayView extends StatelessWidget {
     final slept = data.sleepMin.value;
     final rings = [
       for (final k in HomeRingKind.values)
-        if (k == HomeRingKind.strain && data.strain.value != null)
+        if (k == HomeRingKind.recovery)
+          batteryRing(data, l, t)
+        else if (k == HomeRingKind.strain && data.strain.value != null)
           RingView(
             kind: k,
             label: ringViewOf(k, data, l).label,
@@ -511,6 +537,12 @@ class TaktTodayView extends StatelessWidget {
         key: const ValueKey('takt-activities'),
         child: ActivityList(items: items, onOpen: onOpen, onDiscard: onDiscard, onLog: onLog),
       ),
+      // Feature 04, D6: unter den Karten, nach den Aktivitäten, damit die
+      // ohne Scrollen sichtbar bleiben.
+      if (week != null && week!.any((d) => d.morning != null)) ...[
+        const SizedBox(height: S.x5),
+        TaktBatteryWeek(days: week!, today: now ?? DateTime.now()),
+      ],
     ]);
   }
 
