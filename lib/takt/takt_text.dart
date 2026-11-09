@@ -36,7 +36,7 @@ class TaktText {
   String get strainPending => de ? 'Belastung noch nicht berechnet' : 'Strain not scored yet';
   String get batteryToday => de ? 'Verlauf heute' : 'Today';
   String get batteryMorningRow => de ? 'Ladung am Morgen' : 'Charge this morning';
-  String get batteryStrainRow => de ? 'Belastung bisher' : 'Strain so far';
+  String get batteryStrainRow => de ? 'Höchste Belastung heute' : 'Peak strain today';
   String get batteryNowRow => de ? 'Stand jetzt' : 'Left now';
   String get batteryRule => de
       ? 'Die Batterie startet mit deiner Erholung. Belastung zieht ab: wenig Belastung wenig, '

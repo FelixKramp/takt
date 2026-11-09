@@ -236,3 +236,90 @@ an ruhigen Tagen nach oben driftet (bei Exponent 1,5 im unteren Bereich kaum sic
 | D7 | ✅ | Bestehender Test grün. Siehe H12. |
 | D8 | ✅ | Bestehender Streifen-Test grün. Am Layout hat der Fix nichts geändert. |
 | 01/A1–A3, 07/H9 | ✅ | Alle Tests in `test/takt` grün, Ring → Batterie → Erholung mit echter DB. |
+
+## Runde 3
+Geprüft am 2026-11-09 um 18:00 bis 19:00 Uhr von einem neuen, unabhängigen Prüfer-Agenten, Stand
+`e009d98` (HEAD). Nichts repariert.
+
+### Kurzfassung
+**B2′ ist behoben**, mit echter Datenbank nachgestellt: Ring, Wertkarte, „Stand jetzt“, Kurvenende
+und heutige Säule zeigen alle 49 statt 55. **H12 ist behoben:** Ein Vortag, den der Höchststand
+unter 20 % zog, ist rot, obwohl der Tageswert am Abend wieder darüber liegt. Kein ❌. Neu sind drei
+Hinweise zu Ladezeit, Kosten und einer zweiten Strain-Zahl im Detail. Regressionen keine.
+
+### Was gelaufen ist
+- `flutter test test/takt`: **243 Tests grün** (19:00 Uhr, außerhalb des Fensters 00:00–00:35;
+  240 aus Runde 2 plus die drei neuen für B2′).
+- `flutter analyze lib test/takt`: unverändert 1 Info in `test/takt/workout_takt_test.dart:159`,
+  nicht von diesem Feature.
+- Eigener Wegwerf-Test `test/takt/zz_pruefung04r3_db_test.dart` (wieder gelöscht, ebenso die
+  Test-DB `zz_pruefung04r3.db`): echter Heute-Tab mit sqflite ffi. `metric_series` mit sieben Tagen
+  `readiness` und `strain`, `day_result`-Bundles mit `series.strain_curve` für heute und drei
+  Vortage, `compute_freshness` `today` von Hand gesetzt (`final`/`ready`). Dazu ein Repo, das
+  `getDayStrain` verzögert oder werfen lässt, und eine Kostenmessung. Drei der Widget-Fälle hingen
+  beim Aufräumen (`LocalDb.close` mit noch laufenden Lesungen im Test). Ihre Ergebnisse waren da
+  schon ausgegeben. Das ist ein Problem des Tests, kein Befund der App.
+
+### Aufbau der Daten
+- **Heute:** Erholung 78, Tageswert Strain 9,38, Kurve minütlich ab 07:00, linear auf 10,74 bis
+  zur Mitte, dann auf 9,38 bis vor 10 Minuten.
+- **Gestern (So):** Erholung 70, Tageswert 12 (Rest 40), Kurve ab 08:00 auf 18 um 18:00 (Rest 14),
+  dann auf 12.
+- **Vorgestern:** Kurve bis 8, Tageswert 10, also unter dem Tageswert.
+- **Tag −3:** Bundle ohne Kurve.
+- **Tage −4 bis −6:** ohne Bundle.
+- HRV 63 und Ruhepuls 51 nur im Verlauf von gestern.
+
+### Befunde aus Runde 2
+
+| ID | Ergebnis | Befund |
+|---|---|---|
+| B2′ Ring/„Stand jetzt“ laden auf | ✅ | Ring „49“, „von 78 %“ · Woche heute „49“ · Detail: Wertkarte „49 %“, Rechnung 78 / 10,7 / **Stand jetzt 49** · Kurve beginnt bei 78, steigt nirgends (0 Anstiege), **endet bei 49**. Alle fünf Stellen stimmen überein. Vor dem Fix standen dort 55 und eine Kurve, die bei 49 endete. |
+| H1 Kurvenende vs. „Stand jetzt“ | ✅ (für den Abend) | Am Tag mit sinkendem Strain laufen beide nicht mehr auseinander, siehe oben. Mit einem Zwischenwert aus `wake_day_features`, der *über* der Bundle-Kurve liegt, kann die Kurve weiter unter dem Ende der Zahl liegen. Das ist der alte Teil von H1 aus Runde 1, nicht neu geprüft. |
+| H12 Vortag unter 20 % nicht rot | ✅ | Gestern: Tageswert 12 ergäbe 40, der Höchststand 18 ergibt **14**. Die Säule ist rot (`takt-battery-over-5`), der Satz lautet „Mehr belastet als erholt: So“. Vorgestern mit Kurve unter dem Tageswert bleibt 47, Tag −3 ohne Kurve bleibt 47 (Tageswert). |
+
+### Neue Risiken des Fixes
+
+| Thema | Ergebnis | Befund |
+|---|---|---|
+| Zuordnung Kurve → Tag | ✅ | Abgefragt werden genau die sieben Tage heute bis −6 (`2026-11-09` … `2026-11-03`). Der Höchststand von gestern (18) landet auf So, nicht auf Mo. Für Vortage fällt `getDayStrain` nicht zurück (`_isTodayLabel`), ohne Bundle kommt `{}`, und der Tag wird übersprungen. |
+| Rückfall auf anderen Tag | ✅ | Ohne heutiges Bundle liefert `getDayStrain(heute)` die Kurve von gestern (`_latestBundle`). `DayStrainData.day` ist dann der 08.11., der Vergleich im Screen verwirft sie. Mit echter DB (heute kein `day_result`, `showing_prior_overnight`): Ring „–“, Woche heute „–“, gestern weiter „14“. Sichtbar würde der Fehler ohnehin nicht: `getToday` gibt eine Erholung nur aus dem heutigen Bundle, und ohne Bundle zeigt der Ring „–“. Der Code schließt den Fall jetzt trotzdem selbst aus. |
+| Sommerzeit | ✅ (per Code) | Schlüssel in `_peaks` und in `batteryWeek` werden gleich gebaut (`DateTime(y, m, d − i)` Ortszeit), der Tag der Kurve wird über Jahr/Monat/Tag verglichen, nicht über Dauer. Die aktuelle Woche enthält keine Umstellung, deshalb nicht mit echten Daten nachgestellt. Am Rückstelltag behält `gridCurve` in der doppelten Stunde den späteren Wert. Läge der Höchststand in der ersten 02:00–03:00-Stunde, ginge er verloren. Praktisch bedeutungslos. |
+| Tag ohne Kurve | ✅ | Tag −3 (Bundle ohne Kurve, `day` null) → übersprungen, Säule aus dem Tageswert. Kurve unter Tageswert → Tageswert gewinnt (`peakStrain`). |
+| Fehler beim Laden | ✅ | `getDayStrain` wirft für jeden Tag: keine Exception, HRV „63“ und Ruhepuls „51“ bleiben, Wochenkarte erscheint. Ring und Säulen fallen still auf den Tageswert zurück (55, So 40), also auf das Verhalten vor dem Fix. Siehe H14. |
+| Ladezeit | ✅ blockiert nicht, siehe H14 | Mit 700 ms Verzögerung je Tageskurve: HRV ist früh da, `_load` (Ringe, Karten, Aktivitäten) wartet nicht. Die **Wochenkarte erscheint aber erst nach allen sieben Kurven**. Der Ring zeigt bis dahin 55 und springt dann auf 49. |
+| `stillNewest` | ✅ (per Code) | Beide `try`-Blöcke nutzen denselben Token, eine neuere Lesung verwirft die ältere ganz (Woche und Höchststände zusammen). `_peaks` wird nur bei Erfolg ersetzt und bleibt sonst stehen. Ein Höchststand von gestern kann nach Mitternacht nicht auf heute rutschen, weil der Schlüssel das Datum ist (`_peaks[_today0()]`). |
+
+### Hinweise (kein ❌)
+- **H14 – Wochenkarte und Höchststand warten auf sieben Tageskurven, nacheinander.** Vorher stand
+  die Woche nach zwei `getChart`-Lesungen. Jetzt stehen davor sieben `DayStrainData.load`
+  hintereinander. Beim ersten Öffnen (und wenn eine Lesung scheitert) zeigt der Ring kurz den Stand
+  aus dem aktuellen Strain, also genau das „Aufladen“ aus B2′, und springt dann. Wirft
+  `getDayStrain`, bleibt es still dabei. Für den Ring würde die heutige Kurve allein reichen, und die
+  Woche könnte zuerst mit Tageswerten erscheinen.
+- **H15 – Kosten pro Laden von Heute.** Jede Tageskurve liest `getDayStrain` *und* `getDayWear`
+  (in `DayStrainData.load`) und jedes Mal `_crossDay`, ohne `repo.sharingDayReads`. Gemessen: 15
+  Bundle-Decodes statt 0 je `_loadLastValues`, dazu 7 Crossday-Decodes. Fehlt das heutige Bundle,
+  dekodiert `_latestBundle` zweimal bis zu 14 Zeilen (ungezählt). Auf dem Mac mit synthetischen
+  90-KB-Bundles 30 ms. Echte Bundles sind größer, das Handy ist langsamer, und das läuft auf dem
+  UI-Isolate bei jedem Öffnen, nach jedem Sync und nach jeder Rückkehr aus einem Detail. Der Kommentar
+  an `_bundle` beschreibt genau diese Decode-Kosten als bekanntes Ruckel-Problem. Billiger wäre
+  `sharingDayReads` oder nur `series.strain_curve` lesen.
+- **H16 – Zwei Strain-Zahlen für heute.** Im Batterie-Detail steht „Belastung bisher 10,7“, der
+  Strain-Ring auf Heute daneben zeigt 9,4. Beides stimmt, gemeint ist aber Verschiedenes
+  (Höchststand gegen aktuellen Stand). Eine Beschriftung wie „Höchste Belastung heute“ würde den
+  Widerspruch auflösen. Die Spec-Änderung deckt die Rechnung, nicht die Beschriftung.
+- H3, H6–H10 und H13 aus Runde 1 und 2 sind unverändert offen und waren nicht Teil des Fixes.
+
+### Regressionen (Stichproben)
+
+| Bezug | Ergebnis | Befund |
+|---|---|---|
+| D1, D2 | ✅ | Kurve startet bei 78. 78 → 49 bei 10,74, 70 → 47 bei 10, 70 → 14 bei 18, Formel unverändert. |
+| D3 | ✅ | Ring „Batterie“, Stand, „von 78 %“ mit echter DB. |
+| D4 | ✅ | Ring → `BatteryDetail` mit echtem Repo, Kurve, Rechnung, „So entsteht die Ladung“ vorhanden. |
+| D5 | ✅ | Ohne heutige Erholung Ring „–“ und Woche heute „–“. |
+| D6 | ✅ | Sieben Säulen Di bis Mo, heute aus den frischen Werten, Vortage aus Verlauf und Kurve. |
+| D7 | ✅ | Siehe H12, roter Sonntag mit Satz. |
+| D8 | ✅ | Bestehender Streifen-Test grün. Der Fix ändert kein Layout. |
+| 01, 07 | ✅ | Alle 243 Tests in `test/takt` grün, HRV und Ruhepuls aus dem Verlauf auch bei werfenden Tageskurven. |
