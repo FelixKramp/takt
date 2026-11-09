@@ -75,3 +75,6 @@ neuen Daten dazu.
 
 ## Daten
 Nur, was die bisherigen Screens lesen. Nichts Neues gespeichert.
+
+## Änderungen
+2026-11-09 · Feature 04: Der erste Ring ist jetzt die Batterie. Er führt zum Batterie-Screen, der Erholungs-Screen ist von dort über „So entsteht die Ladung“ erreichbar.

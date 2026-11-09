@@ -5,7 +5,7 @@ Dünner Fork von OpenStrap Edge für WHOOP-Bänder: gleiche Algorithmen und Blue
 ## Produkt
 - **Problem:** OpenStrap zeigt Puls und Training nicht direkt beim Öffnen und ist unübersichtlich.
 - **MVP:** Heute-Screen mit Ringen, Live-Puls, Karten und Aktivitäten (Feature 01).
-- **Nicht im MVP:** Batterie statt Erholung, Redesign anderer Tabs, iOS.
+- **Nicht im MVP:** Redesign anderer Tabs, iOS. (Batterie kam als Feature 04 dazu.)
 
 ## Stack und Befehle
 Toolchain liegt in `~/Developer/tools` (Flutter 3.41.6, JDK 17, Android SDK).

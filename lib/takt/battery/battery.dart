@@ -19,10 +19,20 @@ int batteryLeft(double morning, double? strain) {
   return (morning.clamp(0.0, 100.0) * (1 - math.pow(s, 1.5))).round();
 }
 
-/// D4: der Stand pro Minute aus der kumulierten Strain-Kurve des Tages.
-List<double?> batteryCurve(double morning, List<double?> strainCurve) => [
-      for (final s in strainCurve) s == null ? null : batteryLeft(morning, s).toDouble(),
-    ];
+/// D4: der Stand pro Minute aus der Strain-Kurve des Tages. Die Kurve ist
+/// nicht monoton, ein ruhiger Abend zieht Strain wieder ab. Aufladen während
+/// des Tages ist ein Nicht-Ziel, deshalb zählt der höchste Strain bis dahin
+/// (Prüfung 04, B2).
+List<double?> batteryCurve(double morning, List<double?> strainCurve) {
+  double? peak;
+  return [
+    for (final s in strainCurve)
+      if (s == null)
+        null
+      else
+        batteryLeft(morning, peak = peak == null || s > peak ? s : peak).toDouble(),
+  ];
+}
 
 class BatteryDay {
   const BatteryDay({required this.day, this.morning, this.strain});
@@ -39,8 +49,9 @@ DateTime _dayOf(int sec) {
   return DateTime(d.year, d.month, d.day);
 }
 
-/// D6: die letzten sieben Tage bis [today]. Heute nimmt die frischen Werte von
-/// Heute, weil der Verlauf erst nach der Tagesrechnung einen Punkt hat.
+/// D6: die letzten sieben Tage bis [today]. Heute nimmt nur die frischen Werte
+/// von Heute, nie den Verlauf: Teilnacht-Rechnungen schreiben dort schon eine
+/// Erholung, die der Ring noch nicht zeigt (Prüfung 04, B1).
 List<BatteryDay> batteryWeek({
   required List<ChartPoint> recovery,
   required List<ChartPoint> strain,
@@ -64,8 +75,8 @@ List<BatteryDay> batteryWeek({
         return i == 0
             ? BatteryDay(
                 day: d,
-                morning: todayMorning ?? on(recovery, d),
-                strain: todayStrain ?? on(strain, d))
+                morning: todayMorning,
+                strain: todayStrain)
             : BatteryDay(day: d, morning: on(recovery, d), strain: on(strain, d));
       }(),
   ];

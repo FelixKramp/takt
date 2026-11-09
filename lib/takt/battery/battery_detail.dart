@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../l10n/decimal_text.dart' show displayFixed;
+import '../../l10n/display_text.dart' show uiText;
 import '../../ui2/activity/day_strain.dart' show DayStrainData;
 import '../../ui2/charts.dart' show AxisSpec, LineChart, axisInt;
 import '../../ui2/grammar.dart' show ChartFrame, Pressable, Surface;
@@ -52,7 +53,14 @@ class BatteryDetailData {
     final d = await HomeData.load(repo, l);
     List<double?> curve = const [];
     try {
-      curve = (await DayStrainData.load(repo)).curve;
+      final s = await DayStrainData.load(repo);
+      final now = DateTime.now();
+      // Rechnet heute noch, liefert der Strain-Screen die Kurve von gestern.
+      // Die gehört nicht zur Ladung von heute (Prüfung 04, H2).
+      final day = s.day;
+      if (day != null && day.year == now.year && day.month == now.month && day.day == now.day) {
+        curve = s.curve;
+      }
     } catch (_) {
       // Ohne Kurve bleiben Wertkarte und Rechnung.
     }
@@ -120,7 +128,7 @@ class _BatteryDetailState extends State<BatteryDetail> {
                         value: left?.toString(),
                         unit: '%',
                         when: morning == null ? null : t.batteryMorning(morning.round()),
-                        why: d.why ?? t.noValueYet,
+                        why: d.why == null ? t.noValueYet : uiText(c, d.why!),
                       ),
                       if (morning != null && d.strain == null) ...[
                         const SizedBox(height: S.x3),

@@ -294,19 +294,28 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
 
       final hrv = last(await repo.getChart('hrv'));
       final rhr = last(await repo.getChart('resting_hr'));
-      // Feature 04, D6: die Woche der Batterie aus den beiden Verläufen.
-      final recovery = pointsOf(await repo.getChart('recovery'));
-      final strain = pointsOf(await repo.getChart('strain'));
       if (stillNewest(#taktLastValues, token)) {
         setState(() {
           _hrvLast = hrv;
           _rhrLast = rhr;
+        });
+      }
+    } catch (_) {
+      // Ohne Verlauf bleiben die Karten beim heutigen Wert oder beim Strich.
+    }
+    // Feature 04, D6: die Woche der Batterie. Eigener Versuch, damit ein
+    // Fehler hier HRV und Ruhepuls nicht mitnimmt (Prüfung 04, H5).
+    try {
+      final recovery = pointsOf(await repo.getChart('recovery'));
+      final strain = pointsOf(await repo.getChart('strain'));
+      if (stillNewest(#taktLastValues, token)) {
+        setState(() {
           _weekRecovery = recovery;
           _weekStrain = strain;
         });
       }
     } catch (_) {
-      // Ohne Verlauf bleiben die Karten beim heutigen Wert oder beim Strich.
+      // Ohne Verlauf keine Wochenkarte.
     }
   }
 
@@ -357,7 +366,10 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
                 recovery: _weekRecovery,
                 strain: _weekStrain,
                 today: DateTime.now(),
-                todayMorning: _data.readiness.value?.toDouble(),
+                // Wie der Ring: in der Nacht noch keine Ladung (B1).
+                todayMorning: _data.recoveryState == 'night_in_progress'
+                    ? null
+                    : _data.readiness.value?.toDouble(),
                 todayStrain: _data.strain.value?.toDouble(),
               ),
         items: _items,

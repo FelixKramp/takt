@@ -66,6 +66,22 @@ void main() {
       expect(batteryCurve(78, [0, null, 6, 14]), [78, null, 66, 36]);
     });
 
+    test('B2: sinkt der Strain am Abend, lädt die Batterie nicht wieder auf', () {
+      expect(batteryCurve(78, [10.74, 9.38, null, 6]),
+          [batteryLeft(78, 10.74), batteryLeft(78, 10.74), null, batteryLeft(78, 10.74)]);
+    });
+
+    test('B1: heute ohne frische Erholung bleibt leer, auch wenn der Verlauf einen Wert hat', () {
+      final today = DateTime(2026, 11, 9);
+      final week = batteryWeek(
+        recovery: [(t: sec(DateTime(2026, 11, 9, 3)), v: 34)],
+        strain: const [],
+        today: today,
+      );
+      expect(week.last.morning, isNull);
+      expect(week.last.left, isNull);
+    });
+
     test('D6, D7: sieben Tage aus den Verläufen, heute aus den frischen Werten', () {
       final today = DateTime(2026, 11, 9);
       ({int t, double v}) pt(int daysAgo, double v) =>

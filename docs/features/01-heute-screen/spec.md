@@ -140,3 +140,4 @@ Algorithmen, aber ein neuer Heute-Screen, eigener Name und eigenes Logo.
 2026-11-06 · A1 · Android hält die App oft am Leben, deshalb gilt auch die Rückkehr nach mindestens 5 Minuten im Hintergrund als Öffnen, außer ein Workout läuft.
 2026-11-06 · A8, A9 · Prüfung: sofortiges Speichern schnitt laufende Trainings ab, und OpenStrap erkennt keine Sportart. Felix hat beides freigegeben, Handball kommt in den Katalog.
 2026-11-06 · A25 neu · Der Update-Hinweis von OpenStrap würde Edge anbieten, Felix will trotzdem von neuen Takt-Versionen erfahren.
+2026-11-09 · Feature 04: Der erste Ring ist jetzt die Batterie. Er führt zum Batterie-Screen, der Erholungs-Screen ist von dort über „So entsteht die Ladung“ erreichbar.
