@@ -7,11 +7,23 @@ import 'package:openstrap_edge/takt/look.dart';
 import 'package:openstrap_edge/takt/battery/battery.dart';
 import 'package:openstrap_edge/takt/battery/battery_detail.dart';
 import 'package:openstrap_edge/takt/battery/battery_week.dart';
+import 'package:openstrap_edge/takt/health/body_age.dart';
+import 'package:openstrap_edge/takt/health/body_age_view.dart';
+import 'package:openstrap_edge/takt/journal/journal_config.dart';
+import 'package:openstrap_edge/takt/journal/journal_tab.dart';
+import 'package:openstrap_edge/takt/journal/morning_sheet.dart';
 import 'package:openstrap_edge/takt/sleep/sleep_head.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:openstrap_edge/takt/sleep/sleep_score.dart';
+import 'package:openstrap_edge/takt/today/activity_items.dart';
+import 'package:openstrap_edge/takt/today/pulse_display.dart';
+import 'package:openstrap_edge/takt/today/pulse_state.dart';
+import 'package:openstrap_edge/takt/today/takt_today_screen.dart';
 import 'package:openstrap_edge/models/metric.dart';
 import 'package:openstrap_edge/ui2/activity/day_strain.dart';
 import 'package:openstrap_edge/ui2/activity/picker.dart';
 import 'package:openstrap_edge/ui2/activity/summary.dart';
+import 'package:openstrap_edge/ui2/screens/home_screen.dart' show HomeData;
 import 'package:openstrap_edge/ui2/screens/log_workout.dart';
 import 'package:openstrap_edge/ui2/screens/driver_breakdown.dart';
 import 'package:openstrap_edge/ui2/screens/metric_detail.dart';
@@ -178,5 +190,160 @@ void main() {
           ),
         )),
         'batterie_woche');
+  });
+
+  testWidgets('README Galerie (Phone-Format)', (t) async {
+    Future<void> phone(Widget w, String name) async {
+      t.view.physicalSize = const Size(400, 865);
+      t.view.devicePixelRatio = 1;
+      t.platformDispatcher.alwaysUse24HourFormatTestValue = true;
+      addTearDown(t.view.reset);
+      addTearDown(t.platformDispatcher.clearAlwaysUse24HourTestValue);
+      await t.pumpWidget(app(TaktLook(child: w)));
+      await t.pumpAndSettle();
+      await shot(t, find.byType(Scaffold).first, name);
+    }
+
+    final today = DateTime(2026, 11, 9, 18, 30);
+    final home = HomeData(
+      readiness: Metric.parse({'value': 81, 'unit': '%'}),
+      sleepMin: Metric.parse({'value': 452, 'unit': 'min'}),
+      sleepNeedMin: Metric.parse({'value': 470, 'unit': 'min'}),
+      rhr: Metric.parse({'value': 52, 'unit': 'bpm'}),
+      steps: Metric.parse({'value': 8940, 'unit': 'steps'}),
+      strain: Metric.parse({'value': 12.4, 'unit': ''}),
+      calories: Metric.parse({'value': 740, 'unit': 'kcal'}),
+    );
+    final startTs = DateTime(2026, 11, 9, 17).millisecondsSinceEpoch ~/ 1000;
+    await phone(
+      Scaffold(
+        body: TaktTodayView(
+          data: home,
+          pulse: const PulseView(
+            state: PulseState(PulseKind.live, bpm: 64),
+            trace: [
+              58, 60, 62, 65, 64, 61, 59, 60, 63, 66,
+              64, 62, 61, 63, 67, 65, 63, 62, 64, 66,
+              65, 63, 62, 64, 65, 64, 63, 64,
+            ],
+          ),
+          lastData: today.subtract(const Duration(minutes: 4)),
+          hrv: Metric.parse({'value': 74, 'unit': 'ms'}),
+          sleepScore: const NightScore(
+            score: 86,
+            duration: 94,
+            efficiency: 88,
+            regularity: 78,
+          ),
+          strainPeak: 12.4,
+          now: today,
+          items: [
+            ActivityItem(
+              id: 'handball-1',
+              startTs: startTs,
+              endTs: startTs + 75 * 60,
+              type: 'Handball',
+              detected: false,
+              durationMin: 75,
+              avgHr: 152,
+              maxHr: 184,
+              strain: 12.4,
+              calories: 640,
+            ),
+          ],
+          week: [
+            for (var i = 0; i < 7; i++)
+              BatteryDay(
+                day: DateTime(2026, 11, 3 + i),
+                morning: <double>[82, 74, 65, 58, 70, 77, 81][i],
+                strain: <double>[7.2, 14.5, 11.0, 16.1, 8.4, 10.9, 12.4][i],
+              ),
+          ],
+        ),
+      ),
+      'readme_today',
+    );
+
+    await phone(
+      Scaffold(
+        body: SleepDetail(
+          embedded: true,
+          data: sleepData(),
+          head: (_) => TaktSleepHead(view: view),
+        ),
+      ),
+      'readme_sleep',
+    );
+
+    await phone(
+      BatteryDetail(
+        data: BatteryDetailData(
+          morning: 81,
+          strain: 12.4,
+          strainCurve: [
+            for (var i = 0; i < 1440; i++)
+              i < 7 * 60 ? null : (i > 19 * 60 ? null : (i < 17 * 60 ? (i - 420) / 140 : 4.28 + (i - 1020) / 14.7))
+          ],
+        ),
+      ),
+      'readme_battery',
+    );
+
+    final ageSnap = BodyAgeCalculator.calculate(
+      realAge: 34,
+      dataDays: 28,
+      avgSleepHours: 7.5,
+      avgSri: 81,
+      avgRhr: 52,
+      avgSteps: 8940,
+      moderateMinPerWeek: 155,
+      intensiveMinPerWeek: 38,
+      strengthMinPerWeek: 50,
+      prevWeekDelta: -0.4,
+    );
+    await phone(TaktBodyAgeDetail(snapshot: ageSnap), 'readme_body_age');
+    await phone(ActivitySummary(handball(), weightKg: 75), 'readme_workout');
+
+    SharedPreferences.setMockInitialValues({});
+    await phone(
+      Scaffold(
+        body: Align(
+          alignment: Alignment.bottomCenter,
+          child: MorningSheet(
+            // Für das öffentliche README ohne die privaten Fragen (J20).
+            config: JournalConfig([
+              for (final q in JournalConfig.standardQuestions)
+                if (!q.isPrivate) q,
+            ]),
+            calYesterday: '2026-11-08',
+            calToday: '2026-11-09',
+            initialYesterdayAnswers: const {
+              'vitamin_d': 1.0,
+              'read_evening': 1.0,
+              'meat': 0.0,
+            },
+            initialTodayAnswers: const {
+              'feeling': 3.0,
+            },
+            onSave: (_, _) async {},
+            onDismiss: () async {},
+            onOpenFullJournal: () {},
+          ),
+        ),
+      ),
+      'readme_morning_sheet',
+    );
+
+    await phone(
+      const Scaffold(
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(16),
+            child: JournalTab(),
+          ),
+        ),
+      ),
+      'readme_journal',
+    );
   });
 }
