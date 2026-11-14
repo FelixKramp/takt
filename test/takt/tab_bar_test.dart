@@ -40,17 +40,15 @@ void main() {
     expect(pills, isEmpty);
   });
 
-  testWidgets('F2: Schlaf-Tab in der Farbe des Schlafscores', (t) async {
-    TaktSleepBand.current.value = ScoreBand.gut;
-    await pump(t, ShellDomain.sleep);
-    expect(label(t, 'Schlaf').style?.color, ScoreBand.gut.ink(false));
-    TaktSleepBand.current.value = ScoreBand.knapp;
-    await t.pump();
-    expect(label(t, 'Schlaf').style?.color, ScoreBand.knapp.ink(false));
-  });
-
-  testWidgets('F2: ohne Score ist der Schlaf-Tab orange wie die anderen', (t) async {
+  testWidgets('Gerätetest 0.5.1: Schlaf-Tab bleibt Takt-Orange, die Stufe wechselt ihn nicht mehr', (t) async {
+    // Vorher sprang er beim Laden von Orange auf Blau oder Rot. Die Stufe steht
+    // am Ring, den Balken und am Wort, nicht mehr am Tab.
     await pump(t, ShellDomain.sleep);
     expect(label(t, 'Schlaf').style?.color, ScoreBand.okay.ink(false));
+    for (final band in ScoreBand.values) {
+      TaktSleepBand.current.value = band;
+      await t.pump();
+      expect(label(t, 'Schlaf').style?.color, ScoreBand.okay.ink(false), reason: band.name);
+    }
   });
 }

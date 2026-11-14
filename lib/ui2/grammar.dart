@@ -29,6 +29,7 @@
 //     and the golden sweep measures every Pressable in every case rather than
 //     the five tabs of the shell.
 
+import '../takt/header.dart' show TaktHeader;
 import '../takt/look.dart';
 import '../takt/pult_tokens.dart';
 import '../takt/stripe/stripe.dart';
@@ -2460,15 +2461,24 @@ class ChartFrame extends StatelessWidget {
     final measure = taktDodge(c, Text(
       uiText(c, unit),
       style: F.over.copyWith(color: p.ink3),
+      textAlign: stacked ? TextAlign.start : TextAlign.end,
     ), align: 1);
     if (!stacked) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(child: name),
-          const SizedBox(width: S.x2),
-          measure,
-        ],
+      // TAKT: Die Einheiten bekommen höchstens 55 % der Zeile und brechen um.
+      // Eine lange Liste („bpm · ms · br/min · rel“) lief sonst über den Rand
+      // (Gerätetest 0.5.1, Schlaf: „Im Verlauf der Nacht“).
+      return LayoutBuilder(
+        builder: (c, box) => Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(child: name),
+            const SizedBox(width: S.x2),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: box.maxWidth * 0.55),
+              child: measure,
+            ),
+          ],
+        ),
       );
     }
     return Column(
@@ -2865,6 +2875,15 @@ class NavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext c) {
+    if (TaktLook.on(c)) {
+      return TaktHeader(
+        title,
+        back: true,
+        onBack: onBack,
+        trailing: trailing,
+        sub: sub.isEmpty ? null : Text(sub, style: F.cap.copyWith(color: P.of(c).ink2)),
+      );
+    }
     final p = P.of(c);
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 52),

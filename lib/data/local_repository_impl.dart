@@ -4047,18 +4047,30 @@ class LocalRepositoryImpl extends LocalRepository {
         (od['key'] as String): [for (final d in dates) maps[od['key']]![d]],
     };
 
+    // Custom field definitions so a user-invented field reads by its own name
+    // and unit rather than its storage key.
+    final customs = (await getJournalFields()).where((f) => f.custom).toList();
+
+    // TAKT (Feature 13, J16): Custom yes/no habits and standard yes/no habits
+    // are paired with the night after (lag 1).
+    final effectiveLagDays = <String, int>{
+      ...kJournalFieldLagDays,
+      'vitamin_d': 1,
+      'read_evening': 1,
+      'meat': 1,
+      'priv_solo': 1,
+      for (final c in customs)
+        if (c.max == 1.0) c.key: 1,
+    };
+
     final corr = ana.journalNumericCorrelations(
       journal: days,
       dates: dates,
       outcomes: outcomes,
       // Keyed by this app's field keys; analytics' own map uses generic names
       // that match none of them, which paired every behaviour at lag 0.
-      fieldLagDays: kJournalFieldLagDays,
+      fieldLagDays: effectiveLagDays,
     );
-
-    // Custom field definitions so a user-invented field reads by its own name
-    // and unit rather than its storage key.
-    final customs = (await getJournalFields()).where((f) => f.custom).toList();
     final betterOf = {
       for (final od in outcomeDefs)
         od['key'] as String: od['higherBetter'] as bool,

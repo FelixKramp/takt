@@ -10,6 +10,7 @@
 // knows — how much it has measured, and from what.
 
 import '../../takt/brand.dart' show kTaktNoReportUpload;
+import '../../takt/look.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +18,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_state.dart';
 import '../../state/locale_controller.dart';
+import '../../theme/theme_controller.dart';
 import '../ui2.dart';
 import '../screens/coach.dart' show CoachSetup, coachSubtitle;
 import '../screens/home_screen.dart' show deviceBatteryOf;
@@ -141,7 +143,7 @@ Widget settingsGroup(BuildContext c, String title, List<Widget> rows) {
 /// so a caller whose own numbers the pushed screen can change is able to
 /// re-read them.
 Future<void> goto(BuildContext c, Widget w) =>
-    Navigator.of(c).push(MaterialPageRoute<void>(builder: (_) => w));
+    Navigator.of(c).push(MaterialPageRoute<void>(builder: (_) => TaktLook(child: w)));
 
 /// The one way into the profile stack. [ProfileAvatar] calls this — profile
 /// is a pushed route, never a tab.
@@ -231,6 +233,43 @@ Future<void> _pickLanguage(BuildContext c) async {
                     : null,
                 onTap: () async {
                   await ctrl.setCode(code);
+                  if (sheet.mounted) Navigator.of(sheet).pop();
+                },
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// TAKT (G37): the appearance as a list to choose from. The row used to step
+/// System, Light, Dark on every tap, so a person could not tell what the next
+/// tap would do. Settings opens the same sheet.
+Future<void> pickAppearance(BuildContext c) async {
+  final theme = c.read<ThemeController?>();
+  if (theme == null) return;
+  final p = P.of(c);
+  await showModalBottomSheet<void>(
+    context: c,
+    backgroundColor: p.card,
+    showDragHandle: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (sheet) => SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final choice in AppThemeChoice.values)
+              ListTile(
+                title: Text(choice.localized(sheet),
+                    style: F.body.copyWith(color: p.ink)),
+                trailing: theme.choice == choice
+                    ? Icon(LucideIcons.check, size: 18, color: p.on(C.blue))
+                    : null,
+                onTap: () async {
+                  await theme.setChoice(choice);
                   if (sheet.mounted) Navigator.of(sheet).pop();
                 },
               ),
@@ -347,6 +386,7 @@ class ProfileHomeView extends StatelessWidget {
     final p = P.of(c);
     final l = AppLocalizations.of(c);
     final s = stats;
+    final theme = c.watch<ThemeController?>();
     return Scaffold(
       backgroundColor: p.bg,
       body: SafeArea(
@@ -403,6 +443,17 @@ class ProfileHomeView extends StatelessWidget {
                       AppLocalizations.of(c)?.profileLanguage ?? 'Language',
                       sub: _languageLabel(c, c.watch<LocaleController>().code),
                       onTap: () => _pickLanguage(c))),
+                  // TAKT (G37): a choice, not a tap that cycles. Without a
+                  // ThemeController above (a test, a gallery) there is no
+                  // appearance to choose, so no row rather than a crash.
+                  if (theme != null)
+                    SetRow(
+                      LucideIcons.sunMedium,
+                      C.orange,
+                      l?.settingsAppearanceRowTitle ?? 'Appearance',
+                      sub: theme.choice.localized(c),
+                      onTap: () => pickAppearance(c),
+                    ),
                 ]),
                 settingsGroup(c, l?.profileYourDataGroup ?? 'Your data', [
                   SetRow(LucideIcons.database, C.green,

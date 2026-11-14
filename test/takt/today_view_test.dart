@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
 import 'package:openstrap_edge/models/metric.dart';
 import 'package:openstrap_edge/takt/battery/battery.dart';
+import 'package:openstrap_edge/takt/pult_tokens.dart' show Pult;
 import 'package:openstrap_edge/takt/sleep/sleep_score.dart';
 import 'package:openstrap_edge/takt/takt_text.dart';
 import 'package:openstrap_edge/takt/today/activity_items.dart';
@@ -190,6 +191,70 @@ void main() {
     expect(logged, isTrue);
   });
 
+  testWidgets('Workout starten und Nachtragen: zwei gleich große flache Tasten nebeneinander (14.11.)', (t) async {
+    var started = 0;
+    var logged = 0;
+    await pump(
+        t,
+        TaktTodayView(
+            data: data0,
+            pulse: livePulse,
+            onStart: () => started++,
+            onLog: () => logged++));
+    await t.drag(find.byType(ListView), const Offset(0, -900));
+    await t.pump();
+    final text = const TaktText(true);
+    expect(find.text(text.startWorkout), findsOneWidget);
+    final startBox = find.byKey(const ValueKey('takt-start-workout'));
+    final logBox = find.byKey(const ValueKey('takt-log-workout'));
+    final start = t.getSize(startBox);
+    final log = t.getSize(logBox);
+    // Gerätetest 14.11.: der alte 64-pt-Knopf war zu groß.
+    expect(start.height, lessThanOrEqualTo(48));
+    expect(start.height, log.height);
+    expect(start.width, closeTo(log.width, 1));
+    expect(t.getTopLeft(startBox).dy, t.getTopLeft(logBox).dy, reason: 'in einer Reihe');
+    // Komplett transparent, keine Farbe: nur Rahmen und normale Schrift
+    // (Gerätetest 0.5.1).
+    final box = t.widget<Container>(find.byKey(const ValueKey('takt-start-workout')));
+    final deco = box.decoration! as BoxDecoration;
+    expect(deco.color == null || deco.color!.a == 0, isTrue, reason: 'keine Fläche');
+    final border = (deco.border! as Border).top.color;
+    expect(border, isNot(Pult.orange));
+    expect(border, isNot(Pult.orangeFor(true)));
+    final label = t.widget<Text>(find.text(text.startWorkout));
+    expect(label.style!.color, isNot(Pult.orange));
+    expect(label.style!.color, isNot(Pult.orangeFor(true)));
+    await t.tap(find.text(text.startWorkout));
+    await t.tap(find.text(text.logWorkout));
+    expect((started, logged), (1, 1));
+  });
+
+  testWidgets('Workout starten fehlt auf einem vergangenen Tag und ohne onStart (läuft schon eins)', (t) async {
+    await pump(
+        t,
+        TaktTodayView(
+            data: data0, pulse: livePulse, isToday: false, onStart: () {}, onLog: () {}));
+    await t.drag(find.byType(ListView), const Offset(0, -900));
+    await t.pump();
+    expect(find.text(const TaktText(true).startWorkout), findsNothing);
+    expect(find.text(const TaktText(true).logWorkout), findsOneWidget);
+    await pump(t, TaktTodayView(data: data0, pulse: livePulse, onLog: () {}));
+    await t.drag(find.byType(ListView), const Offset(0, -900));
+    await t.pump();
+    expect(find.text(const TaktText(true).startWorkout), findsNothing);
+  });
+
+  testWidgets('Gerätetest 0.5.1: Schlafring ist ohne Score nicht blau (blau hieße „gut“)', (t) async {
+    await pump(t, TaktTodayView(data: full, pulse: livePulse));
+    final sleep = t
+        .widgetList<DialRing>(find.byType(DialRing))
+        .firstWhere((r) => r.view.kind == HomeRingKind.sleep);
+    expect(sleep.color, isNot(ScoreBand.gut.fill));
+    expect(sleep.color, isNot(Pult.blue));
+    expect(sleep.color, isNot(Pult.blueOnDark));
+  });
+
   testWidgets('A22: Mehr als fünf lassen sich aufklappen', (t) async {
     await pump(t, TaktTodayView(data: full, pulse: livePulse, items: [for (var i = 0; i < 7; i++) item('w$i', 8 + i)]));
     await t.drag(find.byType(ListView), const Offset(0, -900));
@@ -220,10 +285,10 @@ void sleepScoreRingTests() {
     await t.pump();
     final rings = t.widgetList<DialRing>(find.byType(DialRing)).toList();
     final sleep = rings.firstWhere((r) => r.view.kind == HomeRingKind.sleep);
-    expect(sleep.view.value, '83');
-    expect(sleep.view.frac, closeTo(0.83, 0.001));
+    expect(sleep.view.value, '65');
+    expect(sleep.view.frac, closeTo(0.65, 0.001));
     expect(sleep.view.sub, contains('7:12'));
-    expect(sleep.color, ScoreBand.okay.fill);
+    expect(sleep.color, ScoreBand.knapp.fill);
   });
 
   testWidgets('C11: ohne Score bleibt der Schlafring wie bisher', (t) async {

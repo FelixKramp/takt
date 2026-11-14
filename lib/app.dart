@@ -1,3 +1,4 @@
+import 'takt/look.dart';
 import 'takt/today/takt_today_screen.dart';
 import 'takt/today/visibility.dart';
 import 'dart:async';
@@ -420,8 +421,10 @@ ShellDomain domainForSavedTab(int old) => switch (old) {
 /// old five-tab index translated, so an upgrade lands where the user was.
 ShellDomain restoredShellTab() {
   final v2 = Prefs.getInt(Prefs.shellTabV2, -1);
-  if (v2 >= 0 && v2 < ShellDomain.values.length) return ShellDomain.values[v2];
-  return domainForSavedTab(Prefs.getInt(Prefs.shellTab, 0));
+  if (v2 >= 0 && v2 < ShellDomain.values.length) {
+    return shellDomainOrToday(ShellDomain.values[v2]);
+  }
+  return shellDomainOrToday(domainForSavedTab(Prefs.getInt(Prefs.shellTab, 0)));
 }
 
 /// A deep-link sub-screen route → the domain it belongs to.
@@ -616,7 +619,9 @@ class _ShellState extends State<_Shell> with WidgetsBindingObserver {
     if (tab >= 0) _go(domainForTab(tab));
   }
 
-  void _go(ShellDomain d) {
+  void _go(ShellDomain want) {
+    // The tab that will really be in front, not the one that was asked for.
+    final d = shellDomainOrToday(want);
     if (d == _domain) return;
     taktTodayVisible.value = d == ShellDomain.today;
     setState(() {
@@ -642,7 +647,11 @@ class _ShellState extends State<_Shell> with WidgetsBindingObserver {
     return AppShell(
       key: ValueKey(_rev),
       initial: _domain,
+      // TAKT: Aktivität-Tab per kTaktActivityTabEnabled (app_shell.dart)
+      domains: visibleShellDomains(),
       banner: live ? const _LiveSessionBar() : null,
+      // TAKT: Gesundheit vorladen, sonst lädt der Tab erst beim Antippen.
+      prebuild: const {ShellDomain.health},
       onSelect: (d) {
         _domain = d;
         taktTodayVisible.value = d == ShellDomain.today;
@@ -652,7 +661,7 @@ class _ShellState extends State<_Shell> with WidgetsBindingObserver {
         ShellDomain.today => const TaktTodayScreen(),
         ShellDomain.sleep => const SleepTab(),
         ShellDomain.activity => const WorkoutScreen(),
-        ShellDomain.health => const HealthScreen(),
+        ShellDomain.health => const TaktLook(child: HealthScreen()),
       },
     );
   }

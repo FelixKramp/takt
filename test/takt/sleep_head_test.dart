@@ -32,7 +32,7 @@ final view = TaktSleepView(
     NightBar('2026-11-05', 79),
     NightBar('2026-11-06', 91),
     NightBar('2026-11-07', 77),
-    NightBar('2026-11-08', 83),
+    NightBar('2026-11-08', 65),
   ],
   week: const [
     WeekNight('2026-11-03', bed: 220, wake: 650, bedRec: 210, wakeRec: 660),
@@ -70,14 +70,14 @@ void main() {
 
   testWidgets('C4: Score groß, Stufe, Zeiten, drei Teile, Gewichtung', (t) async {
     await pump(t, view);
-    expect(find.text('83'), findsWidgets);
-    expect(find.text('okay'), findsOneWidget);
+    expect(find.text('65'), findsWidgets);
+    expect(find.text('knapp'), findsOneWidget);
     expect(find.text('7:12 Std geschlafen'), findsOneWidget);
     expect(find.textContaining('bis'), findsWidgets);
     for (final l in ['Dauer zu Bedarf', 'Effizienz', 'Regelmäßigkeit']) {
       expect(find.text(l), findsWidgets);
     }
-    expect(find.textContaining('Dauer zählt zur Hälfte'), findsOneWidget);
+    expect(find.textContaining('Dauer zählt 60 %'), findsOneWidget);
   });
 
   testWidgets('C12: Ring und Balken in der Farbe der Stufe', (t) async {
@@ -86,10 +86,10 @@ void main() {
         .map((c) => c.painter)
         .whereType<DialPainter>()
         .single;
-    expect(dial.litColor, ScoreBand.okay.fill);
-    expect(dial.lit, dialLitTicks(0.83));
-    final word = t.widget<Text>(find.text('okay'));
-    expect(word.style?.color, ScoreBand.okay.ink(false));
+    expect(dial.litColor, ScoreBand.knapp.fill);
+    expect(dial.lit, dialLitTicks(0.65));
+    final word = t.widget<Text>(find.text('knapp'));
+    expect(word.style?.color, ScoreBand.knapp.ink(false));
   });
 
   testWidgets('C5: sieben Nächte mit Wochentag, Lücke ohne Zahl', (t) async {
@@ -141,7 +141,7 @@ void main() {
   testWidgets('C2/Randfall: keine Nacht, ein Hinweis statt Zahlen', (t) async {
     await pump(t, const TaktSleepView(bedRecTonight: 1395, wakeRecTonight: 420));
     expect(find.textContaining('Trag das Band über Nacht'), findsOneWidget);
-    expect(find.text('okay'), findsNothing);
+    expect(find.text('knapp'), findsNothing);
   });
 
   testWidgets('C2: Nacht ohne Bedarf, Strich und Grund', (t) async {

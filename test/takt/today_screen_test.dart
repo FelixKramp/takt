@@ -10,6 +10,7 @@ import 'package:openstrap_edge/l10n/app_localizations.dart';
 import 'package:openstrap_edge/models/activity_suggestion.dart';
 import 'package:openstrap_edge/state/app_state.dart';
 import 'package:openstrap_edge/sync/paired_device.dart' show PairedDevice;
+import 'package:openstrap_edge/takt/now.dart';
 import 'package:openstrap_edge/takt/today/takt_today_screen.dart';
 import 'package:openstrap_edge/takt/today/visibility.dart';
 import 'package:openstrap_edge/theme/theme_controller.dart';
@@ -78,12 +79,17 @@ void main() {
   late LocalRepositoryImpl repo;
 
   Future<void> seed(WidgetTester t) async {
-    SharedPreferences.setMockInitialValues({});
     taktTodayVisible.value = true;
     t.view.physicalSize = const Size(390, 1600);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    final now = DateTime.now();
+    // Feste Uhr: 14:00 am heutigen Tag. Zwischen 00:00 und 00:35 lag der
+    // Wachtag sonst beim Vortag und drei Tests wurden rot.
+    final real = DateTime.now();
+    final now = DateTime(real.year, real.month, real.day, 14);
+    taktNow = () => now;
+    addTearDown(() => taktNow = DateTime.now);
+    SharedPreferences.setMockInitialValues({'takt.journal.sheet.last': todayLabel(now)});
     start = DateTime(now.year, now.month, now.day, 0, 5).millisecondsSinceEpoch ~/ 1000;
     await t.runAsync(() async {
       await LocalDb.close();
@@ -138,7 +144,7 @@ void main() {
   testWidgets('A8: Laufendes Training steht offen in der Liste und bleibt ungespeichert', (t) async {
     await seed(t);
     await open(t, at(start + 1800 + 60));
-    expect(find.textContaining('erkannt,'), findsOneWidget);
+    expect(find.text('erkannt'), findsOneWidget);
     expect(find.text('Training'), findsOneWidget);
     await t.runAsync(() async => expect((await repo.pendingActivities()).length, 1));
     await close(t);
@@ -152,7 +158,7 @@ void main() {
       final w = await repo.getWorkouts(range: 'week');
       expect((w['workouts'] as List).single['id'], startsWith('suggestion:'));
     });
-    expect(find.textContaining('erkannt,'), findsOneWidget);
+    expect(find.text('erkannt'), findsOneWidget);
     await close(t);
   });
 
@@ -177,7 +183,7 @@ void main() {
       (t) async {
     await seed(t);
     await open(t, at(start + 1800 + 1900));
-    await t.tap(find.textContaining('erkannt,'));
+    await t.tap(find.text('erkannt'));
     await settle(t, 30);
     expect(find.byType(ActivityPicker), findsNothing, reason: 'nicht zurückgefallen');
     expect(find.byType(ActivitySummary), findsOneWidget);
@@ -196,7 +202,7 @@ void main() {
   testWidgets('A9: Auch eine offene Erkennung bekommt ihre Sportart', (t) async {
     await seed(t);
     await open(t, at(start + 1800 + 60));
-    await t.tap(find.textContaining('erkannt,'));
+    await t.tap(find.text('erkannt'));
     await settle(t, 10);
     await t.enterText(find.byType(TextField), 'Handball');
     await settle(t, 5);
@@ -212,7 +218,7 @@ void main() {
     await open(t, at(start + 1800 + 1900));
     await t.tap(find.byIcon(LucideIcons.x));
     await settle(t);
-    expect(find.textContaining('erkannt,'), findsNothing);
+    expect(find.text('erkannt'), findsNothing);
     await t.runAsync(() async {
       expect(await repo.pendingActivities(), isEmpty);
       final w = await repo.getWorkouts(range: 'week');

@@ -2,9 +2,15 @@
 // steht offen da: drei Teile aus Werten, die OpenStrap schon misst, mit festen
 // Gewichten, und die Teile stehen unter der Zahl.
 //
-//   Dauer zu Bedarf  50 %  (bei 100 gedeckelt)
-//   Effizienz        25 %  (70 % → 0, 95 % → 100, linear)
-//   Regelmäßigkeit   25 %  (OpenStraps SRI, auf 0…100 begrenzt)
+//   Dauer zu Bedarf  60 %  (Anteil am Bedarf zum Quadrat, bei 100 gedeckelt:
+//                           6 von 8 Std. → 56, 7 von 8 → 77)
+//   Effizienz        20 %  (85 % → 0, 98 % → 100, linear)
+//   Regelmäßigkeit   20 %  (SRI 50 → 0, 100 → 100, linear)
+//
+// Änderung 2026-11-14: Vorher 50/25/25 mit Effizienz ab 70 % und SRI ab 0.
+// Effizienz (meist 90–97 %) und SRI (meist 75–95) lagen fast immer nahe am
+// Maximum und trugen die Hälfte, der Score blieb so bei ~80, egal ob sechs
+// oder acht Stunden geschlafen. Jetzt bewegt eine kurze Nacht den Score.
 //
 // Fehlt Effizienz oder Regelmäßigkeit, zählen die übrigen Teile anteilig
 // (C2). Ohne Dauer oder Bedarf gibt es keinen Score.
@@ -42,6 +48,9 @@ class NightScore {
       ];
 }
 
+const double kWDuration = 0.6, kWEfficiency = 0.2, kWRegularity = 0.2;
+const double kEffZero = 85, kEffFull = 98, kSriZero = 50;
+
 double _clamp100(double v) => v < 0 ? 0 : (v > 100 ? 100 : v);
 
 NightScore scoreNight({
@@ -52,23 +61,26 @@ NightScore scoreNight({
 }) {
   final eff = efficiencyPct == null
       ? null
-      : _clamp100((efficiencyPct - 70) / 25 * 100);
-  final reg = regularity == null ? null : _clamp100(regularity.toDouble());
+      : _clamp100((efficiencyPct - kEffZero) / (kEffFull - kEffZero) * 100);
+  final reg = regularity == null
+      ? null
+      : _clamp100((regularity - kSriZero) / (100 - kSriZero) * 100);
   if (durationMin == null || durationMin <= 0) {
     return NightScore(efficiency: eff, regularity: reg, reason: NoScore.noNight);
   }
   if (needMin == null || needMin <= 0) {
     return NightScore(efficiency: eff, regularity: reg, reason: NoScore.noNeed);
   }
-  final dur = _clamp100(durationMin / needMin * 100);
-  var sum = 0.5 * dur, weight = 0.5;
+  final ratio = (durationMin / needMin).clamp(0.0, 1.0);
+  final dur = _clamp100(ratio * ratio * 100);
+  var sum = kWDuration * dur, weight = kWDuration;
   if (eff != null) {
-    sum += 0.25 * eff;
-    weight += 0.25;
+    sum += kWEfficiency * eff;
+    weight += kWEfficiency;
   }
   if (reg != null) {
-    sum += 0.25 * reg;
-    weight += 0.25;
+    sum += kWRegularity * reg;
+    weight += kWRegularity;
   }
   return NightScore(
     score: (sum / weight).round(),

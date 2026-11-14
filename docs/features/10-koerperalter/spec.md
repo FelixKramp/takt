@@ -43,6 +43,11 @@ Muskelmasse (keine Waage).
 - **K5** – Woche: Die Zahl ändert sich nur montags. Daneben steht der Vergleich zur
   Vorwoche.
 - **K6** – Displaystreifen: Keine Ziffer liegt auf dem Streifen.
+- **K7** – Alterungstempo (Pace of Aging): Berechnet nach der inversen 8-Jahres-Verdopplungsregel
+  (`Pace = 2^(diffYears / 8.0)`). 1,00× entspricht normaler biologischer Alterung (1:1), < 1,00×
+  verlangsamter Alterung (Schutzfaktor), > 1,00× beschleunigter Alterung. Steht als Multiplikator
+  (z.B. „Tempo 0,84×“) auf der Karte und als eigene Tachometer-Kachel mit Erklärung
+  („16 % langsamer als normal“) im Detail.
 
 ## Randfälle
 - Kein Alter im Profil: Hinweis mit Weg zum Profil.
@@ -53,7 +58,6 @@ Muskelmasse (keine Waage).
 
 ## Nicht-Ziele
 - Kein medizinischer Befund, keine Lebenserwartung.
-- Kein „Tempo des Alterns“ im MVP.
 - Keine Benachrichtigungen.
 
 ## Offene Thesen für Felix

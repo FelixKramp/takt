@@ -49,6 +49,18 @@ import 'metric_detail.dart' show MetricDetail, detailLinkRow;
 import 'nutrition_screen.dart';
 import 'start_card.dart';
 
+/// TAKT: Der Aktivität-Tab ist aus (kTaktActivityTabEnabled), Heute startet das
+/// Live-Training selbst. Liefert die Sportartenwahl mit denselben Daten, die der
+/// Tab ihr gibt (Gewicht, zuletzt Gemachtes, Satz-Verlauf).
+Future<Widget> taktWorkoutPicker(AppState app) async {
+  final d = await _loadWorkoutData(app);
+  return ActivityPicker(
+    weightKg: d.weightKg,
+    host: activityHost(app, history: d.setHistory),
+    recent: d.recent,
+  );
+}
+
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({super.key});
 

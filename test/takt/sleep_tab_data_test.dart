@@ -67,8 +67,9 @@ void main() {
     final v = build(log: {'2026-11-07': const NightNote(needMin: 480, debtMin: 18, strainMin: 12)});
     expect(v.sleptMin, 432);
     expect(v.needMin, 480);
-    expect(v.score.score, 83, reason: '90 · 76 · 76');
-    expect(v.score.band, ScoreBand.okay);
+    // 0,6·81 + 0,2·(89−85)/13·100 + 0,2·(76−50)/50·100 = 65,15
+    expect(v.score.score, 65, reason: '81 · 30,8 · 52');
+    expect(v.score.band, ScoreBand.knapp);
     expect(v.needParts?.baseMin, 450);
   });
 

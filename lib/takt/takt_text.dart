@@ -24,6 +24,10 @@ class TaktText {
   String get noActivities => de
       ? 'Heute noch nichts erkannt. War da ein Training?'
       : 'Nothing detected yet today. Did you train?';
+  String get noActivitiesPastDay => de
+      ? 'Keine Trainings an diesem Tag aufgezeichnet.'
+      : 'No workouts recorded for this day.';
+  String get startWorkout => de ? 'Workout starten' : 'Start a workout';
   String get logWorkout => de ? 'Workout nachtragen' : 'Log a workout';
   // Feature 08, T8: Kopf des Nachtragens, klein geschrieben wie alle Köpfe.
   String get logWorkoutHead => de ? 'training nachtragen' : 'log a workout';
@@ -68,6 +72,12 @@ class TaktText {
   String get startHere => de ? 'Beginn hier' : 'Start here';
   String get endHere => de ? 'Ende hier' : 'End here';
   String get pulse => de ? 'Puls' : 'Heart rate';
+  String get pulseHead => de ? 'puls' : 'heart rate';
+  String get pulseToday => de ? 'Puls über den Tag' : 'Heart rate through the day';
+  String get pulseMinRow => de ? 'Tiefstwert' : 'Lowest';
+  String get pulseAvgRow => de ? 'Durchschnitt' : 'Average';
+  String get pulseMaxRow => de ? 'Höchstwert' : 'Highest';
+  String get todayCap => de ? 'Heute' : 'Today';
   String get noPulseRecorded => de
       ? 'Für diese Zeit hat das Band keinen Puls aufgezeichnet.'
       : 'The band recorded no heart rate for this time.';
@@ -168,4 +178,25 @@ class TaktText {
   String get nudgeLeft => de ? 'Linie ein Stück nach links' : 'Move the line left a little';
   String get nudgeRight => de ? 'Linie ein Stück nach rechts' : 'Move the line right a little';
   String get newVersion => de ? 'Neue Version verfügbar' : 'New version available';
+  // Feature 10: Körperalter.
+  String get bodyAgeDisclaimer =>
+      de ? 'Grobe Schätzung, kein medizinischer Befund.' : 'Rough estimate, not a medical finding.';
+  String get bodyAgeOwnApprox => de
+      ? 'Eigene Näherung, nicht direkt aus den Studien übernommen: Die linearen Risikowerte und ihre Referenzpunkte sind unsere Annahme.'
+      : 'Own approximation, not taken directly from the studies: the linear risk values and their reference points are our assumption.';
+  String get bodyAgeWeekNote => de
+      ? 'Wochenwert: wird beim ersten Öffnen der Woche festgehalten und ändert sich bis zur nächsten Woche nicht.'
+      : 'Weekly value: fixed the first time you open it in a week and unchanged until the next week.';
+  String get bodyAgeNoFactors => de
+      ? 'Für die sieben Faktoren gibt es in den letzten 30 Tagen noch keine Messwerte.'
+      : 'There are no readings for the seven factors in the last 30 days yet.';
+  String get bodyAgePaceNote => de
+      ? 'Verhältnis des Sterberisikos zu „normal“, kein gemessenes Tempo.'
+      : 'Ratio of mortality risk to “normal”, not a measured pace.';
+  String get bodyAgeMethod => de
+      ? 'Methode: Jeder 30-Tage-Wert wird mit einer linearen Näherung in ein relatives Sterberisiko (RR) übersetzt und nach der 8-Jahres-Faustregel in Jahre umgerechnet (Jahre = ln(RR) / ln(2) × 8). Der Referenzpunkt (RR 1,0) ist ein typischer Erwachsenenwert, nicht das Optimum. Einzelne Faktoren sind auf ±3,0 Jahre, die Summe auf ±10,0 Jahre begrenzt. Alle Studien stammen von Erwachsenen; für Jüngere ist die Zahl eher eine Richtung als ein Messwert. Das Alterungstempo ist das relative Sterberisiko gegenüber „normal“ (2^(Abweichung / 8)), kein gemessenes Tempo, in dem du tatsächlich alterst.'
+      : 'Method: Each 30-day value is mapped to a relative mortality risk (RR) with a linear approximation and converted to years with the 8-year rule of thumb (years = ln(RR) / ln(2) × 8). The reference point (RR 1.0) is a typical adult value, not the optimum. Single factors are capped at ±3.0 years, the total at ±10.0 years. All studies are of adults; for younger people the number is more a direction than a measurement. Pace of aging is the relative mortality risk versus “normal” (2^(deviation / 8)), not a measured rate at which you actually age.';
+  String get studiesDisclaimer => de
+      ? 'Grobe Schätzung, kein medizinischer Befund. Die Studien liefern Richtung und Größenordnung; die linearen Risikowerte darunter sind eine eigene Näherung, nicht direkt aus den Studien übernommen.'
+      : 'Rough estimate, not a medical finding. The studies give direction and order of magnitude; the linear risk values built on them are our own approximation, not taken directly from the studies.';
 }

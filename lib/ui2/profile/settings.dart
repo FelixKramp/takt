@@ -1,5 +1,6 @@
 import '../../takt/about.dart';
 import '../../takt/brand.dart';
+import '../../takt/stripe/stripe.dart' show StripeDodge;
 import '../../takt/takt_text.dart';
 import '../../l10n/display_text.dart';
 import 'step_calibration.dart';
@@ -206,7 +207,7 @@ class _MoreSettingsState extends State<MoreSettings>
       onToggleDev: () => _setDev(false),
       onGallery: () => goto(c, const GalleryScreen()),
       units: units.system.label,
-      appearance: theme.choice.label,
+      appearance: theme.choice.localized(c),
       clockFormat: clock.format,
       cycleTracking: app.cycleTrackingEnabled,
       zoneAlertEnabled: app.zoneAlertEnabled,
@@ -241,8 +242,8 @@ class _MoreSettingsState extends State<MoreSettings>
       onCycleUnits: () => units.setSystem(units.isImperial
           ? UnitSystem.metric
           : UnitSystem.imperial),
-      onCycleAppearance: () => theme.setChoice(AppThemeChoice.values[
-          (theme.choice.index + 1) % AppThemeChoice.values.length]),
+      // TAKT (G37): a list to choose from, as in Profile, not a tap that cycles.
+      onCycleAppearance: () => pickAppearance(c),
       // the wind-down body bakes the time in when it's armed, re-arm it now
       onCycleClockFormat: () async {
         try {
@@ -858,6 +859,17 @@ class MoreSettingsView extends StatelessWidget {
                           'Teaches the strap your own walking, so its step count '
                               'fits you. Nothing leaves the device',
                       onTap: () => goto(c, const StepCalibrationScreen())),
+                ]),
+                settingsGroup(c, Localizations.localeOf(c).languageCode == 'de' ? 'Körperalter & Studien' : 'Body Age & Studies', [
+                  SetRow(
+                    LucideIcons.dna,
+                    C.teal,
+                    Localizations.localeOf(c).languageCode == 'de' ? 'Wissenschaftliche Grundlagen' : 'Scientific background',
+                    sub: Localizations.localeOf(c).languageCode == 'de'
+                        ? 'Studien hinter dem Körperalter und die Verdopplungsregel'
+                        : 'Studies behind body age and the doubling rule',
+                    onTap: () => goto(c, const BodyAgeStudiesScreen()),
+                  ),
                 ]),
                 settingsGroup(c, l?.settingsGroupPrivacy ?? 'Privacy', [
                   // TAKT: Absturzberichte und Tickets gingen an OpenStrap.
@@ -1540,6 +1552,7 @@ class EditProfile extends StatelessWidget {
           for (final k in const [
             'name',
             'sex',
+            'birthdate',
             'age',
             'height_cm',
             'weight_kg',
@@ -1588,6 +1601,7 @@ class _EditProfileViewState extends State<EditProfileView> {
       TextEditingController(text: '${widget.initial['name'] ?? ''}');
   late final _age =
       TextEditingController(text: _s(widget.initial['age']));
+  late String? _birthdate = widget.initial['birthdate'] as String?;
   late final _height =
       TextEditingController(text: _u.heightField(widget.initial['height_cm'] as num?));
   late final _weight =
@@ -1670,6 +1684,51 @@ class _EditProfileViewState extends State<EditProfileView> {
     super.dispose();
   }
 
+  Future<void> _pickBirthdate() async {
+    final now = DateTime.now();
+    var initial = DateTime(now.year - 20, 1, 1);
+    if (_birthdate != null && _birthdate!.isNotEmpty) {
+      try {
+        initial = DateTime.parse(_birthdate!);
+      } catch (_) {}
+    } else if (_age.text.isNotEmpty) {
+      final a = int.tryParse(_age.text);
+      if (a != null && a > 0 && a < 120) {
+        initial = DateTime(now.year - a, now.month, now.day);
+      }
+    }
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
+    if (picked != null) {
+      setState(() {
+        _birthdate =
+            '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+        var years = now.year - picked.year;
+        if (now.month < picked.month ||
+            (now.month == picked.month && now.day < picked.day)) {
+          years--;
+        }
+        _age.text = '$years';
+      });
+    }
+  }
+
+  String _formatBirthdate(String iso, bool de) {
+    try {
+      final dt = DateTime.parse(iso);
+      final d = dt.day.toString().padLeft(2, '0');
+      final m = dt.month.toString().padLeft(2, '0');
+      final y = dt.year.toString();
+      return de ? '$d.$m.$y' : '$y-$m-$d';
+    } catch (_) {
+      return iso;
+    }
+  }
+
   /// A field that cannot be read is NOT a cleared field.
   ///
   /// Every key here is written unconditionally, precisely so a cleared one is
@@ -1717,6 +1776,7 @@ class _EditProfileViewState extends State<EditProfileView> {
     widget.onSave({
       'name': _name.text.trim().isEmpty ? null : _name.text.trim(),
       'sex': _sex,
+      'birthdate': _birthdate,
       'age': age.value?.round(),
       // Typed in the units on the label, stored in metric.
       'height_cm': heightCm,
@@ -1778,6 +1838,61 @@ class _EditProfileViewState extends State<EditProfileView> {
                       ),
                     ),
                 ]),
+                const SizedBox(height: S.x4),
+                Text(
+                  l?.localeName.startsWith('de') == true
+                      ? 'GEBURTSDATUM'
+                      : 'DATE OF BIRTH',
+                  style: F.over.copyWith(color: p.ink3),
+                ),
+                const SizedBox(height: S.x2),
+                Pressable(
+                  onTap: _pickBirthdate,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: S.x4,
+                      vertical: S.x3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: p.card,
+                      borderRadius: R.rMd,
+                      border: Border.all(color: p.line),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.calendar, size: 18, color: p.ink3),
+                        const SizedBox(width: S.x3),
+                        Expanded(
+                          child: Text(
+                            _birthdate != null
+                                ? _formatBirthdate(
+                                    _birthdate!,
+                                    l?.localeName.startsWith('de') == true,
+                                  )
+                                : (l?.localeName.startsWith('de') == true
+                                    ? 'Geburtsdatum auswählen'
+                                    : 'Select date of birth'),
+                            style: F.body.copyWith(
+                              color: _birthdate != null ? p.ink : p.ink3,
+                              fontWeight: _birthdate != null
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        if (_birthdate != null)
+                          Pressable(
+                            onTap: () => setState(() => _birthdate = null),
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: S.x2),
+                              child: Icon(LucideIcons.x, size: 16, color: p.ink3),
+                            ),
+                          ),
+                        Icon(LucideIcons.chevronRight, size: 16, color: p.ink3),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: S.x4),
                 _text(c, _age, l?.settingsAgeYearsFieldLabel ?? 'AGE (YEARS)',
                     TextInputType.number),
@@ -2043,6 +2158,229 @@ class _AutomationSettingsState extends State<AutomationSettings> {
             ),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+class BodyAgeStudiesScreen extends StatelessWidget {
+  const BodyAgeStudiesScreen({super.key});
+
+  @override
+  Widget build(BuildContext c) {
+    final p = P.of(c);
+    final de = Localizations.localeOf(c).languageCode == 'de';
+
+    final studies = [
+      (
+        factor: de ? 'Schlafdauer' : 'Sleep duration',
+        target: de ? '7,0–8,0 Std.' : '7.0–8.0 h',
+        study: 'Cappuccio et al. (2010), Sleep',
+        detail: de
+            ? 'Metaanalyse von 16 Studien mit rund 1,38 Mio. Teilnehmenden: Kurzer Schlaf RR 1,12, langer Schlaf RR 1,30 für die Gesamtsterblichkeit, also eine U-Form. Was als kurz und lang gilt, legt jede Einzelstudie anders fest.'
+            : 'Meta-analysis of 16 studies with about 1.38 million participants: short sleep RR 1.12, long sleep RR 1.30 for all-cause mortality, a U-shape. Each study defines short and long differently.',
+      ),
+      (
+        factor: de ? 'Schlafregelmäßigkeit' : 'Sleep regularity',
+        target: de ? 'ab 75 SRI' : '75+ SRI',
+        study: 'Windred et al. (2024), Sleep',
+        detail: de
+            ? 'UK Biobank, 60 977 Teilnehmende (Ø 62,8 Jahre): Die vier regelmäßigeren Fünftel hatten 20–48 % weniger Gesamtsterblichkeit als das unregelmäßigste. Die Studie rechnet den SRI aus Beschleunigungsdaten, Takt aus Schlaf und Wachzeiten des Bandes; die Skalen sind nicht dieselbe.'
+            : 'UK Biobank, 60,977 participants (mean age 62.8): the four more regular fifths had 20–48% lower all-cause mortality than the most irregular. The study computes SRI from accelerometer data, Takt from the band\'s sleep and wake times; the scales are not the same.',
+      ),
+      (
+        factor: de ? 'Ruhepuls' : 'Resting heart rate',
+        target: de ? 'unter 58 bpm' : 'under 58 bpm',
+        study: 'Jensen et al. (2013), Heart',
+        detail: de
+            ? 'Copenhagen Male Study, 2 798 Männer, 16 Jahre Beobachtung: Bei der Gesamtsterblichkeit stieg das Risiko um 16 % je 10 bpm Ruhepuls, mit HR 3,06 für über 90 gegenüber höchstens 50 bpm. Nur Männer mittleren Alters.'
+            : 'Copenhagen Male Study, 2,798 men, 16 years of follow-up: all-cause mortality rose 16% per 10 bpm of resting heart rate, with HR 3.06 for over 90 versus 50 bpm or less. Middle-aged men only.',
+      ),
+      (
+        factor: de ? 'Schritte' : 'Steps',
+        target: de ? 'ab 8000 / Tag' : '8000+ / day',
+        study: 'Paluch et al. (2022), Lancet Public Health',
+        detail: de
+            ? 'Metaanalyse von 15 Kohorten, 47 471 Teilnehmende: Mehr Schritte gehen mit weniger Sterblichkeit einher. Ein Plateau bei 8000–10 000 Schritten für unter 60-Jährige wird berichtet (laut Pressebericht, nicht im Papier geprüft); Takt zählt deshalb nur bis 10 000.'
+            : 'Meta-analysis of 15 cohorts, 47,471 participants: more steps go with lower mortality. A plateau at 8,000–10,000 steps for under-60s is reported (per press coverage, not checked in the paper); Takt therefore counts only up to 10,000.',
+      ),
+      (
+        factor: de ? 'Moderate Bewegung' : 'Moderate activity',
+        target: de ? 'ab 150 Min./Wo.' : '150+ min/wk',
+        study: 'Lee et al. (2022), Circulation',
+        detail: de
+            ? '116 221 Erwachsene (zwei US-Kohorten), 47 596 Todesfälle: 150–299 Minuten moderate Freizeitaktivität pro Woche gingen mit 19–25 % weniger Sterblichkeit einher. Die Aktivität kommt aus Fragebögen, nicht aus Herzfrequenzzonen; dass Takt Zone 1–3 als „moderat“ zählt, ist unsere eigene Zuordnung.'
+            : '116,221 adults (two US cohorts), 47,596 deaths: 150–299 minutes of moderate leisure activity per week went with 19–25% lower mortality. Activity comes from questionnaires, not heart rate zones; counting zones 1–3 as “moderate” is Takt\'s own mapping.',
+      ),
+      (
+        factor: de ? 'Intensive Bewegung' : 'Vigorous activity',
+        target: de ? 'ab 45 Min./Wo.' : '45+ min/wk',
+        study: 'Lee et al. (2022), Circulation',
+        detail: de
+            ? 'Dieselbe Studie: 75–149 Minuten intensive Freizeitaktivität pro Woche, HR 0,81 für die Gesamtsterblichkeit; ab 300 Minuten intensiv kein klarer Zusatznutzen. Auch hier Fragebogen statt Pulszonen; dass Takt Zone 4–5 als „intensiv“ zählt, ist unsere eigene Zuordnung.'
+            : 'Same study: 75–149 minutes of vigorous leisure activity per week, HR 0.81 for all-cause mortality; no clear extra benefit from 300 minutes of vigorous activity. Again questionnaires rather than heart rate zones; counting zones 4–5 as “vigorous” is Takt\'s own mapping.',
+      ),
+      (
+        factor: de ? 'Krafttraining' : 'Strength training',
+        target: de ? '30–60 Min./Wo.' : '30–60 min/wk',
+        study: 'Momma et al. (2022), BJSM',
+        detail: de
+            ? 'Systematische Übersicht und Metaanalyse von 16 Studien: 10–17 % niedrigeres Risiko mit Krafttraining, J-förmig, mit dem größten Nutzen bei 30–60 Minuten pro Woche. Dass Takt den Nutzen gegen 0 Minuten ansetzt, ist unsere Annahme.'
+            : 'Systematic review and meta-analysis of 16 studies: 10–17% lower risk with strength training, J-shaped, with the greatest benefit at 30–60 minutes per week. Anchoring the benefit against 0 minutes is Takt\'s assumption.',
+      ),
+    ];
+
+    return Scaffold(
+      backgroundColor: p.bg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: S.x4),
+              child: NavBar(
+                de ? 'Körperalter-Studien' : 'Body Age Studies',
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(S.x4, 0, S.x4, S.x10),
+                children: [
+                  const SizedBox(height: S.x4),
+                  Surface(
+                    key: const ValueKey('takt-body-age-studies-disclaimer'),
+                    child: StripeDodge(
+                      line: true,
+                      child: Text(
+                        TaktText.of(c).studiesDisclaimer,
+                        style: F.cap.copyWith(
+                          color: p.ink,
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: S.x4),
+                  Section(
+                    de ? 'Gompertz-Verdopplungsregel' : 'Gompertz Doubling Rule',
+                    Surface(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          StripeDodge(
+                            line: true,
+                            child: Text(
+                              de
+                                  ? 'Gängige Faustregel nach dem Gompertz-Gesetz: Das Sterberisiko Erwachsener verdoppelt sich etwa alle 8 Lebensjahre (Quellen nennen 7 bis 10 Jahre). Die Regel beschreibt Erwachsene; alle Studien hier stammen ebenfalls von Erwachsenen.'
+                                  : 'Common rule of thumb after the Gompertz law: adult mortality risk roughly doubles every 8 years (sources give 7 to 10 years). The rule describes adults; all studies here are of adults as well.',
+                              style: F.body.copyWith(color: p.ink, height: 1.4),
+                            ),
+                          ),
+                          const SizedBox(height: S.x2),
+                          StripeDodge(
+                            line: true,
+                            child: Text(
+                              de
+                                  ? 'Formel: Jahre = ln(Relatives Risiko) / ln(2) × 8'
+                                  : 'Formula: Years = ln(Relative Risk) / ln(2) × 8',
+                              style: F.cap.copyWith(
+                                color: p.on(C.teal),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: S.x2),
+                          StripeDodge(
+                            line: true,
+                            child: Text(
+                              de
+                                  ? 'Ein relatives Risiko von 0,5 entspricht somit −8,0 Jahren, ein RR von 2,0 entspricht +8,0 Jahren. Einzelne Faktoren sind auf maximal ±3,0 Jahre begrenzt, die Gesamtsumme aller Faktoren auf ±10,0 Jahre.'
+                                  : 'A relative risk of 0.5 corresponds to −8.0 years, while RR 2.0 corresponds to +8.0 years. Individual factors are capped at ±3.0 years, total shift capped at ±10.0 years.',
+                              style: F.cap.copyWith(color: p.ink2),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: S.x4),
+                  Section(
+                    de ? 'Die 7 Faktoren und ihre Belege' : 'The 7 Factors and Their Evidence',
+                    Column(
+                      children: [
+                        for (final s in studies) ...[
+                          Surface(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        s.factor,
+                                        style: F.body.copyWith(
+                                          color: p.ink,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: S.x2),
+                                    Flexible(
+                                      child: StripeDodge(
+                                      line: true,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: S.x2,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: p.card2,
+                                          borderRadius: R.rPill,
+                                        ),
+                                        child: Text(
+                                          s.target,
+                                          style: F.over.copyWith(
+                                            color: p.on(C.green),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: S.x1),
+                                StripeDodge(
+                                  line: true,
+                                  child: Text(
+                                    s.study,
+                                    style: F.cap.copyWith(
+                                      color: p.on(C.teal),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: S.x1),
+                                StripeDodge(
+                                  line: true,
+                                  child: Text(
+                                    s.detail,
+                                    style: F.cap.copyWith(color: p.ink2, height: 1.35),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: S.x2),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

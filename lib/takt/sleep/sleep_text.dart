@@ -50,8 +50,8 @@ class SleepText {
   String durationOf(String a, String b) => de ? '$a von $b' : '$a of $b';
   String get notEnoughNights => de ? 'noch nicht genug Nächte' : 'not enough nights yet';
   String get weights => de
-      ? 'Dauer zählt zur Hälfte, Effizienz und Regelmäßigkeit je zu einem Viertel.'
-      : 'Duration counts for half, efficiency and regularity a quarter each.';
+      ? 'Dauer zählt 60 %, Effizienz und Regelmäßigkeit je 20 %. Fehlender Schlaf zählt überproportional.'
+      : 'Duration counts 60 %, efficiency and regularity 20 % each. Missing sleep counts extra.';
   String get lastSeven => de ? 'Letzte 7 Nächte' : 'Last 7 nights';
   String get noNight => de
       ? 'Keine Nacht ausgewertet. Trag das Band über Nacht, dann steht hier morgen dein Score.'

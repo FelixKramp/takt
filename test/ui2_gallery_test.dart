@@ -25,7 +25,7 @@ Widget _wrap(Widget child) => MaterialApp(
 /// bottom of the screen passes whether the row is there or not — including
 /// the one that has to fail if the gallery ever ships visible.
 void _tallPhone(WidgetTester tester) {
-  tester.view.physicalSize = const Size(390 * 3, 2400 * 3);
+  tester.view.physicalSize = const Size(390 * 3, 3200 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
 }

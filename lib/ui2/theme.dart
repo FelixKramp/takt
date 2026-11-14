@@ -135,21 +135,21 @@ class P {
 
   static P of(BuildContext c) => P(Theme.of(c).brightness == Brightness.dark);
 
-  // TAKT: Pult-Flächen, hell wie gebürstetes Aluminium, dunkel wie eloxiert.
-  Color get bg => dark ? const Color(0xFF151614) : const Color(0xFFD8D8D3);
-  Color get card => dark ? const Color(0xFF232421) : const Color(0xFFEDEDE9);
-  Color get card2 => dark ? const Color(0xFF2C2D29) : const Color(0xFFE2E2DD);
-  Color get line => dark ? const Color(0xFF3A3B36) : const Color(0xFFB5B5AF);
-  Color get track => dark ? const Color(0xFF3A3B36) : const Color(0xFFB5B5AF);
+  // TAKT: Reines, strahlendes Weiß-Design (White Mode) und eloxiertes Dunkel (Dark Mode).
+  Color get bg => dark ? const Color(0xFF151614) : const Color(0xFFF7F8FA);
+  Color get card => dark ? const Color(0xFF232421) : const Color(0xFFFFFFFF);
+  Color get card2 => dark ? const Color(0xFF2C2D29) : const Color(0xFFEFF1F4);
+  Color get line => dark ? const Color(0xFF3A3B36) : const Color(0xFFDCE0E5);
+  Color get track => dark ? const Color(0xFF3A3B36) : const Color(0xFFDCE0E5);
 
-  Color get ink => dark ? const Color(0xFFF1F1EC) : const Color(0xFF1B1B19);
-  Color get ink2 => dark ? const Color(0xFFB0B1A9) : const Color(0xFF3F3F3B);
+  Color get ink => dark ? const Color(0xFFF1F1EC) : const Color(0xFF111827);
+  Color get ink2 => dark ? const Color(0xFFB0B1A9) : const Color(0xFF4B5563);
 
   /// The muted caption ink. Hand-solved to clear 4.5:1 on [card2], the darkest
   /// (light theme) / lightest (dark theme) surface it can sit on — so it is
   /// legible on every surface, not just the one it was eyeballed against.
   /// The values it replaces measured 4.34:1 and 3.21:1 respectively.
-  Color get ink3 => dark ? const Color(0xFF9B9C94) : const Color(0xFF55554F);
+  Color get ink3 => dark ? const Color(0xFF9B9C94) : const Color(0xFF5B6675);
 
   /// The ink that goes on top of a [fill]. White by construction — [fill]
   /// darkens the accent until white clears AA on it.
@@ -168,8 +168,8 @@ class P {
   /// surface cannot un-clear the first.
   Color on(Color accent) {
     final toward = dark ? ink : C.n900;
-    // TAKT: Im hellen Pult ist `bg` die dunkelste Fläche, nicht `card2`.
-    final worst = dark ? card2 : bg;
+    // TAKT: `card2` ist in beiden Modi die kontrastkritischste Fläche.
+    final worst = card2;
     final flat = _solve(accent, toward, worst, dark);
     return _solve(flat, toward, Color.alphaBlend(wash(accent), worst), dark);
   }

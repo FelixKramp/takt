@@ -12,6 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../takt/health/health_text.dart';
+import '../takt/takt_text.dart';
 import '../widget/widget_service.dart';
 import 'tokens.dart';
 import 'theme.dart';
@@ -25,6 +27,16 @@ extension AppThemeChoiceLabel on AppThemeChoice {
         AppThemeChoice.light => 'Light',
         AppThemeChoice.dark => 'Dark',
       };
+
+  /// [label] in the user's language (German and English; the rest English).
+  String localized(BuildContext c) {
+    final t = TaktText.of(c);
+    return switch (this) {
+      AppThemeChoice.system => t.appearanceSystem,
+      AppThemeChoice.light => t.appearanceLight,
+      AppThemeChoice.dark => t.appearanceDark,
+    };
+  }
 }
 
 class ThemeController extends ChangeNotifier {

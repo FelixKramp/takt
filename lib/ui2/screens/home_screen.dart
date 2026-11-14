@@ -62,6 +62,7 @@ import '../../state/app_state.dart';
 import '../../state/clock_format.dart' show formatClockOf;
 import '../../state/units_controller.dart';
 import '../../theme/theme_switcher.dart' show themedRoute;
+import '../../takt/look.dart';
 import '../activity/day_strain.dart' show DayStrainDetail;
 import '../profile/alarm.dart'
     show AlarmArmState, alarmArmOf, alarmDoor, alarmGlanceCard;
@@ -92,8 +93,16 @@ const pad = EdgeInsets.fromLTRB(S.x4, 0, S.x4, S.x16 + S.x8);
 /// so a plain route gets the fade-through on Android and the Cupertino slide
 /// WITH swipe-back on iOS. [themedRoute] also keeps the pushed screen
 /// re-colouring on an appearance change and names the route for Crashlytics.
-void go(BuildContext c, Widget w) => Navigator.of(c)
-    .push(themedRoute((_) => w, name: w.runtimeType.toString()));
+// TAKT preserve TaktLook across pushed routes when navigating from a Takt tab.
+void go(BuildContext c, Widget w) {
+  final takt = TaktLook.peek(c);
+  Navigator.of(c).push(
+    themedRoute(
+      (_) => takt ? TaktLook(child: w) : w,
+      name: w.runtimeType.toString(),
+    ),
+  );
+}
 
 /// The repo, or null when there is no AppState above us — which is the case in
 /// every golden. A screen with no repo renders its absent states, which is

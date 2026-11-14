@@ -35,6 +35,10 @@ import '../../data/day_label.dart';
 import '../../data/db.dart';
 import '../../data/local_repository.dart';
 import '../../l10n/app_localizations.dart';
+import '../../takt/health/health_text.dart';
+import '../../takt/look.dart';
+import '../../takt/takt_text.dart';
+import '../../takt/stress/takt_stress_view.dart';
 import '../ui2.dart';
 import 'day_timeline.dart';
 import 'home_screen.dart';
@@ -1064,6 +1068,46 @@ class _InvestigateState extends State<Investigate> {
         ? rawLevel
         : null;
     return [
+      const SizedBox(height: S.x3),
+      // G26: the daytime stress curve is a different measure (a heart-rate
+      // model, 0–3) from the overnight stress level on this screen (Baevsky,
+      // 0–100). It is named for what it is and says so.
+      Surface(
+        onTap: () => Navigator.of(c).push(
+          MaterialPageRoute(
+            builder: (_) => TaktLook(
+              child: TaktStressDetailScreen(
+                initialDate: d.day ?? todayLabel(),
+              ),
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(LucideIcons.chartLine, size: 16, color: P.of(c).on(C.purple)),
+            const SizedBox(width: S.x2),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    TaktText.of(c).dayStressDoor,
+                    style: F.body.copyWith(
+                      color: P.of(c).ink,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    TaktText.of(c).dayStressDoorSub,
+                    style: F.cap.copyWith(color: P.of(c).ink3),
+                  ),
+                ],
+              ),
+            ),
+            Icon(LucideIcons.chevronRight, size: 16, color: P.of(c).ink3),
+          ],
+        ),
+      ),
       const SizedBox(height: S.x3),
       MonoTable(l?.investigateStressIndexTitle ?? 'Stress index', [
         (l?.investigateStressIndexSi ?? 'Index (SI)', displayFixed(si, 2)),

@@ -13,7 +13,9 @@ class ActivityItem {
     this.endTs,
     this.durationMin,
     this.avgHr,
+    this.maxHr,
     this.strain,
+    this.calories,
     this.suggestion,
   });
 
@@ -24,21 +26,29 @@ class ActivityItem {
   final bool detected;
   final int? durationMin;
   final int? avgHr;
+  final int? maxHr;
   final double? strain;
+  final int? calories;
 
   /// Gesetzt, wenn das automatische Bestätigen gescheitert ist.
   final ActivitySuggestion? suggestion;
 }
 
 /// Heutige, abgeschlossene Workouts und noch offene Erkennungen, neueste zuerst.
+/// Mit [fromSec] und [toSec] gilt das Wachfenster (Aufwachen bis nächstes
+/// Einschlafen, auch über 00:00 Uhr hinaus) statt der starren Kalendergrenze.
 List<ActivityItem> todayActivities(
   List<Map<String, dynamic>> workouts,
   DateTime day, {
   List<ActivitySuggestion> pending = const [],
   String Function(ActivitySuggestion)? sportOf,
+  int? fromSec,
+  int? toSec,
 }) {
-  final from = DateTime(day.year, day.month, day.day).millisecondsSinceEpoch ~/ 1000;
-  final to = DateTime(day.year, day.month, day.day + 1).millisecondsSinceEpoch ~/ 1000;
+  final from =
+      fromSec ?? DateTime(day.year, day.month, day.day).millisecondsSinceEpoch ~/ 1000;
+  final to =
+      toSec ?? DateTime(day.year, day.month, day.day + 1).millisecondsSinceEpoch ~/ 1000;
   bool isToday(int ts) => ts >= from && ts < to;
 
   final items = <ActivityItem>[
@@ -54,7 +64,9 @@ List<ActivityItem> todayActivities(
           detected: '${w['id']}'.startsWith(kDetectedPrefix),
           durationMin: w['duration_min'] as int?,
           avgHr: (w['avg_hr'] as num?)?.toInt(),
+          maxHr: (w['max_hr'] as num?)?.toInt(),
           strain: (w['strain'] as num?)?.toDouble(),
+          calories: (w['calories'] as num?)?.toInt(),
         ),
     for (final s in pending)
       if (s.kind == ActivityKind.workout && isToday(s.startTs))
@@ -66,6 +78,10 @@ List<ActivityItem> todayActivities(
           detected: true,
           durationMin: s.durationMin,
           avgHr: (s.details['avg_bpm'] as num?)?.round(),
+          maxHr:
+              ((s.details['max_bpm'] ?? s.details['peak_bpm']) as num?)?.round(),
+          strain: (s.details['strain'] as num?)?.toDouble(),
+          calories: (s.details['calories'] as num?)?.toInt(),
           suggestion: s,
         ),
   ];

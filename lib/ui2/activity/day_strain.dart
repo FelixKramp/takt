@@ -23,6 +23,7 @@ import '../../takt/header.dart';
 import '../../takt/look.dart';
 import '../../takt/pult_tokens.dart';
 import '../../takt/takt_text.dart';
+import '../../takt/today/wake_day.dart' show loadTaktDay;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -234,12 +235,29 @@ class _DayStrainDetailState extends State<DayStrainDetail> {
       return;
     }
     try {
-      final d = await DayStrainData.load(repo, forDay: _day);
+      var d = await DayStrainData.load(repo, forDay: _day);
       var days = _days;
       var acts = const <(int, int)>[];
       if (mounted && TaktLook.peek(context)) {
         try {
-          days = await repo.availableDays();
+          final loaded = await loadTaktDay(repo, selectedDay: _day);
+          if (loaded.data.strain.value != null) {
+            d = DayStrainData(
+              day: d.day,
+              curve: loaded.strainCurve.isNotEmpty ? loaded.strainCurve : d.curve,
+              strain: loaded.data.strain.value?.toDouble() ?? d.strain,
+              zoneMin: d.zoneMin,
+              maxHrUsed: d.maxHrUsed,
+              zoneSource: d.zoneSource,
+              zoneMaxHr: d.zoneMaxHr,
+              zoneLowerBpm: d.zoneLowerBpm,
+              peakHr: d.peakHr,
+              wornMin: d.wornMin,
+              coveragePct: d.coveragePct,
+              note: d.note,
+            );
+          }
+          days = loaded.availableDays;
           final w = (await repo.getWorkouts(range: 'month'))['workouts'];
           acts = [
             for (final e in (w is List ? w : const []))

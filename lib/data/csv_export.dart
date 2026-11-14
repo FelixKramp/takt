@@ -225,6 +225,8 @@ const kCsvExportSets = <CsvExportSet>[
       SELECT j.date, j.field, COALESCE(f.label, '') AS label, j.value,
              COALESCE(f.unit, '') AS unit, j.at_min
       FROM journal_metric j LEFT JOIN journal_field_def f ON f.key = j.field
+      -- TAKT (Feature 13, J20): private questions never leave the device.
+      WHERE j.field NOT LIKE 'priv_%'
       ORDER BY j.date ASC, j.field ASC
     ''',
   ),

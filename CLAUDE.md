@@ -39,6 +39,7 @@ Während des Builds ist die Spec eingefroren: Abweichung → stoppen und Felix f
 | 08 | Training von Heute und Workout nachtragen im Takt-Design | build | `docs/features/08-training/` |
 | 09 | Feinschliff Training: Sportart-Wahl, Pulskurve ablesen, Puls beim Nachtragen, Pulsabfall erklärt | build | `docs/features/09-training-feinschliff/` |
 | 10 | Körperalter: geschätztes Alter aus Schlaf, Ruhepuls, Schritten, Bewegung, Kraft | spec | `docs/features/10-koerperalter/` |
+| 13 | Journal im Takt-Design mit Morgenblatt, eigene Ja/Nein-Fragen, Auswertung gegen die Batterie | architektur | `docs/features/13-journal/` |
 
 ## Konventionen
 - Neuer Code liegt unter `lib/takt/`, Upstream-Dateien nur punktuell ändern, damit `git merge upstream/main` sauber bleibt.

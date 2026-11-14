@@ -8,11 +8,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/decimal_text.dart' show displayFixed;
 import '../../l10n/display_text.dart' show uiText;
-import '../../ui2/activity/day_strain.dart' show DayStrainData;
 import '../../ui2/charts.dart' show AxisSpec, LineChart, axisInt;
 import '../../ui2/grammar.dart' show ChartFrame, Pressable, Surface;
 import '../../ui2/screens/home_screen.dart'
-    show HomeData, HomeRingKind, repoOf, ringViewOf;
+    show HomeRingKind, repoOf, ringViewOf;
 import '../../ui2/screens/readiness_detail.dart' show ReadinessDetail;
 import '../../ui2/theme.dart';
 import '../detail/value_card.dart';
@@ -21,6 +20,7 @@ import '../look.dart';
 import '../pult_tokens.dart';
 import '../stripe/stripe.dart';
 import '../takt_text.dart';
+import '../today/wake_day.dart' show loadTaktDay;
 import 'battery.dart';
 
 class BatteryDetailData {
@@ -46,38 +46,26 @@ class BatteryDetailData {
   BatteryDetailData copyWith({String? why}) => BatteryDetailData(
       morning: morning, strain: strain, strainCurve: strainCurve, why: why ?? this.why, now: now);
 
-  static Future<BatteryDetailData> load(BuildContext c) async {
+  static Future<BatteryDetailData> load(BuildContext c, {String? day}) async {
     final repo = repoOf(c);
     final l = AppLocalizations.of(c);
     if (repo == null) return const BatteryDetailData();
-    final d = await HomeData.load(repo, l);
-    List<double?> curve = const [];
-    try {
-      final s = await DayStrainData.load(repo);
-      final now = DateTime.now();
-      // Rechnet heute noch, liefert der Strain-Screen die Kurve von gestern.
-      // Die gehört nicht zur Ladung von heute (Prüfung 04, H2).
-      final day = s.day;
-      if (day != null && day.year == now.year && day.month == now.month && day.day == now.day) {
-        curve = s.curve;
-      }
-    } catch (_) {
-      // Ohne Kurve bleiben Wertkarte und Rechnung.
-    }
+    final loaded = await loadTaktDay(repo, selectedDay: day, l: l);
     return BatteryDetailData(
-      morning: d.readiness.value?.toDouble(),
-      strain: d.strain.value?.toDouble(),
-      strainCurve: curve,
-      why: ringViewOf(HomeRingKind.recovery, d, l).why,
+      morning: loaded.data.readiness.value?.toDouble(),
+      strain: loaded.data.strain.value?.toDouble(),
+      strainCurve: loaded.strainCurve,
+      why: ringViewOf(HomeRingKind.recovery, loaded.data, l).why,
     );
   }
 }
 
 class BatteryDetail extends StatefulWidget {
-  const BatteryDetail({super.key, this.data});
+  const BatteryDetail({super.key, this.data, this.day});
 
   /// Vorgeladen für Tests. Null: aus dem Repo.
   final BatteryDetailData? data;
+  final String? day;
 
   @override
   State<BatteryDetail> createState() => _BatteryDetailState();
@@ -94,7 +82,7 @@ class _BatteryDetailState extends State<BatteryDetail> {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
         try {
-          final d = await BatteryDetailData.load(context);
+          final d = await BatteryDetailData.load(context, day: widget.day);
           if (mounted) setState(() => _data = d);
         } catch (_) {
           if (mounted) setState(() => _data = const BatteryDetailData());

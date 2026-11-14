@@ -1,3 +1,4 @@
+import 'dart:async';
 // The four-tab shell.
 //
 // Today · Sleep · Activity · Health. Stable: the contents personalise, the
@@ -15,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../l10n/app_localizations.dart';
+import '../takt/prebuild.dart';
 import '../takt/sleep/sleep_score.dart';
 import 'grammar.dart';
 import 'theme.dart';
@@ -49,6 +51,29 @@ enum ShellDomain {
   final Color accent;
 }
 
+/// TAKT: is the Activity tab in the bar? It is switched off for now, and Felix
+/// has not decided whether it comes back. THIS ONE LINE is the whole switch:
+/// the bar, the saved-tab and notification-tab mapping and the deep links in
+/// `app.dart` all read it. Nothing of the Activity screens is deleted.
+const bool kTaktActivityTabEnabled = false;
+
+/// The tabs in the bar, in bar order.
+List<ShellDomain> visibleShellDomains(
+        {bool activityTab = kTaktActivityTabEnabled}) =>
+    [
+      for (final d in ShellDomain.values)
+        if (activityTab || d != ShellDomain.activity) d,
+    ];
+
+/// [d], or Today when [d] is not in the bar. The shell falls back to Today for
+/// a tab it does not show, so whoever tracks which tab is in front (the live
+/// pulse, the auto-sync) has to ask the same question (G35).
+ShellDomain shellDomainOrToday(ShellDomain d,
+        {bool activityTab = kTaktActivityTabEnabled}) =>
+    visibleShellDomains(activityTab: activityTab).contains(d)
+        ? d
+        : ShellDomain.today;
+
 // There is no `Domain` InheritedWidget. There was one, promising that a screen
 // "and anything it pushes" could pick up its accent without threading it — but
 // nothing ever read it, and a pushed route could not have: `MaterialApp.home`
@@ -62,6 +87,9 @@ class AppShell extends StatefulWidget {
 
   final ShellDomain initial;
 
+  /// Visible domains in the bar, or all [ShellDomain.values] if omitted.
+  final List<ShellDomain>? domains;
+
   /// Notified on every tab change, including a re-tap of the current tab
   /// (which domains conventionally use to scroll to top) and a return via Back.
   final void Function(ShellDomain domain)? onSelect;
@@ -72,12 +100,20 @@ class AppShell extends StatefulWidget {
   /// belongs inside the domain.
   final Widget? banner;
 
+  /// TAKT: Tabs, die kurz nach dem Start im Hintergrund aufgebaut werden, damit
+  /// sie beim ersten Antippen schon geladen sind. Die App sagt das ausdrücklich:
+  /// TaktLook liegt um die einzelnen Tabs, nicht um die Shell, und war hier
+  /// deshalb nie sichtbar (Gerätetest 14.11.).
+  final Set<ShellDomain> prebuild;
+
   const AppShell({
     super.key,
     required this.builder,
     this.initial = ShellDomain.today,
+    this.domains,
     this.onSelect,
     this.banner,
+    this.prebuild = const {},
   });
 
   @override
@@ -85,6 +121,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  List<ShellDomain> get _domains => widget.domains ?? ShellDomain.values;
   late ShellDomain _current = widget.initial;
   late final Set<ShellDomain> _built = {widget.initial};
   // Tabs are kept alive, not pushed onto the Navigator. Keep their history
@@ -94,7 +131,34 @@ class _AppShellState extends State<AppShell> {
     if (widget.initial != ShellDomain.today) ShellDomain.today,
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    if (!_domains.contains(_current)) {
+      _current = _domains.first;
+      _built.add(_current);
+    }
+    // TAKT: Gesundheit wird kurz nach dem Start im Hintergrund aufgebaut, damit
+    // der Tab beim ersten Antippen schon geladen ist (Gerätetest 14.11.).
+    final todo = widget.prebuild.where(_domains.contains).toSet();
+    if (todo.isNotEmpty) {
+      _prebuild = taktPrebuildTimer(() {
+        if (!mounted || _built.containsAll(todo)) return;
+        setState(() => _built.addAll(todo));
+      });
+    }
+  }
+
+  Timer? _prebuild;
+
+  @override
+  void dispose() {
+    _prebuild?.cancel();
+    super.dispose();
+  }
+
   void _select(ShellDomain d) {
+    if (!_domains.contains(d)) return;
     setState(() {
       // Each tab at most once, most recent last, so switching back and forth
       // between two tabs does not add a Back press per switch. Today stays in
@@ -141,11 +205,11 @@ class _AppShellState extends State<AppShell> {
             children: [
               Expanded(
                 child: IndexedStack(
-                  index: _current.index,
+                  index: _domains.indexOf(_current).clamp(0, _domains.length - 1),
                   children: [
                     // An unvisited tab is an empty box, not a built screen — the
                     // old shell built all forty screens' worth of state on launch.
-                    for (final d in ShellDomain.values)
+                    for (final d in _domains)
                       if (_built.contains(d))
                         widget.builder(c, d)
                       else
@@ -157,7 +221,8 @@ class _AppShellState extends State<AppShell> {
             ],
           ),
         ),
-        bottomNavigationBar: _TabBar(current: _current, onTap: _select),
+        bottomNavigationBar:
+            _TabBar(current: _current, domains: _domains, onTap: _select),
       ),
     );
   }
@@ -165,9 +230,14 @@ class _AppShellState extends State<AppShell> {
 
 class _TabBar extends StatelessWidget {
   final ShellDomain current;
+  final List<ShellDomain> domains;
   final ValueChanged<ShellDomain> onTap;
 
-  const _TabBar({required this.current, required this.onTap});
+  const _TabBar({
+    required this.current,
+    required this.domains,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext c) {
@@ -183,7 +253,7 @@ class _TabBar extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final d in ShellDomain.values)
+              for (final d in domains)
                 Expanded(
                   child: _Tab(
                     domain: d,
@@ -208,14 +278,10 @@ class _Tab extends StatelessWidget {
 
   @override
   Widget build(BuildContext c) {
-    // TAKT (Feature 06, F2): flach, ohne Pille. Der aktive Tab ist fett und
-    // farbig: Schlaf in der Farbe des Schlafscores, die anderen in Takt-Orange.
-    if (domain == ShellDomain.sleep && on) {
-      return ValueListenableBuilder<ScoreBand?>(
-        valueListenable: TaktSleepBand.current,
-        builder: (c, band, _) => _body(c, (band ?? ScoreBand.okay).ink(P.of(c).dark)),
-      );
-    }
+    // TAKT (Feature 06, F2): flach, ohne Pille. Der aktive Tab ist fett und in
+    // Takt-Orange, Schlaf wie die anderen. Die Stufe des Schlafscores färbte ihn
+    // früher, und er sprang beim Laden von Orange auf Blau oder Rot (Gerätetest
+    // 0.5.1). Die Stufe steht jetzt am Ring, den Balken und am Wort.
     return _body(c, on ? ScoreBand.okay.ink(P.of(c).dark) : P.of(c).ink3);
   }
 

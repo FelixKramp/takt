@@ -1,4 +1,9 @@
 import '../../takt/today/more_for_today.dart';
+import '../../takt/health/body_age.dart';
+import '../../takt/health/body_age_view.dart';
+import '../../takt/health/takt_health_views.dart';
+import '../../takt/journal/journal_tab.dart';
+import '../../takt/look.dart';
 import '../../l10n/display_text.dart';
 // HEALTH — observation-oriented. "What is happening, what is changing, is
 // anything unusual?"
@@ -23,6 +28,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/metric.dart';
 import '../../models/payloads.dart' show todayHeadlineOf;
 import '../../state/app_state.dart';
+import '../../takt/stress/day_stress.dart';
 import '../profile/profile.dart' show ProfileAvatar;
 import '../profile/wearable_numbers.dart'
     show WearableCells, kHealthWearableRows;
@@ -94,6 +100,18 @@ class HealthData {
   /// trend cards draw for resting HR and HRV. Null when it could not be read.
   final Map<String, dynamic>? baselines;
 
+  // TAKT Body Age snapshot (Feature 10).
+  final BodyAgeSnapshot? bodyAge;
+
+  // TAKT Daytime Stress analysis.
+  final DayStressAnalysis? stressAnalysis;
+
+  /// TAKT: the quick first read ([load] with `quick`), without the heavy
+  /// parts (body age, day stress, gaps, naps, findings). The overview shows
+  /// at once and those parts fill in when the full read lands (14.11.: the
+  /// tab spun for a long time on every first open).
+  final bool partial;
+
   const HealthData({
     this.today = const {},
     this.insights = const {},
@@ -108,7 +126,65 @@ class HealthData {
     this.napDay = '',
     this.findings = const [],
     this.baselines,
+    this.bodyAge,
+    this.stressAnalysis,
+    this.partial = false,
   });
+
+  /// TAKT resolves the Body Age snapshot, computing synchronously from
+  /// [profile], [daysWithData] and [charts] when [bodyAge] was not preloaded
+  /// (e.g. in widget tests with injected [HealthData]).
+  BodyAgeSnapshot resolveBodyAge() {
+    if (bodyAge != null) return bodyAge!;
+    double? avgChart(String key) {
+      final pts = points(key);
+      if (pts.isEmpty) return null;
+      final tail = pts.length > 30 ? pts.sublist(pts.length - 30) : pts;
+      var sum = 0.0;
+      for (final p in tail) {
+        sum += p.v;
+      }
+      return sum / tail.length;
+    }
+
+    final birthdateStr = profile['birthdate'] as String?;
+    DateTime? birthdate;
+    if (birthdateStr != null && birthdateStr.isNotEmpty) {
+      try {
+        birthdate = DateTime.parse(birthdateStr);
+      } catch (_) {}
+    }
+    double? exactAge;
+    if (birthdate != null) {
+      final days = DateTime.now().difference(birthdate).inDays;
+      if (days > 0) exactAge = days / 365.2425;
+    }
+
+    final rawAge = profile['age'];
+    final realAge = rawAge is num
+        ? rawAge.toInt()
+        : (rawAge is String ? int.tryParse(rawAge) : exactAge?.floor());
+    final sleepVal = avgChart('sleep');
+    final sleepHours =
+        sleepVal == null ? null : (sleepVal > 24 ? sleepVal / 60.0 : sleepVal);
+    final rhr = avgChart('resting_hr');
+    final steps = avgChart('steps');
+    final regObj = insights['sleep_regularity'];
+    final regScore = regObj is Map
+        ? (envValue(regObj['score'])?['value'] as num?)?.toDouble() ??
+            (regObj['score'] as num?)?.toDouble()
+        : null;
+
+    return BodyAgeCalculator.calculate(
+      realAge: realAge,
+      exactAge: exactAge,
+      dataDays: daysWithData,
+      avgSleepHours: sleepHours,
+      avgSri: regScore,
+      avgRhr: rhr,
+      avgSteps: steps,
+    );
+  }
 
   /// The stored points for [key].
   List<ChartPoint> points(String key) => charts[key] ?? const [];
@@ -142,7 +218,7 @@ class HealthData {
   Metric get stress => metricOf(today['stress']);
   Metric get resp => metricOf(today['resp']);
 
-  static Future<HealthData> load(LocalRepository repo) async {
+  static Future<HealthData> load(LocalRepository repo, {bool quick = false}) async {
     final today = await repo.getToday();
     final cd = await repo.getInsights();
     final profile = await repo.getProfile();
@@ -171,6 +247,20 @@ class HealthData {
     // duration form lands at 23:00 the day before across a DST boundary.
     final n = DateTime.now();
     final from = dayLabelOf(DateTime(n.year, n.month, n.day - 29));
+
+    if (quick) {
+      return HealthData(
+        today: today,
+        insights: cd,
+        profile: profile,
+        charts: charts,
+        daysWithData: days.where((d) => d.compareTo(from) >= 0).length,
+        need: envMetric(needEnv, needSec == null ? null : needSec / 60,
+            unit: 'min'),
+        insightsStale: staleReasonOf(cd),
+        partial: true,
+      );
+    }
 
     // The night the overnight rows describe, and the evening before it: a gap
     // that starts at 11:20 PM is filed under the previous calendar day's wear
@@ -217,6 +307,17 @@ class HealthData {
     final napDay = days.isEmpty ? todayLabel() : days.first;
     final naps = await _soft(() => repo.getDayNaps(napDay));
     final heart = await _soft(() => repo.getDayHeart(todayLabel()));
+    final bodyAge = await loadBodyAge(
+      repo,
+      profile: profile,
+      insights: cd,
+      charts: charts,
+      availableDays: days,
+    );
+    DayStressAnalysis? stressAnalysis;
+    try {
+      stressAnalysis = await DayStressCalculator.loadForDay(repo, todayLabel());
+    } catch (_) {}
 
     return HealthData(
       today: today,
@@ -236,6 +337,8 @@ class HealthData {
       baselines: heart['baselines'] is Map
           ? (heart['baselines'] as Map).cast<String, dynamic>()
           : null,
+      bodyAge: bodyAge,
+      stressAnalysis: stressAnalysis,
     );
   }
 }
@@ -505,6 +608,17 @@ class _HealthScreenState extends State<HealthScreen> with RevisionReload {
         l?.healthTabVitals ?? 'Vitals',
         l?.healthTabLabs ?? 'Labs',
       ];
+
+  /// TAKT (Feature 13, J26): the Takt bar has three tabs:
+  /// Overview (0), Vitals (3), Journal (5). Explore and Labs are removed.
+  static const _taktOrder = [0, 3, 5];
+
+  List<String> _taktTabsOf(AppLocalizations? l) => [
+        l?.healthTabOverview ?? 'Overview',
+        l?.healthTabVitals ?? 'Vitals',
+        'Journal',
+      ];
+
   late int _tab = widget.tab;
 
   HealthData? _d;
@@ -564,6 +678,14 @@ class _HealthScreenState extends State<HealthScreen> with RevisionReload {
     }
     final t = beginRead(#day);
     try {
+      // TAKT: on the first read show the quick part at once, the heavy part
+      // (body age, stress, gaps) follows. A reload keeps the old data up.
+      if (_d == null && TaktLook.on(context)) {
+        final q = await HealthData.load(repo, quick: true);
+        if (stillNewest(#day, t) && _d == null) {
+          setState(() => (_d = q, _loading = false));
+        }
+      }
       final d = await HealthData.load(repo);
       if (stillNewest(#day, t)) setState(() => (_d = d, _loading = false));
     } catch (_) {
@@ -663,13 +785,26 @@ class _HealthScreenState extends State<HealthScreen> with RevisionReload {
   Widget build(BuildContext c) {
     final d = _d ?? const HealthData();
     final l = AppLocalizations.of(c);
+    final takt = TaktLook.on(c);
+
     return ListView(padding: pad, children: [
       ScreenTitle(l?.healthTitle ?? 'Health',
           trailing: const ProfileAvatar(accent: C.domHealth)),
-      SubTabs(_tabsOf(l), _tab, _select, color: C.blue),
-      const SizedBox(height: S.x3),
-      const MoreForTodayRow(),
-      const SizedBox(height: S.x3),
+      if (takt) ...[
+        // TAKT (Feature 05, G1/G2): Overview, Vitals, Explore and Labs stay
+        // reachable in the Takt look, in Takt's own bar.
+        TaktSubTabBar(
+          items: _taktTabsOf(l),
+          index: _taktOrder.contains(_tab) ? _taktOrder.indexOf(_tab) : 0,
+          onTap: (i) => _select(_taktOrder[i]),
+        ),
+        const SizedBox(height: S.x3),
+      ] else ...[
+        SubTabs(_tabsOf(l), _tab, _select, color: C.blue),
+        const SizedBox(height: S.x3),
+        const MoreForTodayRow(),
+        const SizedBox(height: S.x3),
+      ],
       if (_loading && _d == null)
         const Padding(
           padding: EdgeInsets.only(top: S.x8),
@@ -679,12 +814,28 @@ class _HealthScreenState extends State<HealthScreen> with RevisionReload {
         switch (_tab) {
           0 => _overview(c, d),
           1 => _explore(c),
-          2 => _trends(c, d),
-          3 => _vitals(c, d),
+          // Takt shows the trend cards on Overview, so there is no tab of its own.
+          2 => takt ? _overview(c, d) : _trends(c, d),
+          3 => takt ? _taktVitals(d) : _vitals(c, d),
+          5 => const JournalTab(), // TAKT (Feature 13, J26): Journal tab
           _ => _labs(c),
         },
     ]);
   }
+
+  Widget _taktVitals(HealthData d) => TaktVitalsView(
+        vitals: _v,
+        health: d,
+        vDay: _vDay,
+        vDays: _vDays,
+        vFailed: _vFailed,
+        onDay: _goVitalsDay,
+        onRetry: () {
+          setState(() => _vFailed = false);
+          _loadVitals(force: true);
+        },
+        now: widget.now,
+      );
 
   // ─────────────── OVERVIEW ───────────────
   Widget _overview(BuildContext c, HealthData d) {
@@ -892,6 +1043,16 @@ class _HealthScreenState extends State<HealthScreen> with RevisionReload {
           );
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      // TAKT Body Age card and Trends directly on Overview in Takt design.
+      if (TaktLook.on(c)) ...[
+        if (d.partial)
+          const TaktLoadingCard(key: ValueKey('takt-body-age-loading'))
+        else
+          TaktBodyAgeCard(snapshot: d.resolveBodyAge()),
+        const SizedBox(height: S.x3),
+        TaktTrendsView(data: d),
+        const SizedBox(height: S.x3),
+      ],
       // WHOOP MG only: the ECG door appears once the paired band has
       // positively identified itself as an MG, and stays while it is away.
       if (pairedIsMaverickOf(c)) ...[
@@ -900,12 +1061,17 @@ class _HealthScreenState extends State<HealthScreen> with RevisionReload {
       ],
       // Where today's recovery stands, in Home's words: the overnight rows
       // below can be a held-over night while Home greys today's own number.
-      if (recoveryStateLine(todayHeadlineOf(d.today), l) case final note?) ...[
-        Text('${l?.homeRingRecovery ?? 'Recovery'} · $note',
-            style: F.cap.copyWith(color: p.ink3)),
-        const SizedBox(height: S.x2),
-      ],
-      if (rows.isNotEmpty)
+      if (!TaktLook.on(c))
+        if (recoveryStateLine(todayHeadlineOf(d.today), l) case final note?) ...[
+          taktDodge(
+            c,
+            Text('${l?.homeRingRecovery ?? 'Recovery'} · $note',
+                style: F.cap.copyWith(color: p.ink3)),
+            line: true,
+          ),
+          const SizedBox(height: S.x2),
+        ],
+      if (!TaktLook.on(c) && rows.isNotEmpty)
         Surface(
           pad: const EdgeInsets.symmetric(horizontal: S.x4),
           child: Column(children: [
@@ -915,10 +1081,11 @@ class _HealthScreenState extends State<HealthScreen> with RevisionReload {
             ],
           ]),
         ),
-      for (final g in gaps) ...[const SizedBox(height: S.x3), g],
+      if (!TaktLook.on(c))
+        for (final g in gaps) ...[const SizedBox(height: S.x3), g],
       // The active wearable's heart rows, each with its class, source line
       // and reason. Nothing on a WHOOP-only install, nor when handed data.
-      if (widget.data == null) const WearableCells(kHealthWearableRows),
+      if (!TaktLook.on(c) && widget.data == null) const WearableCells(kHealthWearableRows),
 
       // OBSERVATIONS — the illness watch, wrapped, plus a door to the other
       // three detectors.

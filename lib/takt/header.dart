@@ -32,10 +32,11 @@ String dayShortLabel(String day, bool de) {
 
 class TaktHeader extends StatelessWidget {
   const TaktHeader(this.name,
-      {super.key, this.back = false, this.center, this.trailing, this.sub});
+      {super.key, this.back = false, this.onBack, this.center, this.trailing, this.sub});
 
   final String name;
   final bool back;
+  final VoidCallback? onBack;
   final Widget? center;
   final Widget? trailing;
 
@@ -53,7 +54,7 @@ class TaktHeader extends StatelessWidget {
         if (back) ...[
           Pressable(
             key: const ValueKey('takt-back'),
-            onTap: () => Navigator.maybePop(c),
+            onTap: onBack ?? () => Navigator.maybePop(c),
             semanticLabel: AppLocalizations.of(c)?.supplementNavBack ?? 'Back',
             child: SizedBox(
               width: 32,

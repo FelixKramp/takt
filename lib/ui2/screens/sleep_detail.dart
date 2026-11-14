@@ -193,8 +193,19 @@ String sleepReadingText(AppLocalizations? l, num value, int places,
 
 /// A stage interval as one label. Seconds in, because that is what the analytics
 /// interval carries; `hm` wants minutes.
-String _rangeText(ana.StageInterval i) =>
-    '${hm(i.loSec / 60)}–${hm(i.hiSec / 60)}';
+///
+/// TAKT: kompakt als „1:03–2:45 Std.“. Ausgeschrieben („1 Std. 03 Min.–2 Std.
+/// 45 Min.“) war es fast so breit wie der Bildschirm, in Punktschrift schwer
+/// lesbar und drückte die Beschriftung daneben zusammen (Gerätetest 0.5.1).
+String _rangeText(ana.StageInterval i) {
+  String clock(num sec) {
+    final m = (sec / 60).round();
+    return '${m ~/ 60}:${(m % 60).toString().padLeft(2, '0')}';
+  }
+
+  return lookupAppLocalizations(Locale(LocaleController.displayLanguageCode))
+      .supplementHoursValue('${clock(i.loSec)}–${clock(i.hiSec)}');
+}
 
 String _capitalise(String s) =>
     s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
@@ -335,13 +346,32 @@ class SleepData {
     // off overnight and the card said "7h 04m" while this screen answered "No
     // night to show" about the same tap.
     final days = await repo.availableDays();
-    final prefer = heldOverNightOf(today) ??
-        (today['status'] as Map?)?['today_day']?.toString();
+    final status = (today['status'] as Map?)?.cast<String, dynamic>();
+    final todayDay = status?['today_day']?.toString();
+    var prefer = heldOverNightOf(today) ?? todayDay;
+    // TAKT: Sobald die heutige Nacht abgeleitet ist (duration_min != null) und
+    // nicht mehr läuft, direkt heute bevorzugen statt 60 min auf
+    // `showing_prior_overnight == false` zu warten.
+    Map<String, dynamic>? prefetchedTodayNight;
+    if (todayDay != null &&
+        prefer != todayDay &&
+        days.contains(todayDay) &&
+        status?['recovery_state'] != 'night_in_progress') {
+      try {
+        final tn = await repo.getDaySleepV2(todayDay);
+        if (tn['duration_min'] != null) {
+          prefer = todayDay;
+          prefetchedTodayNight = tn;
+        }
+      } catch (_) {}
+    }
     final latest = pickDay(days, null, prefer);
     final day = pickDay(days, want, prefer);
     if (day == null) return SleepData(days: days, latestDay: latest);
 
-    final night = await repo.getDaySleepV2(day);
+    final night = day == todayDay && prefetchedTodayNight != null
+        ? prefetchedTodayNight
+        : await repo.getDaySleepV2(day);
     var deviceNights = const <Map<String, Object?>>[];
     try {
       deviceNights = await repo.getDeviceNights(day);
@@ -699,6 +729,10 @@ class _SleepDetailState extends State<SleepDetail> with RevisionReload {
         setState(() => (
               _d = d,
               _lastGood = d,
+              // TAKT: Falls der Nutzer manuell auf heute geblättert hat, bevor
+              // `latestDay` nachgezogen war, folgt der Reiter ab jetzt wieder
+              // automatisch der neuesten Nacht.
+              _day = _day != null && _day == d.latestDay ? null : _day,
               _rough = rough,
               _correctable = correctable,
               _wholeNightKept = wholeNightKept,
@@ -2649,14 +2683,23 @@ class _Compare extends StatelessWidget {
       final i = _CompareIndex.of(c);
       final warn = ScoreBand.okay.ink(p.dark);
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text(label, style: F.body.copyWith(color: p.ink))),
-          const SizedBox(width: S.x2),
-          StripeDodge(
-            align: 1,
-            child: Text(value, style: Pult.digits(17, p.ink)),
-          ),
-        ]),
+        // TAKT: Label und Wert teilen sich die Zeile, solange beide passen.
+        // Eine Spanne wie „1 Std. 03 Min.–2 Std. 45 Min.“ ist fast so breit wie
+        // der Bildschirm und drückte das Label als Expanded auf ein Zeichen
+        // Breite zusammen (Gerätetest 0.5.1). Dann rutscht der Wert darunter.
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: S.x2,
+          runSpacing: S.x1,
+          children: [
+            Text(label, style: F.body.copyWith(color: p.ink)),
+            StripeDodge(
+              align: 1,
+              child: Text(value, style: Pult.digits(17, p.ink)),
+            ),
+          ],
+        ),
         const SizedBox(height: S.x3),
         _TaktStrip(
             index: i,

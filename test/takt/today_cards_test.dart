@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
+import 'package:openstrap_edge/l10n/decimal_text.dart' show displayFixed;
 import 'package:openstrap_edge/models/metric.dart';
 import 'package:openstrap_edge/takt/today/pulse_display.dart';
 import 'package:openstrap_edge/takt/today/pulse_state.dart';
@@ -92,5 +93,23 @@ void main() {
     );
     expect(find.text('58 ms'), findsOneWidget);
     expect(find.text('HRV'), findsOneWidget);
+  });
+
+  testWidgets('Gerätetest 0.5.1: HRV, Ruhepuls und Schritte sind groß (32 pt)', (t) async {
+    await pump(
+      t,
+      TaktTodayView(
+        data: HomeData(rhr: m(51), steps: m(9876)),
+        hrv: Metric.parse({'value': 66, 'unit': 'ms'}),
+        pulse: pulse,
+        now: now,
+      ),
+    );
+    final cards = find.byKey(const ValueKey('takt-cards'));
+    for (final v in ['66 ms', '51', displayFixed(9876, 0)]) {
+      final text = find.descendant(of: cards, matching: find.text(v));
+      expect(text, findsOneWidget, reason: v);
+      expect(t.widget<Text>(text).style?.fontSize, greaterThanOrEqualTo(32), reason: v);
+    }
   });
 }

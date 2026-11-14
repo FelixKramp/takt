@@ -10,6 +10,7 @@ import '../../state/clock_format.dart' show formatClockOf;
 import '../../ui2/profile/devices.dart' show MyDevices;
 import '../../ui2/screens/home_screen.dart' show go;
 import '../../ui2/ui2.dart';
+import '../now.dart';
 import '../pult_tokens.dart';
 import '../takt_text.dart';
 import 'pulse_state.dart';
@@ -21,7 +22,9 @@ const kPulseHeight = 112.0;
 
 /// Der echte Puls: besitzt den Live-Strom, solange er zu sehen ist.
 class PulseDisplay extends StatefulWidget {
-  const PulseDisplay({super.key});
+  const PulseDisplay({super.key, this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   State<PulseDisplay> createState() => _PulseDisplayState();
@@ -69,7 +72,7 @@ class _PulseDisplayState extends State<PulseDisplay> with WidgetsBindingObserver
   }
 
   void _remember(int bpm) {
-    final now = DateTime.now();
+    final now = taktNow();
     _last = LastPulse(bpm, now);
     final saved = _savedAt;
     if (saved != null && now.difference(saved).inSeconds < 60) return;
@@ -98,6 +101,7 @@ class _PulseDisplayState extends State<PulseDisplay> with WidgetsBindingObserver
       state: pulseStateOf(live: live, last: _last, paired: paired, connected: connected),
       trace: c.read<AppState>().liveHrTrace(),
       onPair: () => go(c, const MyDevices()),
+      onTap: widget.onTap,
     );
   }
 }
@@ -105,11 +109,18 @@ class _PulseDisplayState extends State<PulseDisplay> with WidgetsBindingObserver
 /// Reine Darstellung, dadurch ohne Band testbar. Die Höhe bleibt in jedem
 /// Zustand gleich, damit der Screen beim Trennen nicht springt.
 class PulseView extends StatelessWidget {
-  const PulseView({super.key, required this.state, this.trace = const [], this.onPair});
+  const PulseView({
+    super.key,
+    required this.state,
+    this.trace = const [],
+    this.onPair,
+    this.onTap,
+  });
 
   final PulseState state;
   final List<int> trace;
   final VoidCallback? onPair;
+  final VoidCallback? onTap;
 
   bool get _canPair =>
       state.kind == PulseKind.never &&
@@ -136,15 +147,22 @@ class PulseView extends StatelessWidget {
       if (!live) _reason(t),
     ];
     final body = Row(children: [
-      StripeDodge(
-        reserve: 0,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(state.bpm == null ? '--' : '${state.bpm}', style: Pult.digits(72, ink)),
+      // Die Zahl darf schrumpfen. Ohne Begrenzung lief die Zeile bei schmalem
+      // Display und großer Schrift über (Überlauf-Suche).
+      Flexible(
+        flex: 2,
+        child: StripeDodge(
+          reserve: 0,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(state.bpm == null ? '--' : '${state.bpm}', style: Pult.digits(72, ink)),
+          ),
         ),
       ),
       const SizedBox(width: S.x3),
       Expanded(
+        flex: 3,
         child: StripeDodge(
           child: FittedBox(
             fit: BoxFit.scaleDown,
@@ -177,8 +195,9 @@ class PulseView extends StatelessWidget {
       ),
       child: body,
     );
-    return _canPair
-        ? Pressable(onTap: onPair, child: box)
+    final action = _canPair ? onPair : onTap;
+    return action != null
+        ? Pressable(key: const ValueKey('takt-pulse-tap'), onTap: action, child: box)
         : box;
   }
 }

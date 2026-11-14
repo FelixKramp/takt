@@ -42,6 +42,7 @@ import 'home_screen.dart'
         staleReasonOf,
         syncOf,
         weekdayShortName;
+import 'investigate.dart' show Investigate;
 import 'journal_compose.dart';
 import 'start_card.dart';
 import 'metric_detail.dart' show detailScaffold;
@@ -436,6 +437,11 @@ class _WellnessScreenState extends State<WellnessScreen> with RevisionReload {
                   score.round().toString(),
                   unit: '/100',
                   sub: (level ?? '').toUpperCase(),
+                  // G26: this is the overnight stress level (Baevsky, 0–100),
+                  // so it opens ITS screen. The daytime curve has its own
+                  // door there, under its own name.
+                  onTap: () => Navigator.of(c).push(MaterialPageRoute<void>(
+                      builder: (_) => Investigate('stress', day: _date))),
                 ),
         ),
       ],

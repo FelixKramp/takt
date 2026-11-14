@@ -16,9 +16,9 @@ er keine Blackbox ist.
 - **C1** – Berechnung
   Ausgangslage: Eine Hauptschlafphase mit Dauer, Bedarf, Effizienz und Regelmäßigkeit liegt vor ·
   Handlung: Schlaf-Tab öffnen · Ergebnis: Der Score (0 bis 100, ganze Zahl) setzt sich so zusammen:
-  - 50 %: Dauer im Verhältnis zum Bedarf, bei 100 gedeckelt
-  - 25 %: Effizienz, linear von 70 % (0 Punkte) bis 95 % (100 Punkte)
-  - 25 %: Regelmäßigkeit, so wie sie OpenStrap schon berechnet (0 bis 100)
+  - 60 %: Dauer im Verhältnis zum Bedarf, zum Quadrat, bei 100 gedeckelt (6 von 8 Std. → 56)
+  - 20 %: Effizienz, linear von 85 % (0 Punkte) bis 98 % (100 Punkte)
+  - 20 %: Regelmäßigkeit (SRI von OpenStrap), linear von 50 (0 Punkte) bis 100 (100 Punkte)
 - **C2** – Fehlende Teile
   Ausgangslage: Regelmäßigkeit oder Effizienz fehlt, etwa in der ersten Woche · Handlung:
   Schlaf-Tab öffnen · Ergebnis: Der Score rechnet mit den vorhandenen Teilen, ihre Gewichte werden
@@ -91,3 +91,6 @@ er keine Blackbox ist.
 ## Daten
 Der Score wird aus den gespeicherten Schlafwerten berechnet und nicht zusätzlich gespeichert. Er
 verlässt das Handy nicht.
+
+## Änderungen
+- 2026-11-14 · C1 · Gerätetest: Der Score blieb zwischen 78 und 81, auch nach 6 Std. Schlaf bei Regelmäßigkeit 90. Effizienz (meist 90–97 %) und SRI (meist 75–95) lagen fast immer nahe am Maximum und trugen die Hälfte. Neu 60/20/20, Dauer quadratisch, Effizienz und SRI auf ihren echten Bereich gestreckt. Felix' Auftrag per /goal.

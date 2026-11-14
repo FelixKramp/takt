@@ -237,6 +237,8 @@ void main() {
           ),
           strainPeak: 12.4,
           now: today,
+          onStart: () {},
+          onLog: () {},
           items: [
             ActivityItem(
               id: 'handball-1',

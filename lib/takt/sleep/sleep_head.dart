@@ -196,7 +196,7 @@ class _ScoreCard extends StatelessWidget {
               s.efficiency, accent),
           _Part(t.regularityPart, '', s.regularity, accent),
           const SizedBox(height: S.x1),
-          Text(t.weights, style: F.cap.copyWith(color: p.ink3)),
+          StripeDodge(line: true, child: Text(t.weights, style: F.cap.copyWith(color: p.ink3))),
         ],
       ]),
     );

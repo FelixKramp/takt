@@ -7,6 +7,7 @@
 //
 // Built entirely inside SQLite by [attachCopy], so no row passes through Dart.
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -151,9 +152,20 @@ Future<String> exportRecentSlice({DateTime? now, int rawDays = kSliceDays}) asyn
   return dest;
 }
 
+/// Exposes the WHERE clause generation for testing.
+@visibleForTesting
+Future<String?> whereForTable(DatabaseExecutor db, String table, int cutoff,
+        int rawCutoff, String cutoffDay) =>
+    _where(db, table, cutoff, rawCutoff, cutoffDay);
+
 /// The WHERE clause that keeps [table]'s rows ('' = all), or null for none.
 Future<String?> _where(DatabaseExecutor db, String table, int cutoff,
     int rawCutoff, String cutoffDay) async {
+  // TAKT (Feature 13, J20): private questions never leave the device,
+  // even in diagnostic error report slices.
+  if (table == 'journal_metric') {
+    return " WHERE field NOT LIKE 'priv_%'";
+  }
   var rule = kSliceTables[table];
   if (rule == null) {
     rule = await _fallback(db, table);

@@ -210,7 +210,7 @@ const _notComponents = {
   'ProfileHome', 'ProfileHomeView', 'MoreSettings', 'MoreSettingsView',
   'NotificationSettings', 'NotificationSettingsView', 'EditProfile',
   'EditProfileView', 'DataScreen', 'AlarmScreen', 'AlarmScreenView',
-  'ReportIssueScreen',
+  'ReportIssueScreen', 'BodyAgeStudiesScreen',
   // Owns a live calibration routine: a ticker over the band's step stream and
   // phone pedometer reads, and it writes calibration rows when it finishes.
   'StepCalibrationScreen',
