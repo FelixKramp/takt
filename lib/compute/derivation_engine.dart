@@ -76,6 +76,8 @@ import 'step_cadence.dart';
 import 'profile.dart';
 import 'substrate.dart';
 import 'vendor_sleep.dart';
+// TAKT: Gehen-Erkennung aus dem Schrittzähler (Feature 14).
+import '../takt/walk/walk_detect.dart';
 
 /// Analytics/bundle version — bump to force a recompute of non-finalized days.
 /// v3: Walch 2019 stager + 4-class stages (light/deep/rem), robust nocturnal HRV,
@@ -10795,6 +10797,21 @@ class DerivationEngine {
         }
 
       }
+      // TAKT: Spaziergänge und Gehen erkennt die Puls-Erkennung oben nie. Der
+      // Takt-Detektor sucht sie im Schrittzähler, außerhalb gespeicherter und
+      // eben erkannter Trainings (Feature 14).
+      toPersist.addAll(walkSuggestionRows(
+        date,
+        detectWalks(
+          tsSec: s.tsSec,
+          stepCount: s.stepCount,
+          hr: s.hr,
+          blocked: [
+            for (final w in savedSpans) (w.startSec, w.endSec),
+            for (final b in bouts) (b.startSec, b.endSec),
+          ],
+        ),
+      ));
       return _WorkoutCompute(
         boutJson: boutJson,
         hrrBpm: hrrBpm,
