@@ -55,6 +55,17 @@ void main() {
     expect(need.strainMin, isNull);
   });
 
+  test('14.11.: Notizen aus der alten Bedarfsrechnung werden verworfen', () {
+    Prefs.setString(TaktNightLog.key,
+        '{"2026-11-13":{"need":636,"debt":101},"2026-11-14":{"v":2,"need":505}}');
+    final log = TaktNightLog.read();
+    expect(log.containsKey('2026-11-13'), isFalse);
+    expect(log['2026-11-14']!.needMin, 505);
+    final need = needForNight('2026-11-14', log, needNow: 517, strainNowMin: 12);
+    expect(need.needMin, 505, reason: 'ohne gültige Notiz der heutige Bedarf ohne Belastung');
+    expect(need.fromLog, isFalse);
+  });
+
   test('vorheriger Tag über Monatsgrenzen', () {
     expect(prevDay('2026-11-01'), '2026-10-31');
     expect(prevDay('2026-01-01'), '2025-12-31');

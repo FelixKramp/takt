@@ -394,10 +394,25 @@ Map<String, dynamic> buildCrossDayBundle(
   // was then a population figure presented as the user's own, with nothing on
   // screen saying so. Absent input yields an absent metric; the coach fills in
   // once enough nights exist to estimate an OSD.
+  //
+  // TAKT (Gerätetest 14.11.): Der Bedarf kam auf 10:36 h und die Bettzeit auf
+  // 20:31. Zwei Fehler, die sich addierten:
+  //  1. Grundbedarf = p75 der Wochenend-Nächte. Am Wochenende holt man aber
+  //     gerade die Schuld der Woche nach; dieses Nachholen wurde zum Bedarf
+  //     und dieselbe Lücke danach noch einmal als Schuld addiert. Jetzt: der
+  //     Mittelwert der freien Nächte, sobald es die p75 gibt (gleiche Schwelle).
+  //  2. Die ganze Schuld kam auf eine einzige Nacht. Jetzt: ein Drittel pro
+  //     Nacht, höchstens 45 Minuten (kTaktDebtShare, kTaktDebtCapH).
+  final double? baselineH = osdH == null ? null : _mean(freeDurH) ?? osdH;
   final double? baselineNeedSec =
-      osdH == null ? null : (osdH.clamp(7.0, 9.5)) * 3600.0;
-  final debtSec =
-      (sleepDebt.present ? (sleepDebt.value!.debtHours ?? 0.0) : 0.0) * 3600.0;
+      baselineH == null ? null : (baselineH.clamp(7.0, 9.5)) * 3600.0;
+  final habitualH = sleepDebt.present ? sleepDebt.value!.habitualHours : null;
+  final double debtTotalH = (baselineNeedSec == null || habitualH == null)
+      ? 0.0
+      : math.max(0.0, baselineNeedSec / 3600.0 - habitualH);
+  final double debtTonightH =
+      math.min(debtTotalH * kTaktDebtShare, kTaktDebtCapH);
+  final debtSec = debtTonightH * 3600.0;
   // The debt's own count when it is the one waiting: it needs three weekend
   // nights before it takes a p75, and "need=1" would promise the coach after
   // the first.
@@ -686,6 +701,14 @@ Map<String, dynamic> buildCrossDayBundle(
       // must not render "+0m" for "we do not know", and the missing bonus is
       // worth up to 45 min of need.
       'strain_bonus_min': appliedStrainBonusMin,
+      // TAKT: was von der Schlafschuld heute Nacht im Bedarf steckt, und die
+      // ganze Schuld. Null ohne Grundbedarf.
+      'debt_tonight_min':
+          baselineNeedSec == null ? null : (debtTonightH * 60).round(),
+      'debt_total_min':
+          baselineNeedSec == null ? null : (debtTotalH * 60).round(),
+      'base_need_min':
+          baselineNeedSec == null ? null : (baselineNeedSec / 60).round(),
       'performance': perf.toJson((v) => v.toJson()),
       'bedtime': bedtime.toJson((v) => v.toJson()),
       'wake': wakeRec.toJson((v) => v.toJson()),
@@ -952,6 +975,11 @@ List<bool> _lutealFlags(List<String> dates, List<String> cycleStartDates) {
 /// a plausible recent-history window (a corrupt/absurd date), so we fall back to
 /// the raw per-row series rather than allocating an unbounded list.
 const int _maxDenseTrimpDays = 400;
+
+/// TAKT: Anteil der Schlafschuld, der pro Nacht in den Bedarf geht, und die
+/// Obergrenze dafür in Stunden (Gerätetest 14.11.).
+const double kTaktDebtShare = 1 / 3;
+const double kTaktDebtCapH = 0.75;
 
 /// A DENSE per-calendar-day TRIMP series (oldest→newest) over the span covered
 /// by [dates], with every unloaded or unobserved day contributing a 0 impulse.
@@ -1268,6 +1296,7 @@ bool _isNextDay(String a, String b) {
     // Fresh blank day grid (all wake, all invalid until covered).
     final asleep = List<bool>.filled(epochsPerDay, false);
     final cov = List<bool>.filled(epochsPerDay, false);
+    final off = List<bool>.filled(epochsPerDay, false);
 
     final hyp = d['hypnogram'];
     if (hyp is List) {
@@ -1298,13 +1327,29 @@ bool _isNextDay(String a, String b) {
         final span = math.min(endMin - startMin, epochsPerDay);
         // 'unobserved' is the band seeing nothing (off wrist, lost contact):
         // neither asleep nor awake, so those minutes stay uncovered.
-        if (stage == 'unobserved') continue;
+        if (stage == 'unobserved') {
+          for (var k = 0; k < span; k++) {
+            off[(startMin + k) % epochsPerDay] = true;
+          }
+          continue;
+        }
         final asleepSeg = stage != null && stage != 'wake';
         for (var k = 0; k < span; k++) {
           final m = (startMin + k) % epochsPerDay;
           cov[m] = true;
           if (asleepSeg) asleep[m] = true;
         }
+      }
+    }
+    // TAKT (Gerätetest 14.11.): Außerhalb der aufgezeichneten Nacht war man
+    // wach. Vorher blieben diese Minuten ungültig, verglichen wurde also nur
+    // die Überschneidung zweier Nächte, in der man fast immer beide Male
+    // schlief. Eine Nacht 02:24–09:20 nach 23:50–07:40 ergab so 90 statt
+    // rund 65. Jetzt zählt der ganze Tag, wie in der SRI-Definition; nur
+    // Abschnitte, in denen das Band ausdrücklich nichts sah, bleiben draußen.
+    if (cov.contains(true)) {
+      for (var m = 0; m < epochsPerDay; m++) {
+        if (!cov[m] && !off[m]) cov[m] = true;
       }
     }
     sleepWake.addAll(asleep);

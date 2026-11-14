@@ -538,7 +538,84 @@ void main() {
     });
   });
 
+  _taktDeviceTest1411();
   _wiredFamilies();
+}
+
+// ── TAKT, Gerätetest 14.11. ──────────────────────────────────────────────────
+
+void _taktDeviceTest1411() {
+  group('TAKT 14.11.: Regelmäßigkeit und Schlafbedarf', () {
+    int at(int d, int h, int m) => DateTime(2026, 11, d, h, m).millisecondsSinceEpoch ~/ 1000;
+
+    test('eine verschobene Nacht zählt über den ganzen Tag, nicht nur die Überschneidung', () {
+      // Zwei Nächte, die zweite um zweieinhalb Stunden verschoben. Vorher wurden nur
+      // die 313 Minuten verglichen, in denen beide Male geschlafen wurde: SRI 90.
+      Map<String, dynamic> night(String date, int on, int off) => {
+            'date': date,
+            'onset_sec': on,
+            'wake_sec': off,
+            'tst_min': (off - on) ~/ 60,
+            'hypnogram': [
+              {'start': on, 'end': off, 'stage': 'nrem'},
+            ],
+          };
+      final days = [
+        night('2026-11-13', at(12, 23, 50), at(13, 7, 40)),
+        night('2026-11-14', at(14, 2, 24), at(14, 9, 20)),
+      ];
+      final reg = (buildCrossDayBundle(days, const {})['regularity'] as Map)
+          .cast<String, dynamic>();
+      final sri = ((reg['value'] as Map)['sri'] as num).toDouble();
+      // 254 abweichende Minuten von 1440: 200 · (1186/1440) − 100 ≈ 64,7.
+      expect(sri, closeTo(64.7, 1.5));
+    });
+
+    test('ein Abschnitt ohne Messung bleibt draußen, statt als wach zu zählen', () {
+      final days = [
+        for (final d in [12, 13])
+          {
+            'date': '2026-11-${d + 1}',
+            'onset_sec': at(d, 23, 0),
+            'wake_sec': at(d + 1, 7, 0),
+            'tst_min': 480,
+            'hypnogram': [
+              {'start': at(d, 23, 0), 'end': at(d + 1, 7, 0), 'stage': 'nrem'},
+              if (d == 13) {'start': at(d + 1, 12, 0), 'end': at(d + 1, 18, 0), 'stage': 'unobserved'},
+            ],
+          },
+      ];
+      final v = ((buildCrossDayBundle(days, const {})['regularity'] as Map)['value'] as Map);
+      expect((v['sri'] as num).toDouble(), closeTo(100, 0.01));
+      expect(v['cases'], 1440 - 360);
+    });
+
+    List<Map<String, dynamic>> sleepDays({required int freeMin, required int workMin}) {
+      final days = _synthDays(30);
+      for (final d in days) {
+        final wd = DateTime.parse(d['date'] as String).weekday;
+        d['tst_min'] = wd >= 6 ? freeMin : workMin;
+        d['efficiency'] = 93.0;
+      }
+      return days;
+    }
+
+    test('Grundbedarf ist der Mittelwert der freien Nächte, heute kommt ein Drittel der Schuld dazu', () {
+      final coach = (buildCrossDayBundle(sleepDays(freeMin: 540, workMin: 420), const {})['sleep_coach']
+          as Map);
+      expect(coach['base_need_min'], 540);
+      // Gewohnte Nacht (Median der letzten sieben) 7 h, Grundbedarf 9 h.
+      expect(coach['debt_total_min'], 120);
+      expect(coach['debt_tonight_min'], 40);
+    });
+
+    test('der Anteil der Schuld für heute ist auf 45 Minuten gedeckelt', () {
+      final coach = (buildCrossDayBundle(sleepDays(freeMin: 540, workMin: 360), const {})['sleep_coach']
+          as Map);
+      expect(coach['debt_total_min'], 180);
+      expect(coach['debt_tonight_min'], 45);
+    });
+  });
 }
 
 // ── the three cross-day families wired in this pass ──────────────────────────

@@ -29,7 +29,13 @@ class NightNote {
       ? null
       : needMin! - (debtMin ?? 0) - (strainMin ?? 0) + (napMin ?? 0);
 
+  /// TAKT 14.11.: Version der Bedarfsrechnung. Notizen ohne sie stammen aus
+  /// der alten Rechnung (ganze Schuld auf einmal, p75 als Grundbedarf) und
+  /// werden beim Lesen verworfen.
+  static const int version = 2;
+
   Map<String, dynamic> toJson() => {
+        'v': version,
         if (needMin != null) 'need': needMin,
         if (debtMin != null) 'debt': debtMin,
         if (strainMin != null) 'strain': strainMin,
@@ -71,7 +77,7 @@ class TaktNightLog {
       if (raw is! Map) return const {};
       return {
         for (final e in raw.entries)
-          if (e.value is Map)
+          if (e.value is Map && ((e.value as Map)['v'] as num? ?? 0) >= NightNote.version)
             e.key.toString(): NightNote.fromJson((e.value as Map).cast<String, dynamic>()),
       };
     } catch (_) {

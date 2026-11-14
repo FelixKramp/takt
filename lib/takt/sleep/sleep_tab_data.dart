@@ -224,7 +224,9 @@ Future<TaktSleepView> loadTaktSleep(LocalRepository repo, {String? want}) async 
       dayLabel(DateTime.now()),
       NightNote(
         needMin: (needSec / 60).round(),
-        debtMin: debtH == null ? null : (debtH * 60).round(),
+        // TAKT 14.11.: Im Bedarf steckt nur der heutige Anteil der Schuld.
+        debtMin: (c['debt_tonight_min'] as num?)?.round() ??
+            (debtH == null ? null : (debtH * 60).round()),
         strainMin: (c['strain_bonus_min'] as num?)?.round(),
         napMin: (c['nap_credit_min'] as num?)?.round(),
         bedRec: (envValue(c['bedtime'])?['bedtime_min_of_day'] as num?)?.round(),

@@ -64,7 +64,9 @@ class SleepText {
   String get needLabel => de ? 'Bedarf' : 'Need';
   String get base => de ? 'Grundbedarf' : 'Baseline';
   String get strain => de ? 'Belastung' : 'Strain';
-  String get debt => de ? 'Schlafschuld' : 'Sleep debt';
+  /// Nur der Teil der Schuld, der heute Nacht im Bedarf steckt (ein Drittel,
+  /// höchstens 45 Minuten), nicht die ganze Schuld.
+  String get debt => de ? 'Schlafschuld, Anteil heute' : 'Sleep debt, tonight’s share';
   String get partsTomorrow => de
       ? 'Woraus sich der Bedarf zusammensetzt, zeigt Takt ab der nächsten Nacht.'
       : 'Takt shows what makes up your need from the next night on.';
