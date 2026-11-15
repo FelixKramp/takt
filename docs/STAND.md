@@ -6,10 +6,11 @@ verlängert. Höchstens etwa 30 Zeilen. Was sich im Code geändert hat, steht in
 `git log`; hier steht, was Git nicht weiß. Das Repo ist öffentlich: nichts
 Privates (keine Schlafzeiten, Gesundheitswerte, Journalfragen).
 
-**Aktualisiert:** 2026-11-15 · **Letzter Commit:** siehe `git log -1` · **Version:** 0.5.1+38
+**Aktualisiert:** 2026-11-15 · **Letzter Commit:** siehe `git log -1` · **Version:** 0.5.1+39
 
 ## Zuletzt dazugekommen
 - Erkannte Workouts werden mit verbundenem Band wieder zeitnah gespeichert: Rechnung darf 10 Min hinter dem Datenstand liegen (`lib/takt/today/auto_confirm.dart`). Vorher blieb ein Training stundenlang „offen“: keine Belastung, Antippen öffnete nur die Sportart-Wahl
+- Stressverlauf zeigt auch im Workout Werte (wie WHOOP); Durchschnitt, Zonen, Spitze ohne Workouts
 - Stressverlauf: Zoom mit zwei Fingern (rohe Zeiger über `Listener`, Wischen bleibt), „Ganzer Verlauf“ setzt zurück (`stressZoomView`)
 - Radfahr-Erkennung aus Build 36 zurückgenommen (15 Fehlalarme, Band zählt beim Treten Schritte). Befund und Vorschlag (Handy-Aktivitätserkennung) in `docs/features/15-rad-erkennen/spec.md`. Offene Vorschläge davon verwirft `ActivityStore.pending`
 - Radfahren über die Aktivitätserkennung des Handys (Feature 15): `TaktMotion.kt` schreibt Wechsel mit, `phone_motion.dart` macht einen Gang mit ≥ 50 % Fahrrad zu Radfahren (in `sportOf` auf Heute)

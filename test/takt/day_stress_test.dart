@@ -269,8 +269,9 @@ void main() {
       expect(res.samples, isEmpty);
     });
 
-    // G13: Physisches Training bekommt score = null (nicht 2.5)
-    test('G13: workouts have null score and do not skew avg stress or peak', () {
+    // G13 (TAKT 15.11.): Training bekommt im Verlauf einen Wert (wie WHOOP),
+    // zählt aber nicht in Durchschnitt, Zonen und Spitze.
+    test('G13: workouts are shown with a score but do not skew avg stress or peak', () {
       final nowSec = (1700000000 ~/ 300) * 300;
       final hrCurve = <Map<String, dynamic>>[];
 
@@ -299,7 +300,7 @@ void main() {
       expect(res.hasData, isTrue);
       expect(res.activityMin, equals(20));
       for (final s in res.samples.where((s) => s.isActivity)) {
-        expect(s.score, isNull, reason: 'G13: Workout bins must have score == null, not 2.5');
+        expect(s.score, 3.0, reason: 'Puls 150 bei Ruhe 50 ist voller Körperstress');
         expect(s.activityName, equals('Running'));
       }
       // Peak stress must NOT be 2.5 from the workout
@@ -326,7 +327,9 @@ void main() {
 
       expect(res.hasData, isTrue);
       expect(res.samples.first.isActivity, isTrue);
-      expect(res.samples.first.score, isNull);
+      expect(res.samples.first.score, isNotNull, reason: 'im Verlauf sichtbar');
+      expect(res.highStressMin, 0, reason: 'zählt nicht als Stresszone');
+      expect(res.activityMin, 5);
     });
 
     test('correctly calculates low, medium, high stress zones and activities', () {

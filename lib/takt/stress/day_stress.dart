@@ -275,11 +275,10 @@ class DayStressCalculator {
         // Im Schlaf: Ruhestress typischerweise niedrig (0,0 – 0,7)
         final diff = math.max(0.0, avgHr - rhr);
         score = (diff / 25.0 * 0.7).clamp(0.0, 0.9);
-      } else if (isActivity) {
-        // G13: Physisches Training ist kein mentaler Stress. Kein erfundener Wert 2,5!
-        score = null;
       } else {
-        // Wachzeit ohne Workout: Autonomer Stress
+        // Wachzeit, TAKT 15.11. auch im Workout (wie WHOOP): Der Verlauf zeigt
+        // die Belastung des Körpers durchgehend. In Durchschnitt, Zonen und
+        // Spitze zählen Workouts weiter nicht (G13, Schritt 4 unten).
         final hrDelta = avgHr - rhr;
         final hrStressFactor = ((hrDelta - 10.0) / 42.0).clamp(0.0, 1.0);
 

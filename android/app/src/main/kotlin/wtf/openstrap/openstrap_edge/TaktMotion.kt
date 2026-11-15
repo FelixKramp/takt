@@ -113,13 +113,21 @@ object TaktMotion {
             val e = old.optJSONObject(i) ?: continue
             if (now - e.optLong("ms") <= KEEP_MS) out.put(e)
         }
+        // Dieselbe Meldung kann doppelt kommen (Anmeldung aus zwei Engines).
+        val seen = HashSet<String>()
+        for (i in 0 until out.length()) {
+            val e = out.getJSONObject(i)
+            seen.add("${e.optString("type")}:${e.optBoolean("enter")}:${e.optLong("ms") / 1000}")
+        }
         for (ev in result.transitionEvents) {
             val type = TYPES[ev.activityType] ?: continue
             val ms = now - (bootNanos - ev.elapsedRealTimeNanos) / 1_000_000
+            val enter = ev.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER
+            if (!seen.add("$type:$enter:${ms / 1000}")) continue
             out.put(JSONObject().apply {
                 put("ms", ms)
                 put("type", type)
-                put("enter", ev.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                put("enter", enter)
             })
         }
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, out.toString()).apply()
