@@ -84,18 +84,103 @@ class _StressRepo extends LocalRepository {
       {if (age != null) 'age': age};
 }
 
+/// 12:00 Uhr am 11.11.2026, dem Tag, den die Ladetests abfragen.
+final int _noon1111 = DateTime(2026, 11, 11, 12).millisecondsSinceEpoch ~/ 1000;
+
 List<Map<String, dynamic>> _flat(int t0, num bpm) => [
       for (var i = 0; i < 10; i++) {'t': t0 + i * 30, 'v': bpm},
     ];
 
 void main() {
+  group('TAKT 14.11.: Tagesstress im Wachfenster', () {
+    int at(int d, int h, [int m = 0]) => DateTime(2026, 11, d, h, m).millisecondsSinceEpoch ~/ 1000;
+
+    test('vom Aufwachen bis zum Einschlafen, ohne Nickerchen', () {
+      final w = stressWakeWindow(
+        date: '2026-11-14',
+        sleeps: [
+          (at(14, 1, 10), at(14, 8, 50)), // verschobene Nacht
+          (at(14, 15), at(14, 15, 40)), // Nickerchen beendet den Tag nicht
+          (at(14, 23, 10), at(15, 7)), // nächste Nacht
+        ],
+        nowSec: at(15, 8),
+      )!;
+      expect(w.$1, at(14, 8, 50));
+      expect(w.$2, at(14, 23, 10));
+    });
+
+    test('noch wach nach Mitternacht: der Tag läuft bis jetzt', () {
+      final w = stressWakeWindow(
+        date: '2026-11-14',
+        sleeps: [(at(14, 0, 30), at(14, 8))],
+        nowSec: at(15, 1, 15),
+      )!;
+      expect(w.$1, at(14, 8));
+      expect(w.$2, at(15, 1, 15));
+    });
+
+    test('ohne Nacht beginnt der Tag um Mitternacht', () {
+      final w = stressWakeWindow(date: '2026-11-14', sleeps: const [], nowSec: at(14, 19))!;
+      expect(w.$1, at(14, 0));
+      expect(w.$2, at(15, 0));
+    });
+
+    test('wie WHOOP: der Verlauf beginnt beim Einschlafen, die Nacht zählt nicht in die Zonen', () {
+      expect(
+          stressNightOnset(date: '2026-11-14', sleeps: [
+            (at(13, 23, 30), at(14, 7, 15)),
+            (at(14, 15), at(14, 15, 40)),
+          ]),
+          at(13, 23, 30));
+      final hr = [
+        for (var m = 0; m < 20 * 60; m += 1) {'t': at(13, 23, 30) + m * 60, 'v': 64},
+      ];
+      final a = DayStressCalculator.compute(
+        date: '2026-11-14',
+        hrCurve: hr,
+        restingHr: 55,
+        maxHr: 195,
+        sleepWindows: [(at(13, 23, 30), at(14, 7, 15))],
+        workouts: [(at(14, 12), at(14, 13), 'walking')],
+        fromSec: at(14, 7, 15),
+        toSec: at(14, 20),
+        axisFromSec: at(13, 23, 30),
+      );
+      expect(a.samples.first.isSleep, isTrue, reason: 'die Nacht ist im Verlauf');
+      expect(a.sleepMin, greaterThan(400));
+      expect(a.awakeDataMin, lessThan(12 * 60), reason: 'Zonen nur wach, ohne Training');
+      final bands = stressBands(a.samples);
+      expect(bands.where((b) => b.sleep), hasLength(1));
+      expect(bands.where((b) => !b.sleep).single.name, 'walking');
+      expect(stressAxis(a).$1, at(13, 23, 30));
+    });
+
+    test('Puls vor dem Aufwachen zählt nicht mit', () {
+      final hr = [
+        for (var m = 0; m < 24 * 60; m += 1) {'t': at(14, 0) + m * 60, 'v': m < 8 * 60 + 50 ? 95 : 62},
+      ];
+      final a = DayStressCalculator.compute(
+        date: '2026-11-14',
+        hrCurve: hr,
+        restingHr: 55,
+        maxHr: 195,
+        fromSec: at(14, 8, 50),
+        toSec: at(14, 23),
+      );
+      expect(a.samples.every((s) => s.timestampSec >= at(14, 8, 50)), isTrue);
+      expect(a.samples.every((s) => s.timestampSec < at(14, 23)), isTrue);
+      expect(a.fromSec, at(14, 8, 50));
+      expect(stressAxisLabels(a.fromSec!, a.toSec! - a.fromSec!).first, '08:45');
+    });
+  });
+
   group('Stress-Basis (G14/G15)', () {
     test('G15: ohne Maximalpuls kein erfundener Ersatz (Ruhepuls + 120)', () {
       // Ohne Maximalpuls gibt es keine Sportgrenze. 150 bpm bei Ruhepuls 55
       // wären mit dem erfundenen Ersatz (175) Sport, ohne ihn nicht.
       final res = DayStressCalculator.compute(
         date: '2026-11-11',
-        hrCurve: _flat(1700000000, 150),
+        hrCurve: _flat(_noon1111, 150),
         restingHr: 55,
       );
       expect(res.samples, isNotEmpty);
@@ -106,7 +191,7 @@ void main() {
       // Alter 60 → persönlicher Maximalpuls 166 (Tanaka), Grenze bei 75 % HRR
       // = 55 + 0,75 × 111 = 138,25. Der Tageshöchstwert 180 (ein Sprint) darf
       // sie nicht auf 148,75 heben: 142 bpm ist Sport.
-      final repo = _StressRepo(age: 60, dayMax: 180, hr: _flat(1700000000, 142));
+      final repo = _StressRepo(age: 60, dayMax: 180, hr: _flat(_noon1111, 142));
       return DayStressCalculator.loadForDay(repo, '2026-11-11').then((res) {
         expect(res.samples, isNotEmpty);
         expect(res.samples.every((s) => s.isActivity), isTrue);
@@ -116,7 +201,7 @@ void main() {
     test('G14: der persönliche Wert der App (max_hr_used) hat Vorrang', () {
       // max_hr_used 190 → Grenze 55 + 0,75 × 135 = 156. 142 bpm ist kein Sport.
       final repo = _StressRepo(
-          age: 60, dayMax: 180, maxHrUsed: 190, hr: _flat(1700000000, 142));
+          age: 60, dayMax: 180, maxHrUsed: 190, hr: _flat(_noon1111, 142));
       return DayStressCalculator.loadForDay(repo, '2026-11-11').then((res) {
         expect(res.samples, isNotEmpty);
         expect(res.samples.every((s) => !s.isActivity), isTrue);
@@ -124,7 +209,7 @@ void main() {
     });
 
     test('G15: weder Alter noch max_hr_used: keine Sportgrenze, kein Ersatzwert', () {
-      final repo = _StressRepo(dayMax: 180, hr: _flat(1700000000, 150));
+      final repo = _StressRepo(dayMax: 180, hr: _flat(_noon1111, 150));
       return DayStressCalculator.loadForDay(repo, '2026-11-11').then((res) {
         expect(res.samples, isNotEmpty);
         expect(res.samples.every((s) => !s.isActivity), isTrue);
@@ -451,6 +536,64 @@ void main() {
       await t.pumpAndSettle();
 
       expect(t.takeException(), isNull);
+    });
+
+    // TAKT 14.11.: Beim Wischen über den Verlauf sprang die Seite, weil die
+    // Kopfkarte je nach Messpunkt (mit/ohne HRV, Wischen an/aus) ihre Höhe
+    // änderte und alles darunter mitrutschte.
+    testWidgets('Wischen über den Verlauf verschiebt nichts', (t) async {
+      t.view.physicalSize = const Size(412 * 2.625, 915 * 2.625);
+      t.view.devicePixelRatio = 2.625;
+      addTearDown(() => t.view.resetPhysicalSize());
+
+      final day0 = DateTime(2026, 11, 11).millisecondsSinceEpoch ~/ 1000;
+      final samples = [
+        for (var m = 0; m < 24 * 60; m += 10)
+          DayStressSample(
+            timestampSec: day0 + m * 60,
+            score: (m % 180) / 60,
+            hr: 60 + (m % 50).toDouble(),
+            rmssd: (m ~/ 10).isEven ? 40 : null,
+            isActivity: m >= 17 * 60 && m < 18 * 60,
+            activityName: m >= 17 * 60 && m < 18 * 60 ? 'Handball' : null,
+          ),
+      ];
+      final res = DayStressAnalysis(
+        date: '2026-11-11',
+        samples: samples,
+        avgStress: 1.2,
+        lowStressMin: 400,
+        mediumStressMin: 300,
+        highStressMin: 200,
+        activityMin: 60,
+        sleepMin: 0,
+        peakStress: 2.9,
+        peakTimeSec: day0 + 600 * 60,
+        hasData: true,
+      );
+
+      await t.pumpWidget(_wrap(TaktStressDetailScreen(
+        initialDate: '2026-11-11',
+        injectedAnalysis: res,
+      )));
+      await t.pumpAndSettle();
+
+      final title = find.text('24-STUNDEN-VERLAUF');
+      final below = find.text('ZEIT IN STRESSZONEN');
+      final y0 = t.getTopLeft(title).dy;
+      final z0 = t.getTopLeft(below).dy;
+      final chartY = t.getCenter(title).dy + 100;
+      final left = t.getTopLeft(title).dx + 4;
+      final g = await t.startGesture(Offset(left, chartY));
+      for (var x = left; x < left + 360; x += 7) {
+        await g.moveTo(Offset(x, chartY));
+        await t.pump();
+        expect(t.getTopLeft(title).dy, y0, reason: 'Verlauf sprang bei x=$x');
+        expect(t.getTopLeft(below).dy, z0, reason: 'Zonen sprangen bei x=$x');
+      }
+      await g.up();
+      await t.pump();
+      expect(t.getTopLeft(title).dy, y0, reason: 'nach dem Loslassen');
     });
   });
 }

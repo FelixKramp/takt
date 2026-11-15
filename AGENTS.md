@@ -1,5 +1,10 @@
 # AGENTS.md — OpenStrap `edge`
 
+> **TAKT (Fork):** Projektregeln auf Deutsch stehen in `CLAUDE.md`, sie gelten
+> für jeden Agenten. Übergabe: zu Beginn `docs/STAND.md` lesen, dann
+> `git log <Commit aus STAND.md>..HEAD` und `git status`; am Ende
+> `docs/STAND.md` neu schreiben (nicht verlängern, nichts Privates).
+
 Reviewer context. This doc drifts from code between edits — check
 `kAlgoVersion` (`lib/compute/derivation_engine.dart`), `schemaVersion`
 (`lib/data/db.dart`), and the `version:` line in `pubspec.yaml` directly

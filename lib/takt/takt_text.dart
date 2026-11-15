@@ -9,6 +9,23 @@ class TaktText {
       TaktText(Localizations.localeOf(c).languageCode == 'de');
 
   String get live => de ? 'bpm live' : 'bpm live';
+  // TAKT 14.11.: Bettzeit-Karte auf Heute.
+  String get tonightTitle => de ? 'Heute Nacht, damit dein Schlaf reicht' : 'Tonight, to get the sleep you need';
+  String get toBed => de ? 'ins Bett' : 'to bed';
+  String get getUp => de ? 'aufstehen' : 'get up';
+  // TAKT 14.11.: Heute anordnen.
+  String get arrange => de ? 'Heute anordnen' : 'Arrange Today';
+  String get arrangeReset => de ? 'Zurücksetzen' : 'Reset';
+  String get arrangeHint => de
+      ? 'Halten und ziehen. Batterie, Strain und Schlaf bleiben oben.'
+      : 'Hold and drag. Battery, strain and sleep stay on top.';
+  String get sectionTonight => de ? 'Bettzeit heute Nacht' : 'Bedtime tonight';
+  String get sectionPulse => de ? 'Puls live' : 'Live pulse';
+  String get sectionCards => de ? 'HRV, Ruhepuls, Schritte' : 'HRV, resting HR, steps';
+  String get sectionStress => de ? 'Tages-Stress' : 'Daily stress';
+  String get sectionWatch => de ? 'Hinweise zum Körper' : 'Body notes';
+  String get sectionActivities => de ? 'Aktivitäten' : 'Activities';
+  String get sectionWeek => de ? 'Belastung & Erholung' : 'Strain & recovery';
   String lastAt(String time) => de ? 'zuletzt um $time' : 'last at $time';
   String get notConnected => de ? 'Band nicht verbunden' : 'Band not connected';
   String get notWorn => de ? 'Band nicht angelegt' : 'Band not on your wrist';
@@ -52,6 +69,16 @@ class TaktText {
   String get batteryWeekHelp => de
       ? 'Hell die Ladung am Morgen, voll der Rest am Abend.'
       : 'Light is the morning charge, solid what was left in the evening.';
+  // TAKT 14.11.: Belastung & Erholung.
+  String get loadRecovery => de ? 'Belastung & Erholung' : 'Strain & recovery';
+  String get loadLegend => de ? 'Belastung (0–21)' : 'Strain (0–21)';
+  String get chargeLegend => de ? 'Batterie am Morgen' : 'Morning charge';
+  String get loadNoneOver => de
+      ? 'Kein Tag über dem Limit: Abends blieben überall mindestens 20 % übrig.'
+      : 'No day over the limit: at least 20 % was left every evening.';
+  String get loadNoCharge => de
+      ? 'Die Batterie lernt noch. Sobald sie steht, zeigt die Karte, an welchen Tagen du über dem Limit warst.'
+      : 'The battery is still learning. Once it is set, this card shows the days you went over the limit.';
   String batteryOver(String days) =>
       de ? 'Mehr belastet als erholt: $days' : 'Strained more than recovered: $days';
   String weekdayShort(DateTime d) => (de

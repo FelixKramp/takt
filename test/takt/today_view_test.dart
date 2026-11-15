@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:openstrap_edge/l10n/app_localizations.dart';
 import 'package:openstrap_edge/models/metric.dart';
+import 'package:openstrap_edge/state/clock_format.dart' show formatClockMinute;
 import 'package:openstrap_edge/takt/battery/battery.dart';
 import 'package:openstrap_edge/takt/pult_tokens.dart' show Pult;
 import 'package:openstrap_edge/takt/sleep/sleep_score.dart';
@@ -304,5 +305,35 @@ void sleepScoreRingTests() {
     final sleep = t.widgetList<DialRing>(find.byType(DialRing))
         .firstWhere((r) => r.view.kind == HomeRingKind.sleep);
     expect(sleep.view.value, ringViewOf(HomeRingKind.sleep, full, null).value);
+  });
+
+  testWidgets('14.11.: Heute zeigt, wann ins Bett und wann aufstehen', (t) async {
+    t.view.physicalSize = const Size(390, 844);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    HomeRingKind? opened;
+    await t.pumpWidget(host(TaktTodayView(
+      data: full,
+      pulse: livePulse,
+      tonight: (bed: 22 * 60 + 46, wake: 7 * 60 + 55),
+      onRing: (k) => opened = k,
+    )));
+    await t.pump();
+    final card = find.byKey(const ValueKey('takt-tonight'));
+    expect(card, findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text(formatClockMinute(22 * 60 + 46))), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text(formatClockMinute(7 * 60 + 55))), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text('ins Bett')), findsOneWidget);
+    await t.tap(card);
+    expect(opened, HomeRingKind.sleep, reason: 'Antippen öffnet den Schlaf');
+  });
+
+  testWidgets('14.11.: ohne Empfehlung keine Bettzeit-Karte', (t) async {
+    t.view.physicalSize = const Size(390, 844);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(host(TaktTodayView(data: full, pulse: livePulse)));
+    await t.pump();
+    expect(find.byKey(const ValueKey('takt-tonight')), findsNothing);
   });
 }

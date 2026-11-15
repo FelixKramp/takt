@@ -11,6 +11,9 @@
 
 import 'dart:math' as math;
 
+import '../../data/day_label.dart' show dayLabelOf, localDayEndSec, localDayStartSec;
+import '../now.dart';
+
 import '../../data/local_repository.dart';
 import '../../compute/hr_max.dart' show estimatedMaxHr;
 
@@ -72,37 +75,40 @@ class DayStressAnalysis {
     required this.peakTimeSec,
     required this.hasData,
     this.hasError = false,
+    this.fromSec,
+    this.toSec,
+    this.axisFromSec,
   });
 
   factory DayStressAnalysis.empty(String date) => DayStressAnalysis(
-        date: date,
-        samples: const [],
-        avgStress: null,
-        lowStressMin: 0,
-        mediumStressMin: 0,
-        highStressMin: 0,
-        activityMin: 0,
-        sleepMin: 0,
-        peakStress: null,
-        peakTimeSec: null,
-        hasData: false,
-        hasError: false,
-      );
+    date: date,
+    samples: const [],
+    avgStress: null,
+    lowStressMin: 0,
+    mediumStressMin: 0,
+    highStressMin: 0,
+    activityMin: 0,
+    sleepMin: 0,
+    peakStress: null,
+    peakTimeSec: null,
+    hasData: false,
+    hasError: false,
+  );
 
   factory DayStressAnalysis.error(String date) => DayStressAnalysis(
-        date: date,
-        samples: const [],
-        avgStress: null,
-        lowStressMin: 0,
-        mediumStressMin: 0,
-        highStressMin: 0,
-        activityMin: 0,
-        sleepMin: 0,
-        peakStress: null,
-        peakTimeSec: null,
-        hasData: false,
-        hasError: true,
-      );
+    date: date,
+    samples: const [],
+    avgStress: null,
+    lowStressMin: 0,
+    mediumStressMin: 0,
+    highStressMin: 0,
+    activityMin: 0,
+    sleepMin: 0,
+    peakStress: null,
+    peakTimeSec: null,
+    hasData: false,
+    hasError: true,
+  );
 
   final String date;
   final List<DayStressSample> samples;
@@ -136,15 +142,21 @@ class DayStressAnalysis {
   /// Ob beim Laden ein Fehler aufgetreten ist (G23).
   final bool hasError;
 
+  /// TAKT 14.11.: Das Wachfenster, über das gerechnet wurde: vom Aufwachen
+  /// bis zum Einschlafen (oder bis jetzt). Null: der Kalendertag 00–24 Uhr.
+  final int? fromSec, toSec;
+
+  /// Wo der Verlauf beginnt: beim Einschlafen in die Nacht vor dem Tag, damit
+  /// die Nacht zu sehen ist. Für Durchschnitt und Zonen zählt sie nicht.
+  final int? axisFromSec;
+
   /// Gesamtminuten der Wachphase mit auswertbaren Daten.
   int get awakeDataMin => lowStressMin + mediumStressMin + highStressMin;
 
   /// Prozentualer Anteil der Zonen an der Wachzeit.
   double get lowPct => awakeDataMin > 0 ? (lowStressMin / awakeDataMin) : 0.0;
-  double get mediumPct =>
-      awakeDataMin > 0 ? (mediumStressMin / awakeDataMin) : 0.0;
-  double get highPct =>
-      awakeDataMin > 0 ? (highStressMin / awakeDataMin) : 0.0;
+  double get mediumPct => awakeDataMin > 0 ? (mediumStressMin / awakeDataMin) : 0.0;
+  double get highPct => awakeDataMin > 0 ? (highStressMin / awakeDataMin) : 0.0;
 
   /// Der aktuellste nicht-schlafende Messwert des Tages (für die Live-Anzeige).
   DayStressSample? get latestAwakeSample {
@@ -164,12 +176,29 @@ class DayStressCalculator {
     double? baselineRmssd,
     List<(int, int)> sleepWindows = const [],
     List<(int, int, String)> workouts = const [],
+    int? fromSec,
+    int? toSec,
+    int? axisFromSec,
   }) {
+    final keepFrom = axisFromSec ?? fromSec;
+    // TAKT 14.11.: Nur das Wachfenster zählt. Die Nacht davor (und das
+    // Wachbleiben nach Mitternacht, das zum Vortag gehört) bleibt draußen.
+    if (fromSec != null || toSec != null) {
+      hrCurve = [
+        for (final e in hrCurve)
+          if ((e['t'] as num?) != null &&
+              (keepFrom == null || (e['t'] as num) >= keepFrom) &&
+              (toSec == null || (e['t'] as num) < toSec))
+            e,
+      ];
+    }
     if (hrCurve.isEmpty) return DayStressAnalysis.empty(date);
 
     // G15: Nie erfundene Werte (AGENTS.md, Regel 3). Ohne Ruhebasis kann kein Stress
     // berechnet werden.
-    if (restingHr == null || restingHr <= 0) return DayStressAnalysis.empty(date);
+    if (restingHr == null || restingHr <= 0) {
+      return DayStressAnalysis.empty(date);
+    }
 
     final rhr = restingHr;
     // G14/G15: Ohne persönlichen Maximalpuls gibt es keine Sportgrenze über den
@@ -252,14 +281,12 @@ class DayStressCalculator {
       } else {
         // Wachzeit ohne Workout: Autonomer Stress
         final hrDelta = avgHr - rhr;
-        final hrStressFactor =
-            ((hrDelta - 10.0) / 42.0).clamp(0.0, 1.0);
+        final hrStressFactor = ((hrDelta - 10.0) / 42.0).clamp(0.0, 1.0);
 
         double stressFactor;
         if (binRmssd != null && rmssdBsl != null && rmssdBsl > 0) {
           // Geringere HRV bedeutet höhere sympathische Aktivierung
-          final hrvFactor =
-              (1.0 - (binRmssd / rmssdBsl)).clamp(0.0, 1.0);
+          final hrvFactor = (1.0 - (binRmssd / rmssdBsl)).clamp(0.0, 1.0);
           stressFactor = 0.55 * hrStressFactor + 0.45 * hrvFactor;
         } else {
           stressFactor = hrStressFactor;
@@ -268,43 +295,55 @@ class DayStressCalculator {
         score = (stressFactor * 3.0).clamp(0.0, 3.0);
       }
 
-      rawSamples.add(DayStressSample(
-        timestampSec: tSec,
-        score: score,
-        hr: avgHr,
-        rmssd: binRmssd,
-        isSleep: isSleep,
-        isActivity: isActivity,
-        activityName: actName,
-      ));
+      rawSamples.add(
+        DayStressSample(
+          timestampSec: tSec,
+          score: score,
+          hr: avgHr,
+          rmssd: binRmssd,
+          isSleep: isSleep,
+          isActivity: isActivity,
+          activityName: actName,
+        ),
+      );
     }
 
     // 3. Glätten mit 3-Punkt-Median (nur für Wachzeit-Nicht-Workouts mit Score)
     final smoothed = <DayStressSample>[];
     for (var i = 0; i < rawSamples.length; i++) {
       final cur = rawSamples[i];
-      if (cur.isSleep || cur.isActivity || cur.score == null || i == 0 || i == rawSamples.length - 1) {
+      if (cur.isSleep ||
+          cur.isActivity ||
+          cur.score == null ||
+          i == 0 ||
+          i == rawSamples.length - 1) {
         smoothed.add(cur);
         continue;
       }
       final prev = rawSamples[i - 1];
       final next = rawSamples[i + 1];
-      if (prev.isSleep || prev.isActivity || prev.score == null ||
-          next.isSleep || next.isActivity || next.score == null) {
+      if (prev.isSleep ||
+          prev.isActivity ||
+          prev.score == null ||
+          next.isSleep ||
+          next.isActivity ||
+          next.score == null) {
         smoothed.add(cur);
         continue;
       }
       final trio = [prev.score!, cur.score!, next.score!]..sort();
       final medianScore = trio[1];
-      smoothed.add(DayStressSample(
-        timestampSec: cur.timestampSec,
-        score: medianScore,
-        hr: cur.hr,
-        rmssd: cur.rmssd,
-        isSleep: false,
-        isActivity: false,
-        activityName: null,
-      ));
+      smoothed.add(
+        DayStressSample(
+          timestampSec: cur.timestampSec,
+          score: medianScore,
+          hr: cur.hr,
+          rmssd: cur.rmssd,
+          isSleep: false,
+          isActivity: false,
+          activityName: null,
+        ),
+      );
     }
 
     // 4. Statistiken aggregieren
@@ -340,9 +379,7 @@ class DayStressCalculator {
       }
     }
 
-    final avgStress = wakingScoreCount > 0
-        ? (wakingScoreSum / wakingScoreCount)
-        : null;
+    final avgStress = wakingScoreCount > 0 ? (wakingScoreSum / wakingScoreCount) : null;
 
     return DayStressAnalysis(
       date: date,
@@ -356,14 +393,14 @@ class DayStressCalculator {
       peakStress: peak,
       peakTimeSec: peakTime,
       hasData: smoothed.isNotEmpty,
+      fromSec: fromSec,
+      toSec: toSec,
+      axisFromSec: axisFromSec,
     );
   }
 
   /// Lädt alle relevanten Daten für [date] aus dem Repository und errechnet die Analyse.
-  static Future<DayStressAnalysis> loadForDay(
-    LocalRepository repo,
-    String date,
-  ) async {
+  static Future<DayStressAnalysis> loadForDay(LocalRepository repo, String date) async {
     try {
       final tl = await repo.getDayTimeline(date);
       // G16: Timeline muss zum angeforderten Tag gehören!
@@ -376,7 +413,8 @@ class DayStressCalculator {
       final heart = await repo.getDayHeart(date);
       final profile = await repo.getProfile();
 
-      final hrCurve = (tl['hr'] as List?)?.cast<Map<String, dynamic>>() ??
+      final hrCurve =
+          (tl['hr'] as List?)?.cast<Map<String, dynamic>>() ??
           (stressPayload['hr'] as List?)?.cast<Map<String, dynamic>>() ??
           const [];
 
@@ -387,11 +425,11 @@ class DayStressCalculator {
 
       // G15: Bevorzuge gleitende Baseline
       final baselines = heart['baselines'] is Map ? heart['baselines'] as Map : null;
-      final baselineRhr = (baselines?['resting_hr'] is Map
-              ? baselines!['resting_hr']['usual'] as num?
-              : null)
-          ?.toDouble();
-      final rhr = baselineRhr ??
+      final baselineRhr =
+          (baselines?['resting_hr'] is Map ? baselines!['resting_hr']['usual'] as num? : null)
+              ?.toDouble();
+      final rhr =
+          baselineRhr ??
           (heart['resting_hr'] as num?)?.toDouble() ??
           (heart['rhr'] as num?)?.toDouble();
 
@@ -402,27 +440,35 @@ class DayStressCalculator {
       // Sport als Sport aus.
       final strain = await repo.getDayStrain(date);
       final used = (strain['max_hr_used'] as num?)?.toDouble();
-      final mhr = (used != null && used > 0)
-          ? used
-          : estimatedMaxHr(profile['age'] as num?, null);
+      final mhr = (used != null && used > 0) ? used : estimatedMaxHr(profile['age'] as num?, null);
 
       // G15: Daytime-HRV oder Baseline-HRV
-      final baselineHrv = (baselines?['hrv'] is Map
-              ? baselines!['hrv']['usual'] as num?
-              : null)
+      final baselineHrv = (baselines?['hrv'] is Map ? baselines!['hrv']['usual'] as num? : null)
           ?.toDouble();
       final dtHrvMean = (dtHrv is Map ? dtHrv['mean_rmssd'] as num? : null)?.toDouble();
-      final rmssdBsl = dtHrvMean ??
+      final rmssdBsl =
+          dtHrvMean ??
           baselineHrv ??
           (stressPayload['stress'] is Map
               ? (stressPayload['stress']['rmssd'] as num?)?.toDouble()
               : null) ??
           (heart['rmssd'] as num?)?.toDouble();
 
-      final sleepList = tl['sleep'] as List?;
+      // TAKT 14.11.: Der Folgetag liefert das Einschlafen (und den Puls
+      // nach Mitternacht, falls der Wachtag so lange lief).
+      final next = nextLabel(date);
+      Map<String, dynamic> tlNext = const {};
+      if (next != null) {
+        try {
+          final n = await repo.getDayTimeline(next);
+          if (n['date'] == null || n['date'] == next) tlNext = n;
+        } catch (_) {}
+      }
+
       final sleepWindows = <(int, int)>[];
-      if (sleepList != null) {
-        for (final s in sleepList) {
+      for (final list in [tl['sleep'], tlNext['sleep']]) {
+        if (list is! List) continue;
+        for (final s in list) {
           if (s is Map) {
             final on = (s['onset_ts'] as num?)?.toInt();
             final off = (s['wake_ts'] as num?)?.toInt();
@@ -430,6 +476,30 @@ class DayStressCalculator {
           }
         }
       }
+      final window = stressWakeWindow(
+        date: date,
+        sleeps: sleepWindows,
+        nowSec: taktNow().millisecondsSinceEpoch ~/ 1000,
+      );
+      // TAKT 14.11. (wie WHOOP): Der Verlauf zeigt die Nacht vor dem Tag mit.
+      // Beginnt sie vor Mitternacht, kommt der Puls dafür vom Vortag.
+      final nightOn = stressNightOnset(date: date, sleeps: sleepWindows);
+      final prev = prevLabel(date);
+      var hrPrev = const <Map<String, dynamic>>[];
+      if (nightOn != null && prev != null && nightOn < (localDayStartSec(date) ?? 0)) {
+        try {
+          final pt = await repo.getDayTimeline(prev);
+          if (pt['date'] == null || pt['date'] == prev) {
+            hrPrev = (pt['hr'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+          }
+        } catch (_) {}
+      }
+      final hrAll = <Map<String, dynamic>>[
+        ...hrPrev,
+        ...hrCurve,
+        if (window != null && window.$2 > (localDayEndSec(date) ?? 0))
+          ...((tlNext['hr'] as List?)?.cast<Map<String, dynamic>>() ?? const []),
+      ];
 
       final sessions = tl['sessions'] as List?;
       final workouts = <(int, int, String)>[];
@@ -448,7 +518,10 @@ class DayStressCalculator {
 
       return compute(
         date: date,
-        hrCurve: hrCurve,
+        hrCurve: hrAll,
+        fromSec: window?.$1,
+        toSec: window?.$2,
+        axisFromSec: nightOn,
         hrvTimeline: hrvTimeline,
         restingHr: rhr,
         maxHr: mhr,
@@ -460,4 +533,113 @@ class DayStressCalculator {
       return DayStressAnalysis.error(date);
     }
   }
+}
+
+/// Der Kalendertag nach [date].
+String? nextLabel(String date) {
+  final d = DateTime.tryParse(date);
+  return d == null ? null : dayLabelOf(DateTime(d.year, d.month, d.day + 1));
+}
+
+/// Der Kalendertag vor [date].
+String? prevLabel(String date) {
+  final d = DateTime.tryParse(date);
+  return d == null ? null : dayLabelOf(DateTime(d.year, d.month, d.day - 1));
+}
+
+/// Einschlafen in die Hauptnacht, die an [date] endet (die längste), sonst null.
+int? stressNightOnset({required String date, required List<(int, int)> sleeps}) {
+  final start = localDayStartSec(date);
+  final end = localDayEndSec(date);
+  if (start == null || end == null) return null;
+  (int, int)? own;
+  for (final n in sleeps) {
+    if (n.$2 - n.$1 < kStressNightMinSec) continue;
+    if (n.$2 >= start && n.$2 < end && (own == null || n.$2 - n.$1 > own.$2 - own.$1)) own = n;
+  }
+  return own?.$1;
+}
+
+/// Schlaf ab dieser Länge zählt als Nacht; kürzer ist ein Nickerchen und
+/// beendet den Tag nicht.
+const int kStressNightMinSec = 3 * 3600;
+
+/// TAKT 14.11.: Das Wachfenster für den Tagesstress von [date], wie der
+/// Takt-Tag sonst auch: vom Aufwachen aus der Nacht, die an diesem Tag
+/// endet, bis zum Einschlafen in die nächste Nacht. Läuft die nächste Nacht
+/// noch nicht, endet es um Mitternacht, beim heutigen Tag nach Mitternacht
+/// erst jetzt. Ohne Nacht an diesem Tag beginnt es um 00:00 Uhr.
+(int, int)? stressWakeWindow({
+  required String date,
+  required List<(int, int)> sleeps,
+  required int nowSec,
+}) {
+  final start = localDayStartSec(date);
+  final end = localDayEndSec(date);
+  if (start == null || end == null) return null;
+  final nights = [
+    for (final s in sleeps)
+      if (s.$2 - s.$1 >= kStressNightMinSec) s,
+  ];
+  // Die Hauptnacht, die an diesem Tag endet: die längste.
+  (int, int)? own;
+  for (final n in nights) {
+    if (n.$2 >= start && n.$2 < end && (own == null || n.$2 - n.$1 > own.$2 - own.$1)) {
+      own = n;
+    }
+  }
+  final from = own?.$2 ?? start;
+  int? onset;
+  for (final n in nights) {
+    if (n.$1 > from && n.$1 < end + 86400 && (onset == null || n.$1 < onset)) {
+      onset = n.$1;
+    }
+  }
+  final to = onset ?? (nowSec > end && nowSec < end + 12 * 3600 ? nowSec : end);
+  return to > from ? (from, to) : null;
+}
+
+/// Ein zusammenhängender Abschnitt im Verlauf: Nacht oder Training.
+class StressBand {
+  const StressBand(this.fromSec, this.toSec, {required this.sleep, this.name});
+  final int fromSec, toSec;
+  final bool sleep;
+  final String? name;
+}
+
+/// TAKT 14.11.: Nacht- und Trainingsabschnitte aus den 5-Minuten-Werten, für
+/// die Flächen und Symbole über dem Verlauf. Lücken bis 10 Minuten verbinden.
+List<StressBand> stressBands(List<DayStressSample> samples) {
+  final out = <StressBand>[];
+  int? from, to;
+  bool? sleep;
+  String? name;
+  void flush() {
+    if (from != null && to != null && sleep != null) {
+      out.add(StressBand(from!, to!, sleep: sleep!, name: name));
+    }
+    from = to = null;
+    sleep = null;
+    name = null;
+  }
+
+  for (final s in samples) {
+    final kind = s.isSleep ? true : (s.isActivity ? false : null);
+    if (kind == null) {
+      flush();
+      continue;
+    }
+    final a = s.timestampSec - 150, b = s.timestampSec + 150;
+    if (sleep == kind && to != null && a - to! <= 600) {
+      to = b;
+    } else {
+      flush();
+      from = a;
+      to = b;
+      sleep = kind;
+      name = s.activityName;
+    }
+  }
+  flush();
+  return out;
 }

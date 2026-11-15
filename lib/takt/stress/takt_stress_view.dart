@@ -5,6 +5,8 @@
 // - Sport & Aktivitäten als Aktivitätsblöcke ohne künstlichen Stress-Score (G13)
 // - Pult-Ästhetik mit StripeDodge und Pult.digits (B5)
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +14,7 @@ import 'package:provider/provider.dart';
 import '../../data/day_label.dart';
 import '../../l10n/decimal_text.dart';
 import '../../state/app_state.dart';
+import '../../ui2/activity/catalogue.dart' show activityByName;
 import '../../ui2/ui2.dart';
 import '../header.dart';
 import '../look.dart';
@@ -92,9 +95,7 @@ class TaktStressCard extends StatelessWidget {
           onTap ??
           () => Navigator.of(c).push(
             MaterialPageRoute(
-              builder: (_) => TaktLook(
-                child: TaktStressDetailScreen(initialDate: analysis.date),
-              ),
+              builder: (_) => TaktLook(child: TaktStressDetailScreen(initialDate: analysis.date)),
             ),
           ),
       child: Column(
@@ -109,33 +110,21 @@ class TaktStressCard extends StatelessWidget {
                   de ? 'TAGES-STRESS' : 'DAYTIME STRESS',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: F.cap.copyWith(
-                    color: p.ink2,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: F.cap.copyWith(color: p.ink2, fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(width: S.x2),
               if (hasData)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: S.x2,
-                    vertical: 2,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: 2),
                   decoration: BoxDecoration(
                     color: shownColor.withValues(alpha: 0.15),
                     borderRadius: R.rPill,
-                    border: Border.all(
-                      color: shownColor.withValues(alpha: 0.4),
-                      width: 1,
-                    ),
+                    border: Border.all(color: shownColor.withValues(alpha: 0.4), width: 1),
                   ),
                   child: Text(
                     stressZoneLabel(shown, de).toUpperCase(),
-                    style: F.over.copyWith(
-                      color: shownColor,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: F.over.copyWith(color: shownColor, fontWeight: FontWeight.w700),
                   ),
                 ),
               const SizedBox(width: S.x1),
@@ -248,6 +237,7 @@ class TaktStressCard extends StatelessWidget {
                 date: analysis.date,
                 samples: analysis.samples,
                 p: p,
+                axis: stressAxis(analysis),
               ),
             ),
           ],
@@ -263,9 +253,11 @@ class _StressMiniCurve extends StatelessWidget {
     required this.date,
     required this.samples,
     required this.p,
+    required this.axis,
   });
 
   final String date;
+  final (int, int) axis;
   final List<DayStressSample> samples;
   final P p;
 
@@ -275,7 +267,8 @@ class _StressMiniCurve extends StatelessWidget {
     return CustomPaint(
       size: Size.infinite,
       painter: _StressChartPainter(
-        dayStartSec: dayStartTimestampSec(date),
+        dayStartSec: axis.$1,
+        spanSec: axis.$2,
         samples: samples,
         p: p,
         showZones: false,
@@ -286,11 +279,7 @@ class _StressMiniCurve extends StatelessWidget {
 
 /// Vollbild-Detailansicht des Stress-Tagesverlaufs.
 class TaktStressDetailScreen extends StatefulWidget {
-  const TaktStressDetailScreen({
-    super.key,
-    this.initialDate,
-    this.injectedAnalysis,
-  });
+  const TaktStressDetailScreen({super.key, this.initialDate, this.injectedAnalysis});
 
   final String? initialDate;
   final DayStressAnalysis? injectedAnalysis;
@@ -368,7 +357,7 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
     final dispSample = _scrubbedSample;
     final dispScore = dispSample != null ? dispSample.score : a.avgStress;
     final zoneColor = stressZoneColor(dispScore, p);
-    final dayStart = dayStartTimestampSec(_date);
+    final (dayStart, span) = stressAxis(a);
 
     return Scaffold(
       backgroundColor: p.bg,
@@ -387,21 +376,14 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                   onTap: () => _shiftDay(-1),
                   child: Padding(
                     padding: const EdgeInsets.all(S.x2),
-                    child: Icon(
-                      LucideIcons.chevronLeft,
-                      size: 20,
-                      color: p.ink,
-                    ),
+                    child: Icon(LucideIcons.chevronLeft, size: 20, color: p.ink),
                   ),
                 ),
                 StripeDodge(
                   line: true,
                   child: Text(
                     isToday ? (de ? 'Heute' : 'Today') : _date,
-                    style: F.body.copyWith(
-                      color: p.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: F.body.copyWith(color: p.ink, fontWeight: FontWeight.w700),
                   ),
                 ),
                 Pressable(
@@ -455,37 +437,24 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                             dispSample != null
                                 ? '${de ? 'ZEITPUNKT' : 'AT'} ${_formatHhmm(dispSample.timestampSec)}'
                                 : (de ? 'TAGESDURCHSCHNITT' : 'DAY AVERAGE'),
-                            style: F.cap.copyWith(
-                              color: p.ink2,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: F.cap.copyWith(color: p.ink2, fontWeight: FontWeight.w600),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: S.x2),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: S.x2,
-                            vertical: 2,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: 2),
                           decoration: BoxDecoration(
                             color: zoneColor.withValues(alpha: 0.15),
                             borderRadius: R.rPill,
-                            border: Border.all(
-                              color: zoneColor.withValues(alpha: 0.4),
-                              width: 1,
-                            ),
+                            border: Border.all(color: zoneColor.withValues(alpha: 0.4), width: 1),
                           ),
                           child: Text(
                             dispSample?.isActivity == true
-                                ? (dispSample?.activityName ??
-                                          (de ? 'SPORT' : 'ACTIVITY'))
+                                ? (dispSample?.activityName ?? (de ? 'SPORT' : 'ACTIVITY'))
                                       .toUpperCase()
                                 : stressZoneLabel(dispScore, de).toUpperCase(),
-                            style: F.over.copyWith(
-                              color: zoneColor,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: F.over.copyWith(color: zoneColor, fontWeight: FontWeight.w700),
                           ),
                         ),
                       ],
@@ -497,9 +466,7 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                       children: [
                         StripeDodge(
                           child: Text(
-                            dispScore != null
-                                ? displayFixed(dispScore, 1)
-                                : '—',
+                            dispScore != null ? displayFixed(dispScore, 1) : '—',
                             style: Pult.digits(44, p.ink),
                           ),
                         ),
@@ -512,33 +479,52 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                           ),
                         ),
                         const Spacer(),
-                        if (dispSample != null) ...[
-                          Column(
+                        // TAKT 14.11.: Beide Zeilen nehmen immer ihren Platz
+                        // ein, auch ohne Messpunkt oder HRV. Sonst ändert die
+                        // Karte beim Wischen ihre Höhe und der Verlauf
+                        // darunter springt unter dem Finger.
+                        Flexible(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              StripeDodge(
-                                line: true,
-                                align: 1,
-                                child: Text(
-                                  '${dispSample.hr.round()} bpm',
-                                  style: F.body.copyWith(
-                                    color: p.ink,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              if (dispSample.rmssd != null)
-                                StripeDodge(
+                              Visibility(
+                                visible: dispSample != null,
+                                maintainSize: true,
+                                maintainAnimation: true,
+                                maintainState: true,
+                                child: StripeDodge(
                                   line: true,
                                   align: 1,
                                   child: Text(
-                                    '${dispSample.rmssd!.round()} ms HRV',
+                                    '${dispSample?.hr.round() ?? 0} bpm',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: F.body.copyWith(
+                                      color: p.ink,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Visibility(
+                                visible: dispSample?.rmssd != null,
+                                maintainSize: true,
+                                maintainAnimation: true,
+                                maintainState: true,
+                                child: StripeDodge(
+                                  line: true,
+                                  align: 1,
+                                  child: Text(
+                                    '${dispSample?.rmssd?.round() ?? 0} ms HRV',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: F.over.copyWith(color: p.ink3),
                                   ),
                                 ),
+                              ),
                             ],
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ],
@@ -559,11 +545,10 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                           child: StripeDodge(
                             line: true,
                             child: Text(
-                              de ? '24-STUNDEN-VERLAUF' : '24-HOUR TIMELINE',
-                              style: F.cap.copyWith(
-                                color: p.ink2,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              a.fromSec == null
+                                  ? (de ? '24-STUNDEN-VERLAUF' : '24-HOUR TIMELINE')
+                                  : (de ? 'TAGESVERLAUF MIT NACHT' : 'DAY WITH NIGHT'),
+                              style: F.cap.copyWith(color: p.ink2, fontWeight: FontWeight.w600),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -579,40 +564,49 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final width = constraints.maxWidth;
-                        return SizedBox(
-                          height: 180,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onHorizontalDragUpdate: (details) {
-                              _updateScrub(
-                                details.localPosition.dx,
-                                width,
-                                a.samples,
-                                dayStart,
-                              );
-                            },
-                            onHorizontalDragEnd: (_) {
-                              setState(() => _scrubbedSample = null);
-                            },
-                            onTapUp: (details) {
-                              _updateScrub(
-                                details.localPosition.dx,
-                                width,
-                                a.samples,
-                                dayStart,
-                              );
-                            },
-                            child: CustomPaint(
-                              size: Size.infinite,
-                              painter: _StressChartPainter(
-                                dayStartSec: dayStart,
-                                samples: a.samples,
-                                p: p,
-                                showZones: true,
-                                scrubbedSample: dispSample,
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _stressMarks(a, dayStart, span, width, p),
+                            SizedBox(
+                              height: 180,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onHorizontalDragUpdate: (details) {
+                                  _updateScrub(
+                                    details.localPosition.dx,
+                                    width,
+                                    a.samples,
+                                    dayStart,
+                                    span,
+                                  );
+                                },
+                                onHorizontalDragEnd: (_) {
+                                  setState(() => _scrubbedSample = null);
+                                },
+                                onTapUp: (details) {
+                                  _updateScrub(
+                                    details.localPosition.dx,
+                                    width,
+                                    a.samples,
+                                    dayStart,
+                                    span,
+                                  );
+                                },
+                                child: CustomPaint(
+                                  size: Size.infinite,
+                                  painter: _StressChartPainter(
+                                    dayStartSec: dayStart,
+                                    spanSec: span,
+                                    samples: a.samples,
+                                    p: p,
+                                    showZones: true,
+                                    scrubbedSample: dispSample,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         );
                       },
                     ),
@@ -626,41 +620,11 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            StripeDodge(
-                              line: true,
-                              child: Text(
-                                '00:00',
-                                style: F.over.copyWith(color: p.ink3),
+                            for (final l in stressAxisLabels(dayStart, span))
+                              StripeDodge(
+                                line: true,
+                                child: Text(l, style: F.over.copyWith(color: p.ink3)),
                               ),
-                            ),
-                            StripeDodge(
-                              line: true,
-                              child: Text(
-                                '06:00',
-                                style: F.over.copyWith(color: p.ink3),
-                              ),
-                            ),
-                            StripeDodge(
-                              line: true,
-                              child: Text(
-                                '12:00',
-                                style: F.over.copyWith(color: p.ink3),
-                              ),
-                            ),
-                            StripeDodge(
-                              line: true,
-                              child: Text(
-                                '18:00',
-                                style: F.over.copyWith(color: p.ink3),
-                              ),
-                            ),
-                            StripeDodge(
-                              line: true,
-                              child: Text(
-                                '24:00',
-                                style: F.over.copyWith(color: p.ink3),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -677,17 +641,12 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                   children: [
                     Text(
                       de ? 'ZEIT IN STRESSZONEN' : 'TIME IN STRESS ZONES',
-                      style: F.cap.copyWith(
-                        color: p.ink2,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: F.cap.copyWith(color: p.ink2, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: S.x3),
                     _buildZoneRow(
                       color: p.on(C.teal),
-                      label: de
-                          ? 'Niedriger Stress (0,0 – 1,0)'
-                          : 'Low stress (0.0 – 1.0)',
+                      label: de ? 'Niedriger Stress (0,0 – 1,0)' : 'Low stress (0.0 – 1.0)',
                       duration: _durStr(a.lowStressMin, de),
                       pct: (a.lowPct * 100).round(),
                       p: p,
@@ -695,9 +654,7 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                     const SizedBox(height: S.x2),
                     _buildZoneRow(
                       color: Pult.orangeFor(p.dark),
-                      label: de
-                          ? 'Moderater Stress (1,0 – 2,0)'
-                          : 'Medium stress (1.0 – 2.0)',
+                      label: de ? 'Moderater Stress (1,0 – 2,0)' : 'Medium stress (1.0 – 2.0)',
                       duration: _durStr(a.mediumStressMin, de),
                       pct: (a.mediumPct * 100).round(),
                       p: p,
@@ -705,9 +662,7 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                     const SizedBox(height: S.x2),
                     _buildZoneRow(
                       color: p.on(C.red),
-                      label: de
-                          ? 'Hoher Stress (2,0 – 3,0)'
-                          : 'High stress (2.0 – 3.0)',
+                      label: de ? 'Hoher Stress (2,0 – 3,0)' : 'High stress (2.0 – 3.0)',
                       duration: _durStr(a.highStressMin, de),
                       pct: (a.highPct * 100).round(),
                       p: p,
@@ -716,9 +671,7 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                       const SizedBox(height: S.x2),
                       _buildZoneRow(
                         color: p.on(C.blue),
-                        label: de
-                            ? 'Aktivität & Training'
-                            : 'Activity & workout',
+                        label: de ? 'Aktivität & Training' : 'Activity & workout',
                         duration: _durStr(a.activityMin, de),
                         pct: null,
                         p: p,
@@ -739,13 +692,8 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                         Icon(LucideIcons.info, size: 16, color: p.ink3),
                         const SizedBox(width: S.x2),
                         Text(
-                          de
-                              ? 'WIE STRESS GEMESSEN WIRD'
-                              : 'HOW STRESS IS MEASURED',
-                          style: F.cap.copyWith(
-                            color: p.ink2,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          de ? 'WIE STRESS GEMESSEN WIRD' : 'HOW STRESS IS MEASURED',
+                          style: F.cap.copyWith(color: p.ink2, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -771,10 +719,11 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
     double width,
     List<DayStressSample> samples,
     int dayStartSec,
+    int spanSec,
   ) {
     if (samples.isEmpty || width <= 0) return;
     final frac = (dx / width).clamp(0.0, 1.0);
-    final targetSec = dayStartSec + (frac * 86400).round();
+    final targetSec = dayStartSec + (frac * spanSec).round();
 
     DayStressSample? closest;
     var minDiff = 1 << 30;
@@ -844,16 +793,20 @@ class _StressChartPainter extends CustomPainter {
     required this.p,
     this.showZones = true,
     this.scrubbedSample,
+    this.spanSec = 86400,
   });
 
   final int dayStartSec;
+
+  /// Länge der Achse in Sekunden (TAKT 14.11.: das Wachfenster).
+  final int spanSec;
   final List<DayStressSample> samples;
   final P p;
   final bool showZones;
   final DayStressSample? scrubbedSample;
 
   double _xForSec(int tSec, double w) {
-    return ((tSec - dayStartSec) / 86400.0).clamp(0.0, 1.0) * w;
+    return ((tSec - dayStartSec) / spanSec).clamp(0.0, 1.0) * w;
   }
 
   @override
@@ -872,6 +825,18 @@ class _StressChartPainter extends CustomPainter {
       ..strokeWidth = 1;
     canvas.drawLine(Offset(0, yZone1), Offset(w, yZone1), linePaint);
     canvas.drawLine(Offset(0, yZone2), Offset(w, yZone2), linePaint);
+
+    // TAKT 14.11. (wie WHOOP): die Nacht als ruhige Fläche mit Linie oben.
+    final nightPaint = Paint()..color = p.ink.withValues(alpha: 0.06);
+    final nightTop = Paint()
+      ..color = p.on(C.blue).withValues(alpha: 0.7)
+      ..strokeWidth = 2;
+    for (final b in stressBands(samples)) {
+      if (!b.sleep) continue;
+      final l = _xForSec(b.fromSec, w), r = _xForSec(b.toSec, w);
+      canvas.drawRect(Rect.fromLTRB(l, 0, r, h), nightPaint);
+      if (showZones) canvas.drawLine(Offset(l, 1), Offset(r, 1), nightTop);
+    }
 
     // 1. Physische Aktivitäten als farbige Hintergrund-Balken zeichnen (G13)
     final activityPaint = Paint()
@@ -945,8 +910,7 @@ class _StressChartPainter extends CustomPainter {
       final x = _xForSec(s.timestampSec, w);
       final y = h - (s.score! / 3.0).clamp(0.0, 1.0) * h;
 
-      if (prevSample == null ||
-          (s.timestampSec - prevSample.timestampSec) > 600) {
+      if (prevSample == null || (s.timestampSec - prevSample.timestampSec) > 600) {
         flushSegment();
         curStrokePath = Path()..moveTo(x, y);
         curFillPath = Path()..moveTo(x, y);
@@ -965,9 +929,7 @@ class _StressChartPainter extends CustomPainter {
     if (scrubbedSample != null) {
       final sx = _xForSec(scrubbedSample!.timestampSec, w);
       final sScore = scrubbedSample!.score;
-      final sy = sScore != null
-          ? (h - (sScore / 3.0).clamp(0.0, 1.0) * h)
-          : (h / 2);
+      final sy = sScore != null ? (h - (sScore / 3.0).clamp(0.0, 1.0) * h) : (h / 2);
 
       final guidePaint = Paint()
         ..color = p.ink.withValues(alpha: 0.6)
@@ -992,6 +954,58 @@ class _StressChartPainter extends CustomPainter {
     return old.samples != samples ||
         old.scrubbedSample != scrubbedSample ||
         old.dayStartSec != dayStartSec ||
+        old.spanSec != spanSec ||
         old.p != p;
   }
+}
+
+/// TAKT 14.11.: Start und Länge der Zeitachse: das Wachfenster, ohne es der
+/// Kalendertag.
+(int, int) stressAxis(DayStressAnalysis a) {
+  final start = a.axisFromSec ?? a.fromSec ?? dayStartTimestampSec(a.date);
+  final end = a.toSec ?? start + 86400;
+  return (start, math.max(3600, end - start));
+}
+
+/// Fünf Uhrzeiten unter der Achse, auf die Viertelstunde gerundet.
+List<String> stressAxisLabels(int start, int span) {
+  if (span == 86400 && DateTime.fromMillisecondsSinceEpoch(start * 1000).hour == 0) {
+    return const ['00:00', '06:00', '12:00', '18:00', '24:00'];
+  }
+  String at(int sec) {
+    final d = DateTime.fromMillisecondsSinceEpoch(sec * 1000);
+    final q = ((d.hour * 60 + d.minute) / 15).round() * 15 % 1440;
+    return '${(q ~/ 60).toString().padLeft(2, '0')}:${(q % 60).toString().padLeft(2, '0')}';
+  }
+
+  return [for (var i = 0; i <= 4; i++) at(start + span * i ~/ 4)];
+}
+
+/// TAKT 14.11. (wie WHOOP): Mond über der Nacht, Sportsymbol über jedem
+/// Training, in einer Leiste über dem Verlauf.
+Widget _stressMarks(DayStressAnalysis a, int start, int span, double width, P p) {
+  final bands = stressBands(a.samples);
+  if (bands.isEmpty) return const SizedBox(height: S.x2);
+  const size = 16.0;
+  return SizedBox(
+    key: const ValueKey('takt-stress-marks'),
+    height: 24,
+    child: Stack(
+      clipBehavior: Clip.none,
+      children: [
+        for (final b in bands)
+          Positioned(
+            left: ((((b.fromSec + b.toSec) / 2 - start) / span).clamp(0.0, 1.0) * width - size / 2)
+                .clamp(0.0, math.max(0.0, width - size)),
+            top: 2,
+            child: Icon(
+              b.sleep ? LucideIcons.moon : (activityByName(b.name)?.icon ?? LucideIcons.activity),
+              key: ValueKey(b.sleep ? 'takt-stress-moon' : 'takt-stress-workout'),
+              size: size,
+              color: b.sleep ? p.ink2 : p.on(C.blue),
+            ),
+          ),
+      ],
+    ),
+  );
 }

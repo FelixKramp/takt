@@ -6,6 +6,7 @@ import 'package:openstrap_edge/models/metric.dart';
 import 'package:openstrap_edge/takt/battery/battery.dart';
 import 'package:openstrap_edge/takt/battery/battery_detail.dart';
 import 'package:openstrap_edge/takt/battery/battery_week.dart';
+import 'package:openstrap_edge/takt/battery/load_recovery_week.dart';
 import 'package:openstrap_edge/takt/detail/value_card.dart';
 import 'package:openstrap_edge/takt/look.dart';
 import 'package:openstrap_edge/takt/stripe/stripe.dart';
@@ -288,8 +289,9 @@ void main() {
       final full = HomeData(readiness: m(62), strain: m(13.8));
       await pump(t, TaktTodayView(data: full, pulse: livePulse, week: week()),
           width: 320, scale: 2.0);
-      expect(_key('takt-battery-week'), findsOneWidget);
-      expect(t.getTopLeft(_key('takt-battery-week')).dy,
+      // Seit 14.11. steht dort Belastung & Erholung statt der Säulen.
+      expect(_key('takt-load-recovery'), findsOneWidget);
+      expect(t.getTopLeft(_key('takt-load-recovery')).dy,
           greaterThan(t.getTopLeft(_key('takt-cards')).dy));
       expect(t.takeException(), isNull);
     });
@@ -297,6 +299,37 @@ void main() {
     testWidgets('ohne Verlauf keine Wochenkarte', (t) async {
       await pump(t, TaktTodayView(data: HomeData(readiness: m(62)), pulse: livePulse));
       expect(_key('takt-battery-week'), findsNothing);
+      expect(_key('takt-load-recovery'), findsNothing);
+    });
+
+    testWidgets('14.11.: Belastung & Erholung zeigt beide Linien und Tage über dem Limit',
+        (t) async {
+      final today = DateTime(2026, 11, 14);
+      final days = [
+        for (var i = 6; i >= 0; i--)
+          BatteryDay(
+            day: DateTime(2026, 11, 14 - i),
+            morning: i == 3 ? null : 40.0 + i * 8,
+            strain: i == 5 ? 19.0 : 6.0 + i,
+          ),
+      ];
+      await pump(t, TaktLoadRecoveryWeek(days: days, today: today), width: 320, scale: 2.0);
+      expect(t.takeException(), isNull);
+      expect(_key('takt-lr-strain-1'), findsOneWidget);
+      expect(_key('takt-lr-charge-3'), findsNothing, reason: 'ohne Ladung kein Prozentwert');
+      // Tag 1 (Index 1, i = 5): 80 % morgens, Strain 19 → abends unter 20 %.
+      expect(days[1].over, isTrue);
+      expect(_key('takt-lr-over-1'), findsOneWidget);
+      expect(find.textContaining('Mehr belastet als erholt'), findsOneWidget);
+    });
+
+    testWidgets('14.11.: Belastung steht schon, solange die Batterie lernt', (t) async {
+      final days = [
+        for (var i = 6; i >= 0; i--) BatteryDay(day: DateTime(2026, 11, 14 - i), strain: 8.0),
+      ];
+      await pump(t, TaktLoadRecoveryWeek(days: days, today: DateTime(2026, 11, 14)));
+      expect(_key('takt-lr-strain-6'), findsOneWidget);
+      expect(find.textContaining('Die Batterie lernt noch'), findsOneWidget);
     });
   });
 }

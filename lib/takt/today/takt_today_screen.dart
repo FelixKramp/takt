@@ -15,6 +15,7 @@ import '../../l10n/decimal_text.dart' show displayFixed;
 import '../../models/activity_suggestion.dart';
 import '../../models/metric.dart';
 import '../../state/app_state.dart';
+import '../../state/clock_format.dart' show formatClockMinute;
 import '../../ui2/activity/catalogue.dart';
 import '../../ui2/activity/day_strain.dart' show DayStrainDetail;
 import '../../ui2/activity/picker.dart' show ActivityPicker;
@@ -23,7 +24,8 @@ import '../../ui2/profile/profile.dart' show ProfileAvatar;
 import '../../ui2/screens/home_screen.dart';
 import '../../ui2/screens/journal_compose.dart';
 import '../../ui2/screens/log_workout.dart' show LogWorkout, bumpInsights;
-import '../../ui2/screens/workout_screen.dart' show taktRecentSports, taktWorkoutPicker, taktWorkoutResult;
+import '../../ui2/screens/workout_screen.dart'
+    show taktRecentSports, taktWorkoutPicker, taktWorkoutResult;
 import '../../ui2/screens/metric_detail.dart';
 import '../../ui2/screens/sleep_detail.dart';
 import '../../ui2/ui2.dart';
@@ -42,12 +44,13 @@ import 'day_pulse.dart';
 import 'dial_ring.dart';
 import '../battery/battery.dart';
 import '../battery/battery_detail.dart';
-import '../battery/battery_week.dart';
+import '../battery/load_recovery_week.dart';
 import '../header.dart';
 import 'freshness.dart';
 import 'minute_tick.dart';
 import 'pulse_display.dart';
 import 'visibility.dart';
+import 'today_order.dart';
 import 'wake_day.dart';
 import '../sleep/sleep_head.dart' show durHm;
 import '../sleep/sleep_head_loader.dart';
@@ -72,6 +75,9 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   HomeData _data = const HomeData();
   Metric _hrv = Metric.empty;
   NightScore? _sleepScore;
+
+  /// Empfohlene Bett- und Aufstehzeit für heute Nacht, wie unten im Schlaf-Tab.
+  TonightRec? _tonight;
   ChartPoint? _hrvLast, _rhrLast;
   List<ActivityItem> _items = const [];
   String? _day;
@@ -165,9 +171,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     try {
       final prefs = await SharedPreferences.getInstance();
       String sportOf(ActivitySuggestion s) =>
-          prefs.getString('$_kSportPick${s.id}') ??
-          activityByName(s.sport)?.typeKey ??
-          'other';
+          prefs.getString('$_kSportPick${s.id}') ?? activityByName(s.sport)?.typeKey ?? 'other';
       final now = taktNow();
       final left = await autoConfirmWorkouts(
         pending: repo.pendingActivities,
@@ -177,12 +181,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         busy: busy,
         now: now,
       );
-      final loaded = await loadTaktDay(
-        repo,
-        selectedDay: _selectedDay,
-        now: now,
-        l: l,
-      );
+      final loaded = await loadTaktDay(repo, selectedDay: _selectedDay, now: now, l: l);
       final isActive = loaded.dayId == loaded.activeDayId;
       unawaited(_loadStress(loaded.dayId));
       // W26: Lade den Schlafscore nur EINMAL für den tatsächlich bestimmten Tag:
@@ -241,10 +240,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   }
 
   /// Prüft, ob das Morgenblatt automatisch eingeblendet werden soll (J1, J7, J21, J22, J25).
-  Future<void> _checkAndShowMorningSheet(
-    TaktDayLoaded? loaded,
-    DateTime now,
-  ) async {
+  Future<void> _checkAndShowMorningSheet(TaktDayLoaded? loaded, DateTime now) async {
     if (_morningSheetOpen || !mounted || _selectedDay != null) return;
     // Sofort belegen: Start, Wiederöffnen und fertiges Laden prüfen
     // gleichzeitig, das Blatt darf trotzdem nur einmal kommen.
@@ -261,11 +257,10 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
       final sheetQuestionsYesterday = config.sheetQuestionsYesterday;
       final sheetQuestionsToday = config.sheetQuestionsToday;
 
-      final metricsByDay = await LocalDb.journalMetricsByDay(
-        sinceDaysEpoch: calYesterday,
-      );
+      final metricsByDay = await LocalDb.journalMetricsByDay(sinceDaysEpoch: calYesterday);
       final existingYesterday = {
-        for (final e in (metricsByDay[calYesterday] ?? const <String, JournalMetricValue>{}).entries)
+        for (final e
+            in (metricsByDay[calYesterday] ?? const <String, JournalMetricValue>{}).entries)
           e.key: e.value.value,
       };
       final existingToday = {
@@ -297,11 +292,9 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
         initialToday: decision.todayAnswers,
         onOpenFullJournal: () {
           if (mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => JournalCompose(date: calToday),
-              ),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute<void>(builder: (_) => JournalCompose(date: calToday)));
           }
         },
       );
@@ -344,7 +337,11 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     } catch (_) {
       // Ohne Gewicht fehlt nur der Kaloriensatz.
     }
-    final target = await taktWorkoutTarget(item, (id) => taktWorkoutResult(app, id), weightKg: weight);
+    final target = await taktWorkoutTarget(
+      item,
+      (id) => taktWorkoutResult(app, id),
+      weightKg: weight,
+    );
     if (!mounted) return;
     if (target == null) return _pickSport(item, weightKg: weight);
     await _push(target);
@@ -355,28 +352,36 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     var picking = false;
     final recent = await taktRecentSports(context.read<AppState>());
     if (!mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute<void>(
-      // Feature 09, W3: Die Sportart-Wahl im Takt-Design.
-      builder: (_) => TaktLook(child: ActivityPicker(recent: recent, weightKg: weightKg, onPick: (pc, activity) async {
-        if (picking) return;
-        picking = true;
-        try {
-          if (s != null) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('$_kSportPick${s.id}', activity.typeKey);
-          }
-          // Auch bei offener Erkennung: Sie kann während der Wahl gespeichert
-          // worden sein. Gibt es die Zeile nicht, ändert das nichts.
-          await LocalDb.setSessionType(item.id, activity.typeKey);
-        } catch (_) {
-          picking = false;
-          return;
-        }
-        if (!pc.mounted) return;
-        bumpInsights(pc);
-        Navigator.of(pc).pop();
-      })),
-    ));
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        // Feature 09, W3: Die Sportart-Wahl im Takt-Design.
+        builder: (_) => TaktLook(
+          child: ActivityPicker(
+            recent: recent,
+            weightKg: weightKg,
+            onPick: (pc, activity) async {
+              if (picking) return;
+              picking = true;
+              try {
+                if (s != null) {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('$_kSportPick${s.id}', activity.typeKey);
+                }
+                // Auch bei offener Erkennung: Sie kann während der Wahl gespeichert
+                // worden sein. Gibt es die Zeile nicht, ändert das nichts.
+                await LocalDb.setSessionType(item.id, activity.typeKey);
+              } catch (_) {
+                picking = false;
+                return;
+              }
+              if (!pc.mounted) return;
+              bumpInsights(pc);
+              Navigator.of(pc).pop();
+            },
+          ),
+        ),
+      ),
+    );
     if (mounted) await _load();
   }
 
@@ -405,25 +410,35 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   /// die Schlafabfragen warten. Schreibt nebenbei die Tagesnotiz, auch wenn
   /// der Schlaf-Tab nie geöffnet wird.
   Future<void> _loadSleepScore({String? wantDay, bool updateTabBand = true}) async {
+    // Aufgerufen nach einem await: Der Screen kann schon weg sein.
+    if (!mounted) return;
     final repo = repoOf(context);
     if (repo == null) return;
     final token = beginRead(#taktSleepScore);
     try {
-      final score = (await loadTaktSleep(repo, want: wantDay)).score;
+      final view = await loadTaktSleep(repo, want: wantDay);
+      final score = view.score;
       if (updateTabBand) TaktSleepBand.current.value = score.band;
-      if (stillNewest(#taktSleepScore, token)) setState(() => _sleepScore = score);
+      if (mounted && stillNewest(#taktSleepScore, token)) {
+        setState(() {
+          _sleepScore = score;
+          final bed = view.bedRecTonight, wake = view.wakeRecTonight;
+          _tonight = bed == null || wake == null ? null : (bed: bed, wake: wake);
+        });
+      }
     } catch (_) {
       // Ohne Score bleibt der Schlafring wie in A2.
     }
   }
 
   Future<void> _loadStress(String dayLabel) async {
+    if (!mounted) return;
     final repo = repoOf(context);
     if (repo == null) return;
     final token = beginRead(#taktTodayStress);
     try {
       final analysis = await DayStressCalculator.loadForDay(repo, dayLabel);
-      if (stillNewest(#taktTodayStress, token)) {
+      if (mounted && stillNewest(#taktTodayStress, token)) {
         setState(() => _dayStress = analysis);
       }
     } catch (_) {
@@ -504,8 +519,7 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
 
   /// Alles, was Heute öffnet, steht in der Takt-Haut (Feature 06/07).
   Future<void> _push(Widget w) async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => TaktLook(child: w)));
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => TaktLook(child: w)));
     if (mounted) await _load();
   }
 
@@ -524,8 +538,8 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
   @override
   Widget build(BuildContext c) {
     final syncing = c.select<AppState, bool>((a) => a.syncingNow);
-    final busy = c.select<AppState, bool>(
-        (a) => a.syncingNow || a.deriving || a.derivePending);
+    final workoutRunning = c.select<AppState, bool>((a) => a.activeWorkout != null);
+    final busy = c.select<AppState, bool>((a) => a.syncingNow || a.deriving || a.derivePending);
     // Am Ende einer Berechnung neu lesen: Erst jetzt darf ein abgeschlossenes
     // Training gespeichert werden, und niemand sonst stößt das an.
     if (_wasBusy && !busy) {
@@ -543,66 +557,76 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
       if (isToday && _dayStrainPeak != null)
         DateTime(activeDt.year, activeDt.month, activeDt.day): _dayStrainPeak!,
     };
+    // Alles, was den Provider liest, vor dem Builder (nur in build erlaubt).
+    final lastData = lastDataAtOf(c);
+    final deriving = derivingOf(c);
+    final watch = isToday ? bodyWatchOf(c, _data, activeDay) : null;
     return RefreshIndicator(
       onRefresh: _refresh,
-      child: TaktTodayView(
-        scroll: _scroll,
-        data: _data,
-        hrv: _hrv,
-        sleepScore: _sleepScore,
-        hrvLast: isToday ? _hrvLast : null,
-        rhrLast: isToday ? _rhrLast : null,
-        strainPeak: _dayStrainPeak ?? _peaks[DateTime.parse(shownDay)],
-        dayStepper: _availableDays.length > 1
-            ? TaktDayStepper(
-                key: const ValueKey('takt-today-stepper'),
-                day: shownDay,
-                days: _availableDays,
-                labelOf: (d, de) =>
-                    d == activeDay ? (de ? 'Heute' : 'Today') : dayShortLabel(d, de),
-                onDay: _selectDay,
-              )
-            : null,
-        week: _weekRecovery.isEmpty && _weekStrain.isEmpty
-            ? null
-            : batteryWeek(
-                recovery: _weekRecovery,
-                strain: _weekStrain,
-                today: activeDt,
-                // Wie der Ring: in der Nacht noch keine Ladung (B1).
-                todayMorning: !isToday || _data.recoveryState == 'night_in_progress'
-                    ? null
-                    : _data.readiness.value?.toDouble(),
-                todayStrain: isToday ? _data.strain.value?.toDouble() : null,
-                peaks: peaks,
-              ),
-        items: _items,
-        lastData: lastDataAtOf(c),
-        syncing: syncing || derivingOf(c),
-        pulse: isToday
-            ? PulseDisplay(
-                onTap: () => _push(TaktPulseDetail(
-                  initialDay: shownDay,
-                  activeDay: activeDay,
+      child: ValueListenableBuilder<List<TodaySection>>(
+        valueListenable: TodayOrder.current,
+        builder: (_, order, _) => TaktTodayView(
+          order: order,
+          onArrange: () => _push(const TodayArrangeScreen()),
+          scroll: _scroll,
+          data: _data,
+          hrv: _hrv,
+          sleepScore: _sleepScore,
+          tonight: isToday ? _tonight : null,
+          hrvLast: isToday ? _hrvLast : null,
+          rhrLast: isToday ? _rhrLast : null,
+          strainPeak: _dayStrainPeak ?? _peaks[DateTime.parse(shownDay)],
+          dayStepper: _availableDays.length > 1
+              ? TaktDayStepper(
+                  key: const ValueKey('takt-today-stepper'),
+                  day: shownDay,
                   days: _availableDays,
-                )),
-              )
-            : TaktDayPulseCard(data: _dayPulse),
-        dayStress: _dayStress,
-        header: const ProfileAvatar(accent: C.domHome),
-        watch: isToday ? bodyWatchOf(c, _data, activeDay) : null,
-        loading: _dayLoading,
-        isToday: isToday,
-        onRing: (k) => _push(taktRingTarget(k, day: shownDay)),
-        onCard: (key) => _push(MetricDetail(key)),
-        onOpen: _openWorkout,
-        onTick: _onTick,
-        onDiscard: _discard,
-        onLog: () => _push(const LogWorkout()),
-        // Läuft schon ein Training, bringt die Leiste unten dorthin zurück.
-        onStart: c.select<AppState, bool>((a) => a.activeWorkout != null)
-            ? null
-            : _startWorkout,
+                  labelOf: (d, de) =>
+                      d == activeDay ? (de ? 'Heute' : 'Today') : dayShortLabel(d, de),
+                  onDay: _selectDay,
+                )
+              : null,
+          week: _weekRecovery.isEmpty && _weekStrain.isEmpty
+              ? null
+              : batteryWeek(
+                  recovery: _weekRecovery,
+                  strain: _weekStrain,
+                  today: activeDt,
+                  // Wie der Ring: in der Nacht noch keine Ladung (B1).
+                  todayMorning: !isToday || _data.recoveryState == 'night_in_progress'
+                      ? null
+                      : _data.readiness.value?.toDouble(),
+                  todayStrain: isToday ? _data.strain.value?.toDouble() : null,
+                  peaks: peaks,
+                ),
+          items: _items,
+          lastData: lastData,
+          syncing: syncing || deriving,
+          pulse: isToday
+              ? PulseDisplay(
+                  onTap: () => _push(
+                    TaktPulseDetail(
+                      initialDay: shownDay,
+                      activeDay: activeDay,
+                      days: _availableDays,
+                    ),
+                  ),
+                )
+              : TaktDayPulseCard(data: _dayPulse),
+          dayStress: _dayStress,
+          header: const ProfileAvatar(accent: C.domHome),
+          watch: watch,
+          loading: _dayLoading,
+          isToday: isToday,
+          onRing: (k) => _push(taktRingTarget(k, day: shownDay)),
+          onCard: (key) => _push(MetricDetail(key)),
+          onOpen: _openWorkout,
+          onTick: _onTick,
+          onDiscard: _discard,
+          onLog: () => _push(const LogWorkout()),
+          // Läuft schon ein Training, bringt die Leiste unten dorthin zurück.
+          onStart: workoutRunning ? null : _startWorkout,
+        ),
       ),
     );
   }
@@ -611,12 +635,14 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
 /// Wohin ein Ring führt. Der Schlafring öffnet den Schlaf-Screen mit dem
 /// Takt-Kopf, wie im Schlaf-Tab (Gerätetest 0.2.0, E1).
 Widget taktRingTarget(HomeRingKind k, {String? day}) => switch (k) {
-      // Feature 04, D4: Der erste Ring ist die Batterie.
-      HomeRingKind.recovery => BatteryDetail(day: day),
-      HomeRingKind.strain => DayStrainDetail(day: day),
-      HomeRingKind.sleep =>
-        SleepDetail(day: day, head: (d) => TaktSleepHeadLoader(day: d)),
-    };
+  // Feature 04, D4: Der erste Ring ist die Batterie.
+  HomeRingKind.recovery => BatteryDetail(day: day),
+  HomeRingKind.strain => DayStrainDetail(day: day),
+  HomeRingKind.sleep => SleepDetail(
+    day: day,
+    head: (d) => TaktSleepHeadLoader(day: d),
+  ),
+};
 
 /// Reine Darstellung, dadurch ohne Band und ohne Datenbank testbar.
 class TaktTodayView extends StatelessWidget {
@@ -648,7 +674,20 @@ class TaktTodayView extends StatelessWidget {
     this.strainPeak,
     this.dayStepper,
     this.dayStress,
+    this.tonight,
+    this.order = kDefaultTodayOrder,
+    this.onArrange,
   });
+
+  /// TAKT 14.11.: Reihenfolge der Abschnitte unter den Ringen.
+  final List<TodaySection> order;
+
+  /// Öffnet „Heute anordnen“. Null: kein Knopf.
+  final VoidCallback? onArrange;
+
+  /// TAKT 14.11.: empfohlene Bett- und Aufstehzeit für heute Nacht. Null:
+  /// keine Zeile (vergangener Tag oder noch kein Schlafbedarf).
+  final TonightRec? tonight;
 
   /// Feature 04, B2′: der höchste Strain heute, für den Batterie-Ring.
   final double? strainPeak;
@@ -733,142 +772,226 @@ class TaktTodayView extends StatelessWidget {
       for (final r in rings)
         if (r.why != null && r.why!.isNotEmpty) r.why!,
     ];
-    return ListView(controller: scroll, padding: pad, children: [
-      const SizedBox(height: S.x3),
-      if (dayStepper == null)
-        Row(children: [
-          Text(kAppName.toLowerCase(), style: F.t2.copyWith(color: p.ink)),
-          const SizedBox(width: S.x3),
-          Expanded(
-            child: MinuteTick(
-              onTick: onTick,
-              builder: (_) => StripeDodge(
-                line: true,
-                child: Text(
-                    syncing ? t.syncing : freshnessText(lastData, now ?? taktNow(), t),
-                    key: const ValueKey('takt-status'),
-                    textAlign: TextAlign.end,
-                    style: F.cap.copyWith(color: p.ink2)),
+    return ListView(
+      controller: scroll,
+      padding: pad,
+      children: [
+        const SizedBox(height: S.x3),
+        if (dayStepper == null)
+          Row(
+            children: [
+              Text(kAppName.toLowerCase(), style: F.t2.copyWith(color: p.ink)),
+              const SizedBox(width: S.x3),
+              Expanded(
+                child: MinuteTick(
+                  onTick: onTick,
+                  builder: (_) => StripeDodge(
+                    line: true,
+                    child: Text(
+                      syncing ? t.syncing : freshnessText(lastData, now ?? taktNow(), t),
+                      key: const ValueKey('takt-status'),
+                      textAlign: TextAlign.end,
+                      style: F.cap.copyWith(color: p.ink2),
+                    ),
+                  ),
+                ),
+              ),
+              if (header != null) ...[const SizedBox(width: S.x3), header!],
+            ],
+          )
+        else
+          Row(
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 86),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      kAppName.toLowerCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: F.t2.copyWith(color: p.ink),
+                    ),
+                    MinuteTick(
+                      onTick: onTick,
+                      builder: (_) {
+                        final status = syncing
+                            ? t.syncing
+                            : freshnessText(lastData, now ?? taktNow(), t);
+                        final child = StripeDodge(
+                          line: true,
+                          child: Text(
+                            status,
+                            key: const ValueKey('takt-status'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: F.cap.copyWith(color: p.ink2),
+                          ),
+                        );
+                        return status.isEmpty
+                            ? Visibility(visible: false, maintainState: true, child: child)
+                            : child;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: S.x2),
+              Expanded(child: dayStepper!),
+              if (header != null) ...[const SizedBox(width: S.x2), header!],
+            ],
+          ),
+        const SizedBox(height: S.x3),
+        Row(
+          key: const ValueKey('takt-rings'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final r in rings)
+              Expanded(
+                child: DialRing(
+                  r,
+                  color: colors[r.kind]!,
+                  onTap: onRing == null ? null : () => onRing!(r.kind),
+                ),
+              ),
+          ],
+        ),
+        for (final g in gaps.take(1)) ...[
+          const SizedBox(height: S.x2),
+          StripeDodge(
+            line: true,
+            child: Text(g, style: F.cap.copyWith(color: p.ink2)),
+          ),
+        ],
+        // TAKT 14.11.: Unter den Ringen in der Reihenfolge, die Felix gewählt
+        // hat (Heute anordnen). Kopf und Ringe bleiben oben.
+        for (final id in normalizeTodayOrder(order))
+          ...switch (id) {
+            TodaySection.tonight => [
+              if (tonight != null && !loading) ...[
+                const SizedBox(height: S.x3),
+                KeyedSubtree(
+                  key: const ValueKey('takt-tonight'),
+                  child: _TonightCard(
+                    rec: tonight!,
+                    onTap: onRing == null ? null : () => onRing!(HomeRingKind.sleep),
+                  ),
+                ),
+              ],
+            ],
+            TodaySection.pulse => [
+              const SizedBox(height: S.x3),
+              KeyedSubtree(key: const ValueKey('takt-pulse'), child: pulse),
+            ],
+            TodaySection.cards => [
+              const SizedBox(height: S.x3),
+              Row(
+                key: const ValueKey('takt-cards'),
+                children: [
+                  Expanded(
+                    child: _lastCard(
+                      t,
+                      t.hrv,
+                      loading ? Metric.empty : hrv,
+                      loading ? null : hrvLast,
+                      'ms',
+                      () => onCard?.call('hrv'),
+                    ),
+                  ),
+                  const SizedBox(width: S.x2),
+                  Expanded(
+                    child: _lastCard(
+                      t,
+                      t.restingHr,
+                      effectiveData.rhr,
+                      loading ? null : rhrLast,
+                      '',
+                      () => onCard?.call('resting_hr'),
+                    ),
+                  ),
+                  const SizedBox(width: S.x2),
+                  Expanded(
+                    child: _Card(
+                      t.steps,
+                      _num(effectiveData.steps, ''),
+                      () => onCard?.call('steps'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            TodaySection.stress => [
+              if (dayStress != null && dayStress!.hasData) ...[
+                const SizedBox(height: S.x3),
+                TaktStressCard(analysis: dayStress!),
+              ],
+            ],
+            TodaySection.watch => [
+              if (watch != null) ...[const SizedBox(height: S.x3), ...watch!],
+            ],
+            TodaySection.activities => [
+              const SizedBox(height: S.x5),
+              KeyedSubtree(
+                key: const ValueKey('takt-activities'),
+                child: ActivityList(
+                  items: items,
+                  isPastDay: !isToday,
+                  onOpen: onOpen,
+                  onDiscard: onDiscard,
+                  onLog: onLog,
+                  onStart: onStart,
+                ),
+              ),
+            ],
+            // Feature 04, D6, ab 14.11. als Belastung & Erholung (wie WHOOP):
+            // Strain und Morgenladung als Linien, Tage über dem Limit rot. Die
+            // Belastung steht schon, solange die Batterie noch lernt.
+            TodaySection.week => [
+              if (week != null && week!.any((d) => d.morning != null || d.strain != null)) ...[
+                const SizedBox(height: S.x5),
+                TaktLoadRecoveryWeek(days: week!, today: now ?? taktNow()),
+              ],
+            ],
+          },
+        if (onArrange != null) ...[
+          const SizedBox(height: S.x5),
+          Center(
+            child: Pressable(
+              key: const ValueKey('takt-arrange'),
+              onTap: onArrange!,
+              semanticLabel: t.arrange,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: S.x4, vertical: S.x2),
+                child: Text(t.arrange, style: F.cap.copyWith(color: p.ink2)),
               ),
             ),
           ),
-          if (header != null) ...[const SizedBox(width: S.x3), header!],
-        ])
-      else
-        Row(children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 86),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  kAppName.toLowerCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: F.t2.copyWith(color: p.ink),
-                ),
-                MinuteTick(
-                  onTick: onTick,
-                  builder: (_) {
-                    final status =
-                        syncing ? t.syncing : freshnessText(lastData, now ?? taktNow(), t);
-                    final child = StripeDodge(
-                      line: true,
-                      child: Text(
-                        status,
-                        key: const ValueKey('takt-status'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: F.cap.copyWith(color: p.ink2),
-                      ),
-                    );
-                    return status.isEmpty
-                        ? Visibility(visible: false, maintainState: true, child: child)
-                        : child;
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: S.x2),
-          Expanded(child: dayStepper!),
-          if (header != null) ...[const SizedBox(width: S.x2), header!],
-        ]),
-      const SizedBox(height: S.x3),
-      Row(
-        key: const ValueKey('takt-rings'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final r in rings)
-            Expanded(
-              child: DialRing(r,
-                  color: colors[r.kind]!,
-                  onTap: onRing == null ? null : () => onRing!(r.kind)),
-            ),
         ],
-      ),
-      for (final g in gaps.take(1)) ...[
-        const SizedBox(height: S.x2),
-        StripeDodge(line: true, child: Text(g, style: F.cap.copyWith(color: p.ink2))),
       ],
-      const SizedBox(height: S.x3),
-      KeyedSubtree(key: const ValueKey('takt-pulse'), child: pulse),
-      const SizedBox(height: S.x3),
-      Row(key: const ValueKey('takt-cards'), children: [
-        Expanded(
-            child: _lastCard(t, t.hrv, loading ? Metric.empty : hrv,
-                loading ? null : hrvLast, 'ms', () => onCard?.call('hrv'))),
-        const SizedBox(width: S.x2),
-        Expanded(
-            child: _lastCard(
-                t,
-                t.restingHr,
-                effectiveData.rhr,
-                loading ? null : rhrLast,
-                '',
-                () => onCard?.call('resting_hr'))),
-        const SizedBox(width: S.x2),
-        Expanded(
-            child: _Card(t.steps, _num(effectiveData.steps, ''),
-                () => onCard?.call('steps'))),
-      ]),
-      if (dayStress != null && dayStress!.hasData) ...[
-        const SizedBox(height: S.x3),
-        TaktStressCard(analysis: dayStress!),
-      ],
-      if (watch != null) ...[const SizedBox(height: S.x3), ...watch!],
-      const SizedBox(height: S.x5),
-      KeyedSubtree(
-        key: const ValueKey('takt-activities'),
-        child: ActivityList(
-          items: items,
-          isPastDay: !isToday,
-          onOpen: onOpen,
-          onDiscard: onDiscard,
-          onLog: onLog,
-          onStart: onStart,
-        ),
-      ),
-      // Feature 04, D6: unter den Karten, nach den Aktivitäten, damit die
-      // ohne Scrollen sichtbar bleiben.
-      if (week != null && week!.any((d) => d.morning != null)) ...[
-        const SizedBox(height: S.x5),
-        TaktBatteryWeek(days: week!, today: now ?? taktNow()),
-      ],
-    ]);
+    );
   }
 
   /// Karte mit dem heutigen Wert, sonst dem letzten aus dem Verlauf samt Tag.
-  Widget _lastCard(TaktText t, String label, Metric today, ChartPoint? last, String unit,
-      VoidCallback onTap) {
+  Widget _lastCard(
+    TaktText t,
+    String label,
+    Metric today,
+    ChartPoint? last,
+    String unit,
+    VoidCallback onTap,
+  ) {
     if (today.value != null || last == null) return _Card(label, _num(today, unit), onTap);
     final at = DateTime.fromMillisecondsSinceEpoch(last.t * 1000);
     final n = now ?? taktNow();
     final isToday = at.year == n.year && at.month == n.month && at.day == n.day;
     final v = displayFixed(last.v, 0);
-    return _Card(isToday ? label : '$label, ${t.dayOf(at, n)}',
-        unit.isEmpty ? v : '$v $unit', onTap);
+    return _Card(
+      isToday ? label : '$label, ${t.dayOf(at, n)}',
+      unit.isEmpty ? v : '$v $unit',
+      onTap,
+    );
   }
 
   static String _num(Metric m, String unit) {
@@ -876,6 +999,64 @@ class TaktTodayView extends StatelessWidget {
     if (v == null) return '–';
     final n = displayFixed(v, 0);
     return unit.isEmpty ? n : '$n $unit';
+  }
+}
+
+/// Bett- und Aufstehzeit, Minuten nach Mitternacht.
+typedef TonightRec = ({int bed, int wake});
+
+/// TAKT 14.11.: Wann heute ins Bett, damit der Schlafbedarf reicht. Dieselbe
+/// Empfehlung wie unten im Schlaf-Tab; Antippen öffnet den Schlaf.
+class _TonightCard extends StatelessWidget {
+  const _TonightCard({required this.rec, this.onTap});
+  final TonightRec rec;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext c) {
+    final p = P.of(c);
+    final t = TaktText.of(c);
+    Widget part(String label, int min) => Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StripeDodge(child: Text(formatClockMinute(min), style: Pult.digits(32, p.ink))),
+          const SizedBox(height: S.x1),
+          Text(label, style: F.cap.copyWith(color: p.ink2)),
+        ],
+      ),
+    );
+    return Pressable(
+      onTap: onTap ?? () {},
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: S.x3, vertical: S.x4),
+        decoration: BoxDecoration(
+          color: p.card,
+          borderRadius: R.rSm,
+          border: Border(
+            top: BorderSide(color: p.line),
+            left: BorderSide(color: p.line),
+            right: BorderSide(color: p.line),
+            bottom: BorderSide(color: p.line, width: 3),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(t.tonightTitle, style: F.cap.copyWith(color: p.ink2)),
+            const SizedBox(height: S.x2),
+            Row(
+              children: [
+                part(t.toBed, rec.bed),
+                const SizedBox(width: S.x3),
+                part(t.getUp, rec.wake),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -902,17 +1083,20 @@ class _Card extends StatelessWidget {
             bottom: BorderSide(color: p.line, width: 3),
           ),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          StripeDodge(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(value, style: Pult.digits(32, p.ink)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            StripeDodge(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(value, style: Pult.digits(32, p.ink)),
+              ),
             ),
-          ),
-          const SizedBox(height: S.x1),
-          Text(label, style: F.cap.copyWith(color: p.ink2)),
-        ]),
+            const SizedBox(height: S.x1),
+            Text(label, style: F.cap.copyWith(color: p.ink2)),
+          ],
+        ),
       ),
     );
   }

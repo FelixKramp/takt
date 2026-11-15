@@ -14,6 +14,11 @@ Toolchain liegt in `~/Developer/tools` (Flutter 3.41.6, JDK 17, Android SDK).
 - Build: `flutter build apk --debug --dart-define-from-file=.env`
 - Lint: `flutter analyze`
 
+## Übergabe zwischen Agenten
+Felix arbeitet abwechselnd mit Claude Code und Antigravity.
+- **Zu Beginn:** `docs/STAND.md` lesen, dann `git log <Commit aus STAND.md>..HEAD` und `git status`. Nicht den ganzen Code durchsuchen, um herauszufinden, was neu ist.
+- **Am Ende** (oder vor einem Wechsel): `docs/STAND.md` neu schreiben, nicht verlängern. Nichts Privates, das Repo ist öffentlich.
+
 ## Arbeitsweise
 Blueprint-Ablauf (Skill `/blueprint`): Spec → Architektur → Plan → Build (TDD) → unabhängige Prüfung.
 
