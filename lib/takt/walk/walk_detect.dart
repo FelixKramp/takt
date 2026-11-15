@@ -27,11 +27,7 @@ class WalkRules {
   /// Kürzester Gang in Minuten.
   final int minDurationMin;
 
-  const WalkRules({
-    this.minSpm = 80,
-    this.maxGapMin = 2,
-    this.minDurationMin = 15,
-  });
+  const WalkRules({this.minSpm = 80, this.maxGapMin = 2, this.minDurationMin = 15});
 }
 
 /// Ein erkannter Gang.
@@ -53,8 +49,7 @@ class WalkBout {
   int get durationMin => ((endSec - startSec) / 60).round();
 
   /// Mittlere Schrittfrequenz über den ganzen Gang, Pausen eingerechnet.
-  int get cadenceSpm =>
-      endSec > startSec ? (steps * 60 / (endSec - startSec)).round() : 0;
+  int get cadenceSpm => endSec > startSec ? (steps * 60 / (endSec - startSec)).round() : 0;
 }
 
 /// Zwei Zählerstände, die mehr als so viele Sekunden auseinanderliegen, werden
@@ -64,6 +59,29 @@ const _kMaxSampleGapSec = 10;
 /// Mehr Schritte in einer Sekunde sind kein Gehen, sondern ein Zählersprung
 /// (Reset, Neustart des Bands).
 const _kMaxStepsPerSample = 50;
+
+/// Schritte je Minute (Schlüssel: Unix-Sekunden / 60) aus dem kumulativen
+/// Zählerstand. Minuten ohne gültigen Zählerstand fehlen im Ergebnis; eine
+/// Minute mit Zählerstand, aber ohne Schritte, steht mit 0 darin. Geteilt mit
+/// der Radfahr-Erkennung, die "keine Schritte" von "kein Zähler" trennen muss.
+Map<int, int> stepsByMinute(List<int> tsSec, List<int> stepCount) {
+  final n = tsSec.length < stepCount.length ? tsSec.length : stepCount.length;
+  final steps = <int, int>{};
+  var prevI = -1;
+  for (var i = 0; i < n; i++) {
+    if (stepCount[i] < 0) continue;
+    final m = tsSec[i] ~/ 60;
+    if (prevI >= 0) {
+      final dt = tsSec[i] - tsSec[prevI];
+      final d = (stepCount[i] - stepCount[prevI]) % 65536;
+      if (dt > 0 && dt <= _kMaxSampleGapSec && d <= _kMaxStepsPerSample) {
+        steps[m] = (steps[m] ?? 0) + d;
+      }
+    }
+    prevI = i;
+  }
+  return steps;
+}
 
 /// Findet Gänge im 1-Hz-Schrittzähler.
 ///
@@ -82,11 +100,10 @@ List<WalkBout> detectWalks({
   if (n < 2) return const [];
 
   // Schritte und Puls je Minute.
-  final steps = <int, int>{};
+  final steps = stepsByMinute(tsSec, stepCount)..removeWhere((_, v) => v == 0);
   final hrSum = <int, int>{};
   final hrCount = <int, int>{};
   final hrPeak = <int, int>{};
-  var prevI = -1;
   for (var i = 0; i < n; i++) {
     final m = tsSec[i] ~/ 60;
     if (i < hr.length && hr[i] > 0) {
@@ -94,15 +111,6 @@ List<WalkBout> detectWalks({
       hrCount[m] = (hrCount[m] ?? 0) + 1;
       if (hr[i] > (hrPeak[m] ?? 0)) hrPeak[m] = hr[i];
     }
-    if (stepCount[i] < 0) continue;
-    if (prevI >= 0) {
-      final dt = tsSec[i] - tsSec[prevI];
-      final d = (stepCount[i] - stepCount[prevI]) % 65536;
-      if (dt > 0 && dt <= _kMaxSampleGapSec && d <= _kMaxStepsPerSample) {
-        steps[m] = (steps[m] ?? 0) + d;
-      }
-    }
-    prevI = i;
   }
   if (steps.isEmpty) return const [];
 
@@ -133,13 +141,15 @@ List<WalkBout> detectWalks({
       final p = hrPeak[m] ?? 0;
       if (p > peak) peak = p;
     }
-    bouts.add(WalkBout(
-      startSec: a * 60,
-      endSec: (b + 1) * 60,
-      steps: total,
-      avgBpm: count == 0 ? null : (sum / count).round(),
-      peakBpm: peak == 0 ? null : peak,
-    ));
+    bouts.add(
+      WalkBout(
+        startSec: a * 60,
+        endSec: (b + 1) * 60,
+        steps: total,
+        avgBpm: count == 0 ? null : (sum / count).round(),
+        peakBpm: peak == 0 ? null : peak,
+      ),
+    );
   }
 
   for (final m in keys) {
@@ -164,19 +174,19 @@ List<WalkBout> detectWalks({
 /// Erkannte Gänge als Zeilen für `ActivityStore.reconcile(ActivityKind.workout, …)`,
 /// im selben Format wie die Workout-Vorschläge der Upstream-Erkennung.
 List<Map<String, dynamic>> walkSuggestionRows(String date, List<WalkBout> walks) => [
-      for (final w in walks)
-        {
-          'id': '$date:${w.startSec}',
-          'date': date,
-          'start_ts': w.startSec,
-          'end_ts': w.endSec,
-          'avg_bpm': w.avgBpm,
-          'peak_bpm': w.peakBpm,
-          'duration_min': w.durationMin,
-          'sport': 'walking',
-          'steps': w.steps,
-          'cadence_spm': w.cadenceSpm,
-          'detector': 'takt_walk',
-          'dismissed': 0,
-        },
-    ];
+  for (final w in walks)
+    {
+      'id': '$date:${w.startSec}',
+      'date': date,
+      'start_ts': w.startSec,
+      'end_ts': w.endSec,
+      'avg_bpm': w.avgBpm,
+      'peak_bpm': w.peakBpm,
+      'duration_min': w.durationMin,
+      'sport': 'walking',
+      'steps': w.steps,
+      'cadence_spm': w.cadenceSpm,
+      'detector': 'takt_walk',
+      'dismissed': 0,
+    },
+];

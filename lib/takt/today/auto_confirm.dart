@@ -18,6 +18,14 @@ const kAutoConfirmWindow = Duration(hours: 36);
 /// [sameDay] sagt, ob [derivedAt] zum laufenden Tag gehört. Der wird immer neu
 /// gerechnet und muss bis zum Datenstand reichen. Ein vergangener Tag bleibt
 /// stehen, seine Rechnung muss nur klar nach dem Trainingsende liegen.
+///
+/// TAKT 15.11.: Für den laufenden Tag darf die Rechnung bis zu
+/// [kDeriveLagSeconds] hinter dem Datenstand liegen. Mit verbundenem Band
+/// kommt jede Sekunde ein neuer Wert, der Datenstand lag also fast immer ein
+/// paar Sekunden vor der letzten Rechnung, und ein Handballtraining blieb fast
+/// zwei Stunden offen (ohne Belastung, Antippen öffnete nur die Sportart-Wahl).
+/// Eine Datenlücke ist weiter abgedeckt: Nach einem Sync ist [busy] gesetzt,
+/// bis gerechnet wurde.
 bool isSettled(
   ActivitySuggestion s, {
   required DateTime? dataThrough,
@@ -27,11 +35,16 @@ bool isSettled(
 }) {
   if (busy || dataThrough == null || derivedAt == null) return false;
   final settledAt = s.endTs + kSettleSeconds;
-  if (dataThrough.millisecondsSinceEpoch ~/ 1000 < settledAt) return false;
+  final through = dataThrough.millisecondsSinceEpoch ~/ 1000;
+  final derived = derivedAt.millisecondsSinceEpoch ~/ 1000;
+  if (through < settledAt) return false;
   return sameDay
-      ? !derivedAt.isBefore(dataThrough)
-      : derivedAt.millisecondsSinceEpoch ~/ 1000 >= settledAt;
+      ? derived >= settledAt && derived >= through - kDeriveLagSeconds
+      : derived >= settledAt;
 }
+
+/// So weit darf die Rechnung des laufenden Tages hinter dem Datenstand liegen.
+const kDeriveLagSeconds = 10 * 60;
 
 /// Speichert abgeschlossene Workouts und gibt zurück, was offen bleibt.
 /// Nickerchen laufen weiter über den bisherigen Ablauf.

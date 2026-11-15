@@ -295,6 +295,12 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
   DayStressSample? _scrubbedSample;
   int _loadGen = 0; // G21: Race condition guard
 
+  // TAKT 15.11.: Zoom mit zwei Fingern. Null = ganzer Verlauf.
+  (int, int)? _view;
+  final _pointers = <int, Offset>{};
+  ({double dist, double midX, int start, int span})? _pinch;
+  double _chartWidth = 0;
+
   @override
   void initState() {
     super.initState();
@@ -321,6 +327,7 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
         _analysis = res;
         _loading = false;
         _scrubbedSample = null;
+        _view = null;
       });
     }
   }
@@ -357,7 +364,9 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
     final dispSample = _scrubbedSample;
     final dispScore = dispSample != null ? dispSample.score : a.avgStress;
     final zoneColor = stressZoneColor(dispScore, p);
-    final (dayStart, span) = stressAxis(a);
+    final full = stressAxis(a);
+    final (dayStart, span) = _view ?? full;
+    final zoomed = _view != null;
 
     return Scaffold(
       backgroundColor: p.bg,
@@ -554,54 +563,80 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
                           ),
                         ),
                         const SizedBox(width: S.x2),
-                        Text(
-                          de ? 'Wischen zum Prüfen' : 'Swipe to scrub',
-                          style: F.over.copyWith(color: p.ink3),
-                        ),
+                        if (zoomed)
+                          GestureDetector(
+                            key: const ValueKey('takt-stress-zoom-reset'),
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => setState(() => _view = null),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: S.x1),
+                              child: Text(
+                                de ? 'Ganzer Verlauf' : 'Full range',
+                                style: F.over.copyWith(
+                                  color: p.on(C.blue),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            de ? 'Zwei Finger zoomen' : 'Pinch to zoom',
+                            style: F.over.copyWith(color: p.ink3),
+                          ),
                       ],
                     ),
                     const SizedBox(height: S.x3),
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final width = constraints.maxWidth;
+                        _chartWidth = width;
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _stressMarks(a, dayStart, span, width, p),
                             SizedBox(
                               height: 180,
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onHorizontalDragUpdate: (details) {
-                                  _updateScrub(
-                                    details.localPosition.dx,
-                                    width,
-                                    a.samples,
-                                    dayStart,
-                                    span,
-                                  );
-                                },
-                                onHorizontalDragEnd: (_) {
-                                  setState(() => _scrubbedSample = null);
-                                },
-                                onTapUp: (details) {
-                                  _updateScrub(
-                                    details.localPosition.dx,
-                                    width,
-                                    a.samples,
-                                    dayStart,
-                                    span,
-                                  );
-                                },
-                                child: CustomPaint(
-                                  size: Size.infinite,
-                                  painter: _StressChartPainter(
-                                    dayStartSec: dayStart,
-                                    spanSec: span,
-                                    samples: a.samples,
-                                    p: p,
-                                    showZones: true,
-                                    scrubbedSample: dispSample,
+                              child: Listener(
+                                key: const ValueKey('takt-stress-chart'),
+                                onPointerDown: (e) => _pointerDown(e, full),
+                                onPointerMove: (e) => _pointerMove(e, full),
+                                onPointerUp: (e) => _pointerEnd(e),
+                                onPointerCancel: (e) => _pointerEnd(e),
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onHorizontalDragUpdate: (details) {
+                                    if (_pointers.length > 1) return;
+                                    _updateScrub(
+                                      details.localPosition.dx,
+                                      width,
+                                      a.samples,
+                                      dayStart,
+                                      span,
+                                    );
+                                  },
+                                  onHorizontalDragEnd: (_) {
+                                    setState(() => _scrubbedSample = null);
+                                  },
+                                  onTapUp: (details) {
+                                    _updateScrub(
+                                      details.localPosition.dx,
+                                      width,
+                                      a.samples,
+                                      dayStart,
+                                      span,
+                                    );
+                                  },
+                                  child: CustomPaint(
+                                    size: Size.infinite,
+                                    painter: _StressChartPainter(
+                                      dayStartSec: dayStart,
+                                      spanSec: span,
+                                      samples: a.samples,
+                                      p: p,
+                                      showZones: true,
+                                      scrubbedSample: dispSample,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -714,6 +749,49 @@ class _TaktStressDetailScreenState extends State<TaktStressDetailScreen> {
     );
   }
 
+  // TAKT 15.11.: Zoom mit zwei Fingern über rohe Zeiger, damit das Wischen
+  // mit einem Finger und das Scrollen der Seite unverändert bleiben.
+  void _pointerDown(PointerDownEvent e, (int, int) full) {
+    _pointers[e.pointer] = e.localPosition;
+    if (_pointers.length == 2) _beginPinch(full);
+  }
+
+  void _beginPinch((int, int) full) {
+    final pts = _pointers.values.take(2).toList();
+    final (start, span) = _view ?? full;
+    _pinch = (
+      dist: (pts[0] - pts[1]).distance,
+      midX: (pts[0].dx + pts[1].dx) / 2,
+      start: start,
+      span: span,
+    );
+    setState(() => _scrubbedSample = null);
+  }
+
+  void _pointerMove(PointerMoveEvent e, (int, int) full) {
+    if (!_pointers.containsKey(e.pointer)) return;
+    _pointers[e.pointer] = e.localPosition;
+    final pinch = _pinch;
+    if (pinch == null || _pointers.length < 2 || _chartWidth <= 0) return;
+    final pts = _pointers.values.take(2).toList();
+    final dist = (pts[0] - pts[1]).distance;
+    final midX = (pts[0].dx + pts[1].dx) / 2;
+    final next = stressZoomView(
+      full: full,
+      from: (pinch.start, pinch.span),
+      width: _chartWidth,
+      fromMidX: pinch.midX,
+      toMidX: midX,
+      scale: pinch.dist <= 0 ? 1 : dist / pinch.dist,
+    );
+    setState(() => _view = next);
+  }
+
+  void _pointerEnd(PointerEvent e) {
+    _pointers.remove(e.pointer);
+    if (_pointers.length < 2) _pinch = null;
+  }
+
   void _updateScrub(
     double dx,
     double width,
@@ -805,8 +883,10 @@ class _StressChartPainter extends CustomPainter {
   final bool showZones;
   final DayStressSample? scrubbedSample;
 
+  // Nicht auf den Rand geklemmt: Beim Zoomen liegen Punkte außerhalb, der
+  // Clip unten schneidet sie ab, statt sie am Rand zu stapeln.
   double _xForSec(int tSec, double w) {
-    return ((tSec - dayStartSec) / spanSec).clamp(0.0, 1.0) * w;
+    return (tSec - dayStartSec) / spanSec * w;
   }
 
   @override
@@ -815,6 +895,8 @@ class _StressChartPainter extends CustomPainter {
 
     final h = size.height;
     final w = size.width;
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, -2, w, h + 4));
 
     // Horizontale Zonenlinien (bei Stress = 1,0 und 2,0)
     final yZone1 = h - (1.0 / 3.0) * h;
@@ -947,6 +1029,7 @@ class _StressChartPainter extends CustomPainter {
         ..strokeWidth = 2;
       canvas.drawCircle(Offset(sx, sy), 5, borderPaint);
     }
+    canvas.restore();
   }
 
   @override
@@ -965,6 +1048,36 @@ class _StressChartPainter extends CustomPainter {
   final start = a.axisFromSec ?? a.fromSec ?? dayStartTimestampSec(a.date);
   final end = a.toSec ?? start + 86400;
   return (start, math.max(3600, end - start));
+}
+
+/// Kleinster Ausschnitt beim Zoomen: eine halbe Stunde.
+const kStressMinZoomSec = 1800;
+
+/// TAKT 15.11.: Ausschnitt nach einer Zwei-Finger-Geste. Die Uhrzeit unter der
+/// Mitte der Finger zu Beginn ([fromMidX]) bleibt unter der Mitte jetzt
+/// ([toMidX]): Auseinanderziehen zoomt dort hinein, Verschieben schiebt den
+/// Ausschnitt. Der Ausschnitt bleibt im ganzen Verlauf [full]. Null, wenn er
+/// den ganzen Verlauf zeigt.
+(int, int)? stressZoomView({
+  required (int, int) full,
+  required (int, int) from,
+  required double width,
+  required double fromMidX,
+  required double toMidX,
+  required double scale,
+}) {
+  final (fullStart, fullSpan) = full;
+  final (start, span) = from;
+  if (width <= 0 || scale <= 0) return from == full ? null : from;
+  final minSpan = math.min(kStressMinZoomSec, fullSpan);
+  final newSpan = (span / scale).round().clamp(minSpan, fullSpan);
+  if (newSpan >= fullSpan) return null;
+  final anchor = start + (fromMidX / width).clamp(0.0, 1.0) * span;
+  final newStart = (anchor - (toMidX / width).clamp(0.0, 1.0) * newSpan).round().clamp(
+    fullStart,
+    fullStart + fullSpan - newSpan,
+  );
+  return (newStart, newSpan);
 }
 
 /// Fünf Uhrzeiten unter der Achse, auf die Viertelstunde gerundet.
@@ -993,18 +1106,25 @@ Widget _stressMarks(DayStressAnalysis a, int start, int span, double width, P p)
     child: Stack(
       clipBehavior: Clip.none,
       children: [
+        // Beim Zoomen nur, was im Ausschnitt liegt, mittig über dem sichtbaren Teil.
         for (final b in bands)
-          Positioned(
-            left: ((((b.fromSec + b.toSec) / 2 - start) / span).clamp(0.0, 1.0) * width - size / 2)
-                .clamp(0.0, math.max(0.0, width - size)),
-            top: 2,
-            child: Icon(
-              b.sleep ? LucideIcons.moon : (activityByName(b.name)?.icon ?? LucideIcons.activity),
-              key: ValueKey(b.sleep ? 'takt-stress-moon' : 'takt-stress-workout'),
-              size: size,
-              color: b.sleep ? p.ink2 : p.on(C.blue),
+          if (b.toSec > start && b.fromSec < start + span)
+            Positioned(
+              left:
+                  ((((math.max(b.fromSec, start) + math.min(b.toSec, start + span)) / 2 - start) /
+                                      span)
+                                  .clamp(0.0, 1.0) *
+                              width -
+                          size / 2)
+                      .clamp(0.0, math.max(0.0, width - size)),
+              top: 2,
+              child: Icon(
+                b.sleep ? LucideIcons.moon : (activityByName(b.name)?.icon ?? LucideIcons.activity),
+                key: ValueKey(b.sleep ? 'takt-stress-moon' : 'takt-stress-workout'),
+                size: size,
+                color: b.sleep ? p.ink2 : p.on(C.blue),
+              ),
             ),
-          ),
       ],
     ),
   );

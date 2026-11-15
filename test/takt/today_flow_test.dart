@@ -68,6 +68,15 @@ void main() {
       expect(done, isEmpty);
       expect(left.single.id, 'w');
     });
+    test('A8: Verbundenes Band – Rechnung wenige Minuten hinter dem Datenstand reicht', () async {
+      // Live-Daten laufen der letzten Rechnung immer ein Stück voraus.
+      final (done, _) = await run([w(end)], through: end + 3600, derived: end + 3600 - 120);
+      expect(done, ['w']);
+    });
+    test('A8: Rechnung vor dem Ende plus 30 Minuten reicht nicht', () async {
+      final (done, _) = await run([w(end)], through: end + 1900, derived: end + 1700);
+      expect(done, isEmpty);
+    });
     test('A8: Während Sync oder Berechnung wird nichts gespeichert', () async {
       final (done, _) = await run([w(end)], through: end + 1800, busy: true);
       expect(done, isEmpty);

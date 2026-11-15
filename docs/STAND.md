@@ -6,26 +6,25 @@ verlängert. Höchstens etwa 30 Zeilen. Was sich im Code geändert hat, steht in
 `git log`; hier steht, was Git nicht weiß. Das Repo ist öffentlich: nichts
 Privates (keine Schlafzeiten, Gesundheitswerte, Journalfragen).
 
-**Aktualisiert:** 2026-11-15 · **Letzter Commit:** siehe `git log -1` (Heute, Stress, Belastung & Erholung, Übergabe) · **Version:** 0.5.1+35
+**Aktualisiert:** 2026-11-15 · **Letzter Commit:** siehe `git log -1` · **Version:** 0.5.1+36
 
-## Zuletzt dazugekommen (committet und gepusht)
-- Heute: Karte „Bettzeit heute Nacht“ unter den Ringen (`_TonightCard` in `lib/takt/today/takt_today_screen.dart`)
-- Heute frei anordnen: `lib/takt/today/today_order.dart`, Knopf „Heute anordnen“ unten auf Heute
-- Tagesstress: Wachfenster vom Aufwachen bis zum Einschlafen, Verlauf beginnt beim Einschlafen und zeigt Nacht (Mond) und Workouts (Symbol); Durchschnitt und Zonen nur Wachzeit (`lib/takt/stress/`)
-- Kopfkarte im Stressverlauf behält ihre Höhe beim Wischen (Verlauf sprang)
-- Belastung & Erholung statt Batterie-Woche auf Heute (`lib/takt/battery/load_recovery_week.dart`)
-- Gehen-Erkennung aus der Schrittfrequenz (Feature 14, `lib/takt/walk/`)
+## Zuletzt dazugekommen
+- Erkannte Workouts werden mit verbundenem Band wieder zeitnah gespeichert: Rechnung darf 10 Min hinter dem Datenstand liegen (`lib/takt/today/auto_confirm.dart`). Vorher blieb ein Training stundenlang „offen“: keine Belastung, Antippen öffnete nur die Sportart-Wahl
+- Stressverlauf: Zoom mit zwei Fingern (rohe Zeiger über `Listener`, Wischen bleibt), „Ganzer Verlauf“ setzt zurück (`stressZoomView`)
+- Radfahren erkennen (Feature 15, Spec-Entwurf): `lib/takt/walk/cycle_detect.dart`, eingehängt in `_computeWorkouts`
+- Davor: Bettzeit-Karte, Heute anordnen, Belastung & Erholung, Stress mit Nacht, Gehen-Erkennung
 
 ## Auf dem Gerät geprüft
-- Alles oben: ja (Pixel, Build 35), außer Ziehen im Anordnen-Screen (nur Widget-Test)
-- Gehen-Erkennung: nur Tests, noch kein echter Spaziergang gesehen
+- Speichern erkannter Workouts: ja (Pixel, Build 36)
+- Gehen-Erkennung: ja, echte Spaziergänge erkannt
+- Zoom: nur Widget-Test (adb kann keine zwei Finger)
+- Radfahren: nur synthetische Tests, noch keine echte Fahrt
 
 ## Entscheidungen
-- Schlaf zählt nicht in Stress-Durchschnitt und -Zonen (anders als WHOOP), wird aber im Verlauf gezeigt
-- Tagesnotizen ohne `v: 2` (alte Bedarfsrechnung) werden verworfen; gestrichelte Empfehlungslinien füllen sich deshalb ab 15.11. neu
-- Strain fehlt für die ersten Tage mit eigenem Band absichtlich (ruhiges Wach-Niveau braucht 3 Vortage)
-- Bekannt: Heute-Tests können in einem Lauf über Mitternacht hängen (Zeitabhängigkeit), einzeln grün
+- Radfahren streng: Puls ≥ Ruhe + 30, ≤ 25 Schritte/Min, ≥ 10 Min, sichtbarer Anfang Pflicht (Gehen davor oder Pulsanstieg ≥ 12). Krafttraining kann als Radfahren erscheinen
+- Schlaf zählt nicht in Stress-Durchschnitt und -Zonen, wird aber im Verlauf gezeigt
+- Bekannt: Heute-Tests können in einem Lauf über Mitternacht hängen
 
-## Nächster Schritt
-- iOS: Simulator-Build vorbereiten (CocoaPods, Bundle-ID `de.felixkramp.takt` in `ios/Config`)
-- Gehen-Erkennung mit echtem Spaziergang prüfen
+## Offen
+- Uncommittete Änderungen aus einer anderen Sitzung (Tageswechsel auf Heute, bestätigter Schlaf, u. a. `derivation_engine.dart`, `wake_day.dart`): nicht von Claude, getrennt committen
+- iOS-Simulator-Build vorbereiten (CocoaPods, Bundle-ID in `ios/Config`)
