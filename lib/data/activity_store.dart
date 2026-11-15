@@ -111,6 +111,10 @@ class ActivityStore {
 
   Future<List<ActivitySuggestion>> pending({int? nowTs}) async {
     await migrateLegacy();
+    // TAKT 15.11.: Die zurückgenommene Radfahr-Erkennung (Build 36) hat Sitzen
+    // mit erhöhtem Puls als Fahrt vorgeschlagen. Offene Vorschläge davon weg.
+    await db.update('activity_suggestions', {'status': 'discarded'},
+        where: "status = 'pending' AND details_json LIKE ?", whereArgs: ['%"takt_cycle"%']);
     return [
       for (final r in await db.query(
         'activity_suggestions',

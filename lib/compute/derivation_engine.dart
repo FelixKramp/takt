@@ -77,7 +77,6 @@ import 'profile.dart';
 import 'substrate.dart';
 import 'vendor_sleep.dart';
 // TAKT: Gehen-Erkennung aus dem Schrittzähler (Feature 14).
-import '../takt/walk/cycle_detect.dart';
 import '../takt/walk/walk_detect.dart';
 
 /// Analytics/bundle version — bump to force a recompute of non-finalized days.
@@ -10728,8 +10727,6 @@ class DerivationEngine {
               ).value ??
               const <ana.DetectedWorkout>[]);
 
-      // TAKT (Feature 15): Schritte je Minute einmal für Radfahren und Gehen.
-      final stepsPerMin = stepsByMinute(s.tsSec, s.stepCount);
       // HRR per bout from the per-second HR tail bracketing each bout end.
       final drops = <double>[];
       final taus = <double>[];
@@ -10794,8 +10791,7 @@ class DerivationEngine {
             'avg_bpm': b.avgBpm,
             'peak_bpm': b.peakBpm,
             'duration_min': b.durationMin,
-            // TAKT (Feature 15): kaum Schritte bei hohem Puls ist Radfahren.
-            'sport': cyclingSportFor(b.sport, stepsPerMin, b.startSec, b.endSec),
+            'sport': b.sport,
             'dismissed': 0,
           });
         }
@@ -10804,28 +10800,15 @@ class DerivationEngine {
       // TAKT: Spaziergänge und Gehen erkennt die Puls-Erkennung oben nie. Der
       // Takt-Detektor sucht sie im Schrittzähler, außerhalb gespeicherter und
       // eben erkannter Trainings (Feature 14).
-      final walks = detectWalks(
-        tsSec: s.tsSec,
-        stepCount: s.stepCount,
-        hr: s.hr,
-        blocked: [
-          for (final w in savedSpans) (w.startSec, w.endSec),
-          for (final b in bouts) (b.startSec, b.endSec),
-        ],
-      );
-      toPersist.addAll(walkSuggestionRows(date, walks));
-      // TAKT (Feature 15): gemütliches Radfahren unter der Puls-Schwelle.
-      toPersist.addAll(cycleSuggestionRows(
+      toPersist.addAll(walkSuggestionRows(
         date,
-        detectCycling(
+        detectWalks(
           tsSec: s.tsSec,
           stepCount: s.stepCount,
           hr: s.hr,
-          restingBpm: rhr,
           blocked: [
             for (final w in savedSpans) (w.startSec, w.endSec),
             for (final b in bouts) (b.startSec, b.endSec),
-            for (final w in walks) (w.startSec, w.endSec),
           ],
         ),
       ));

@@ -1,51 +1,34 @@
 ---
 feature: 15-rad-erkennen
-freigegeben: offen (Entwurf, wartet auf Felix)
+freigegeben: offen (erster Versuch zurückgenommen, neuer Weg wartet auf Felix)
 ---
 # Spec: Radfahren automatisch erkennen
 
 ## Nutzer und Nutzen
-Felix wünscht, dass Radfahren wie Gehen automatisch erkannt wird. Bisher heißen Bouts der
-Puls-Erkennung (`autoDetectWorkouts`, ≥ 45 % HRR, ≥ 12 Minuten) nur „detected“ ohne Sportart, und
-gemütliches Fahren liegt unter dieser Schwelle und wird nie gefunden.
+Felix wünscht, dass Radfahren wie Gehen automatisch erkannt wird und eine Fahrt nicht als
+„Gehen“ gespeichert wird.
 
-## Merkmal
-Am Handgelenk: Puls deutlich über Ruhe, Schrittzähler fast still (Hand am Lenker). Gen5-Zähler aus
-dem Substrat (`stepCount`), wie in Feature 14.
+## Erster Versuch (Build 36, zurückgenommen in Build 37)
+Annahme war: Am Rad steht der Schrittzähler still, der Puls ist erhöht. Beides falsch für Felix'
+Band:
+- **Der Gen5-Zähler zählt beim Treten Schritte**, in einer bestätigten Fahrt 100–120 pro Minute,
+  genauso viele wie beim Gehen. Die Fahrt landete deshalb als „Gehen“.
+- Abschnitte mit erhöhtem Puls und 0 Schritten waren Sitzen, etwa nach dem Training. Daraus
+  wurden in drei Tagen 15 Fehlalarme, sechs davon automatisch gespeichert.
 
-## Regel
-1. **Bout der Puls-Erkennung** mit im Mittel höchstens **25 Schritten/Minute** heißt `cycling`.
-   Ohne Zählerstand in mindestens der Hälfte der Minuten bleibt die Sportart, wie sie ist.
-2. **Eigene Erkennung darunter:** Eine Minute zählt als Fahren bei Puls ≥ **Ruhepuls + 30** und
-   ≤ 25 Schritten. Pausen bis **2 Minuten** werden überbrückt, eine Fahrt zählt ab **10 Minuten**
-   und bis 180 Minuten.
-3. **Sichtbarer Anfang ist Pflicht**, sonst wäre Sitzen mit hohem Puls (Prüfung, Aufregung) eine
-   Fahrt: In den 3 Minuten davor wurde gegangen (≥ 60 Schritte/Minute), oder der Puls steigt vom
-   Mittel der 3 Minuten davor zum Mittel der ersten 3 Minuten um ≥ 12 bpm.
-4. Gesperrt sind gespeicherte Trainings, Bouts der Puls-Erkennung und erkannte Gänge.
-5. Ohne Ruhepuls des Tages oder ohne Schrittzähler (Gen4) keine Erkennung.
+## Befund aus allen Schritt-Abschnitten seit Beginn der Banddaten
+Geprüft je Minute: Schritte, Puls, Drehung des Handgelenks (Streuung des Schwerkraftvektors bei
+1 Hz).
+- Schritte trennen nicht (beide 100–120/min).
+- Die Drehung ist am Lenker meist klein (Median 0,08), beim Gehen oft größer (0,15–0,25), aber
+  mehrere vermutliche Gänge liegen genauso tief (Hände in der Jacke). Kein sicherer Schnitt.
+- Puls hängt am Tempo, nicht an der Sportart.
+- Die Spalten `step_cadence` und `activity_class` des Bands trennen auch nicht.
 
-Warum streng: Erkannte Workouts werden 30 Minuten nach dem Ende ohne Rückfrage gespeichert. Ein
-Fehlalarm kostet mehr als eine verpasste Fahrt.
+Folgerung: Aus den 1-Hz-Banddaten allein lässt sich Gehen nicht verlässlich von Radfahren trennen.
 
-## Akzeptanzkriterien
-- **R1** – Gehen zum Rad, dann 20 Minuten Fahrt: eine Fahrt über genau diese 20 Minuten.
-- **R2** – Schneller Pulsanstieg ohne Gehen davor zählt als Anfang.
-- **R3** – Langsam steigender Puls im Sitzen ist keine Fahrt.
-- **R4** – 9 Minuten sind keine Fahrt, 10 Minuten sind eine.
-- **R5** – Ampel bis 2 Minuten überbrückt, 3 Minuten trennen.
-- **R6** – Puls unter Ruhe + 30 ist keine Fahrt.
-- **R7** – Viele Schritte bei hohem Puls (Laufen, Handball) sind kein Radfahren.
-- **R8** – Gesperrte Spannen unterbrechen.
-- **R9** – Ohne Ruhepuls oder Schrittzähler keine Erkennung.
-- **R10** – Ein „detected“-Bout mit kaum Schritten wird `cycling`, Handball nicht.
-- **R11** – Vorschlag mit `sport: cycling`, passt auf den Katalog.
-- **R12** – Auf dem Pixel nach einer echten Fahrt. *Noch offen.*
-
-## Bekannte Grenze
-Krafttraining hat auch wenig Schritte bei hohem Puls und kann als Radfahren vorgeschlagen werden.
-Die Sportart lässt sich wie gewohnt ändern.
-
-## Umsetzung
-`lib/takt/walk/cycle_detect.dart` (rein), Aufruf in `_computeWorkouts` der
-`derivation_engine.dart` (TAKT-Kommentar). Tests: `test/takt/cycle_detect_test.dart`.
+## Vorschlag (wartet auf Freigabe)
+Die Aktivitätserkennung des Handys (Android Activity Recognition: zu Fuß, Fahrrad, Fahrzeug)
+liefert genau diese Unterscheidung aus Handy-Sensoren. Takt merkt sich ihre Übergänge und gibt
+einem erkannten Gang die Sportart `cycling`, wenn das Handy in dieser Zeit überwiegend „Fahrrad“
+gemeldet hat. Braucht die Berechtigung „Körperliche Aktivitäten“ und ein Handy am Körper.
