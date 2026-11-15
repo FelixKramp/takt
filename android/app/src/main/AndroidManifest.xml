@@ -219,6 +219,10 @@
 
         <!-- Boot receiver: restarts EdgeTrackingService + headless auto-connect after reboot.
              Handles BOOT_COMPLETED + QUICKBOOT_POWERON. -->
+        <!-- TAKT (Feature 15): Aktivitätswechsel des Handys von den Play-Diensten. -->
+        <receiver
+            android:name=".TaktMotionReceiver"
+            android:exported="false" />
         <receiver
             android:name=".BootReceiver"
             android:exported="true"

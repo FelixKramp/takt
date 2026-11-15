@@ -27,8 +27,23 @@ Geprüft je Minute: Schritte, Puls, Drehung des Handgelenks (Streuung des Schwer
 
 Folgerung: Aus den 1-Hz-Banddaten allein lässt sich Gehen nicht verlässlich von Radfahren trennen.
 
-## Vorschlag (wartet auf Freigabe)
-Die Aktivitätserkennung des Handys (Android Activity Recognition: zu Fuß, Fahrrad, Fahrzeug)
-liefert genau diese Unterscheidung aus Handy-Sensoren. Takt merkt sich ihre Übergänge und gibt
-einem erkannten Gang die Sportart `cycling`, wenn das Handy in dieser Zeit überwiegend „Fahrrad“
-gemeldet hat. Braucht die Berechtigung „Körperliche Aktivitäten“ und ein Handy am Körper.
+## Umsetzung (Build 38, freigegeben von Felix am 15.11.)
+Die Aktivitätserkennung des Handys (Android Activity Recognition, Transition API) liefert diese
+Unterscheidung aus Handy-Sensoren.
+- `TaktMotion.kt` meldet Wechsel für zu Fuß, Laufen, Fahrrad, Fahrzeug und still an, bei jedem
+  Engine-Start neu (nach Neustart und Update nötig). Ein Broadcast-Empfänger schreibt sie auch
+  ohne laufendes Dart in eigene SharedPreferences, 14 Tage lang.
+- `lib/takt/walk/phone_motion.dart`: `motionSpans` macht aus den Wechseln Spannen (eine Spanne
+  endet am Ende der Aktivität, am nächsten Beginn oder spätestens nach 3 Stunden).
+  `phoneSportFor` gibt `cycling`, wenn mindestens die Hälfte eines Gangs Fahrrad war.
+- Heute (`sportOf`): Ein erkannter Gang wird Radfahren, wenn das Handy es sagt. Die eigene
+  Sportart-Wahl geht vor. Gespeichert wird mit dieser Sportart.
+- Berechtigung „Körperliche Aktivitäten“ kommt von den Handy-Schritten; ohne sie bleibt alles
+  wie vorher. Das Handy muss bei Felix sein.
+
+## Akzeptanzkriterien
+- **R1–R9** in `test/takt/phone_motion_test.dart` (ganze Fahrt, Gehen bleibt Gehen, Hälfte als
+  Grenze, Ende beendet, fehlendes Ende höchstens 3 h, offene Fahrt nicht über jetzt, ohne Daten
+  nichts, native Liste lesen, Katalog).
+- **R10** – Anmeldung auf dem Pixel: Wechsel kommen an (geprüft, Build 38).
+- **R11** – Nach einer echten Fahrt steht „Radfahren“ statt „Gehen“ auf Heute. *Noch offen.*

@@ -137,5 +137,7 @@ dependencies {
     // runtime transitively, but as an `implementation` dep it isn't visible to app
     // code at compile time — declare it explicitly for our native Worker.
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // TAKT (Feature 15): Aktivitätswechsel des Handys (TaktMotion.kt).
+    implementation("com.google.android.gms:play-services-location:21.3.0")
     testImplementation("junit:junit:4.13.2")
 }

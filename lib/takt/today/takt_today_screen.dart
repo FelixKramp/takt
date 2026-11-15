@@ -58,6 +58,7 @@ import '../sleep/sleep_score.dart';
 import '../sleep/sleep_tab_data.dart' show loadTaktSleep;
 import '../stress/day_stress.dart';
 import '../stress/takt_stress_view.dart';
+import '../walk/phone_motion.dart';
 import '../stripe/stripe.dart';
 
 const _kSportPick = 'takt.sport.';
@@ -170,8 +171,17 @@ class _TaktTodayScreenState extends State<TaktTodayScreen>
     final busy = app.syncingNow || app.deriving || app.derivePending;
     try {
       final prefs = await SharedPreferences.getInstance();
+      // TAKT (Feature 15): Ein Gang, in dem das Handy Fahrrad gemeldet hat,
+      // ist eine Fahrt. Die eigene Wahl geht vor.
+      final motion = await PhoneMotion.load();
       String sportOf(ActivitySuggestion s) =>
-          prefs.getString('$_kSportPick${s.id}') ?? activityByName(s.sport)?.typeKey ?? 'other';
+          prefs.getString('$_kSportPick${s.id}') ??
+          (s.sport == 'walking'
+              ? phoneSportFor(motion, s.startTs, s.endTs,
+                  nowMs: taktNow().millisecondsSinceEpoch)
+              : null) ??
+          activityByName(s.sport)?.typeKey ??
+          'other';
       final now = taktNow();
       final left = await autoConfirmWorkouts(
         pending: repo.pendingActivities,
